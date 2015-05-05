@@ -8,6 +8,7 @@ cd /data/git/$HOSTNAME
 if [ ! -d "cloudstack/.git" ]; then
   echo "No git repo found, cloning Apache CloudStack"
   git clone https://github.com/apache/cloudstack.git
+  echo "Please use 'git checkout' to checkout the branch you need."
 else
   echo "Git Apache CloudStack repo already found"
 fi

@@ -5,7 +5,7 @@
 yum -y install maven tomcat6 mkisofs genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen
 
 systemctl start mariadb.service
-systemctl enable mariadb.services
+systemctl enable mariadb.service
 systemctl stop firewalld.service
 systemctl disable firewalld.service
 

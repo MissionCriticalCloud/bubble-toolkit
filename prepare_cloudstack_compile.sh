@@ -4,7 +4,7 @@
 
 # Get source
 BASEDIR=/data/git/${HOSTNAME}
-MYDIR=$(dirname $0)
+MYDIR=$(pwd -P)
 
 install_pkg() {
 	NAME=$*
@@ -56,12 +56,16 @@ ORACLE_REPO
 
 install_pkg VirtualBox-4.3 ruby ruby-devel gcc-c++ zlib-devel libxml2-devel patch sharutils
 gem install bundler
-cd ${BASE}/tools/appliance
+#cd ${BASEDIR}/tools/appliance
 ## bundle check || bundle install
-echo All tools for systemvm generation installed
-ONAME=1
-LIBS=${MYDIR}/libfaketime.so.${SONAME} ${MYDIR}/libfaketimeMT.so.${SONAME}
+SONAME=1
+LIBS="${MYDIR}/faketime/libfaketime.so.${SONAME} ${MYDIR}/faketime/libfaketimeMT.so.${SONAME}"
 
 install -dm0755 "/usr/local/lib/faketime"
 install -m0644 ${LIBS} "/usr/local/lib/faketime"
-install -Dm0755 ${MYDIR}/faketime "/usr/local/bin/faketime"
+install -Dm0755 ${MYDIR}/faketime/faketime "/usr/local/bin/faketime"
+
+install -dm0755 "/usr/local/lib/vhd"
+install -dm0644 ${MYDIR}/vhd-util/libvhd.so.1.0 "/usr/local/lib/vhd"
+install -Dm0755 ${MYDIR}/vhd-util/vhd-util "/usr/local/bin/vhd-util"
+echo All tools for systemvm generation installed

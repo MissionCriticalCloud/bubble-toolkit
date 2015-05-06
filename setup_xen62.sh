@@ -14,7 +14,7 @@ xe host-management-reconfigure pif-uuid=\$PIFUUID
 xe pif-scan host-uuid=\$(xe host-list params=uuid|awk {'print \$5'})
 xe pif-reconfigure-ip uuid=\$PIFUUID mode=dhcp
 xe host-management-reconfigure pif-uuid=\$PIFUUID
-xe host-forget uuid=3794d17b-6721-442e-bc3b-53df3bbf407d --force
+xe host-forget uuid=$(xe host-list params=uuid|awk {'print $5'}) --force
 rm /etc/rc.local.fix
 touch /etc/rc.local.fix
 EOT

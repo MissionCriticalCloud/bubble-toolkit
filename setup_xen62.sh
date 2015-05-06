@@ -10,7 +10,7 @@ sed -i "/CONTROL_DOMAIN_UUID/c\CONTROL_DOMAIN_UUID='$(uuidgen)'" /etc/xensource-
 rm -f /var/xapi/state.db
 
 # On the next boot, exec our fix script
-echo "sh /etc/rc.local.fix" >> /etc/rc.local
+echo "sh /etc/rc.local.fix >> /var/log/rc.local.fix" >> /etc/rc.local
 
 # This is our fix script
 cat <<EOT >> /etc/rc.local.fix
@@ -34,9 +34,6 @@ xe host-forget uuid=$(xe host-list params=uuid|awk {'print $5'}) --force
 
 # Remove us from rc.local
 sed -i '/local.fix/d' /etc/rc.local
-
-# Byebye
-rm /etc/rc.local.fix
 EOT
 
 reboot

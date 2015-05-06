@@ -18,6 +18,9 @@ echo "Getting a new uuid for you..."
 # Wait a bit before we start
 sleep 5
 
+# Stop Xapi
+service xapi stop
+
 # Set the hostname
 xe host-param-set uuid=\$(xe host-list params=uuid|awk {'print \$5'}) name-label=\$HOSTNAME
 
@@ -35,6 +38,15 @@ xe host-forget uuid=$(xe host-list params=uuid|awk {'print $5'}) --force
 
 # Remove us from rc.local
 sed -i '/local.fix/d' /etc/rc.local
+
+# Some final magic
+service xapi start
+sleep 10
+/opt/xensource/libexec/create_templates
+
+echo yes | /opt/xensource/bin/xe-reset-networking --device=eth0 --mode=dhcp
+sleep 20
+
 EOT
 
 reboot

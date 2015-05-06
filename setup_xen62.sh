@@ -10,10 +10,11 @@ sed -i "/CONTROL_DOMAIN_UUID/c\CONTROL_DOMAIN_UUID='$(uuidgen)'" /etc/xensource-
 rm -f /var/xapi/state.db
 
 # On the next boot, exec our fix script
-echo "sh /etc/rc.local.fix >> /var/log/rc.local.fix" >> /etc/rc.local
+echo "sh /etc/rc.local.fix >> /var/log/rc.local.fix 2>&1" >> /etc/rc.local
 
 # This is our fix script
 cat <<EOT >> /etc/rc.local.fix
+echo "Getting a new uuid for you..."
 # Wait a bit before we start
 sleep 5
 

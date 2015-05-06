@@ -22,7 +22,7 @@ sleep 5
 service xapi stop
 
 # Set the hostname
-xe host-param-set uuid=\$(xe host-list params=uuid|awk {'print \$5'}) name-label=\$HOSTNAME
+xe host-param-set uuid=\$(xe host-list params=uuid|awk {'print \$5'} | head -n 1) name-label=\$HOSTNAME
 
 # Our PIF
 PIFUUID=\$(xe pif-list params=uuid | awk {'print \$5'})

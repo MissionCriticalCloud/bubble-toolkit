@@ -66,6 +66,8 @@ install -m0644 ${LIBS} "/usr/local/lib/faketime"
 install -Dm0755 ${MYDIR}/faketime/faketime "/usr/local/bin/faketime"
 
 install -dm0755 "/usr/local/lib/vhd"
-install -dm0644 ${MYDIR}/vhd-util/libvhd.so.1.0 "/usr/local/lib/vhd"
+install -m0644 ${MYDIR}/vhd-util/libvhd.so.1.0 "/usr/local/lib/vhd"
 install -Dm0755 ${MYDIR}/vhd-util/vhd-util "/usr/local/bin/vhd-util"
+echo "/usr/local/lib/vhd" > /etc/ld.so.conf.d/vhd-util-x86_64.conf
+ldconfig
 echo All tools for systemvm generation installed

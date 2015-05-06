@@ -3,8 +3,20 @@
 # Script to prepare source for Apache CloudStack compile
 
 # Get source
-mkdir -p /data/git/$HOSTNAME
-cd /data/git/$HOSTNAME
+BASEDIR=/data/git/${HOSTNAME}
+
+install_pkg() {
+	NAME=$*
+	yum install -y ${NAME}
+	if [ "$?" -ne "0" ]
+	then
+		echo Package Installation Failed exiting
+		exit 1
+	fi
+}
+
+mkdir -p ${BASEDIR}
+cd ${BASEDIR}
 if [ ! -d "cloudstack/.git" ]; then
   echo "No git repo found, cloning Apache CloudStack"
   git clone https://github.com/apache/cloudstack.git
@@ -26,3 +38,23 @@ fi
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=512m -Xdebug -Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=n -Djava.net.preferIPv4Stack=true"
 pwd
 echo "Done."
+
+# Prepare the box so that it can build systemvm images
+
+echo Installing tools to generate systemvm templates
+yum install -y kernel-devel
+
+cat << ORACLE_REPO > /etc/yum.repos.d/oracle.repo
+[virtualbox]
+name=Oracle Linux / RHEL / CentOS-$releasever / $basearch - VirtualBox
+baseurl=http://download.virtualbox.org/virtualbox/rpm/el/$releasever/$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://www.virtualbox.org/download/oracle_vbox.asc
+ORACLE_REPO
+
+install_pkg VirtualBox-4.3 ruby ruby-devel gcc-c++ zlib-devel libxml2-devel patch sharutils
+gem install bundler
+cd ${BASE}/tools/appliance
+bundle check || bundle install
+echo All tools for systemvm generation installed

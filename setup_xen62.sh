@@ -11,6 +11,13 @@ sed -i "/CONTROL_DOMAIN_UUID/c\CONTROL_DOMAIN_UUID='$(uuidgen)'" /etc/xensource-
 rm -rf  /var/xapi/state.db
 service xapi start
 
+# This is our fix script
+cat <<EOT >> /etc/rc.local.fix
+# Remove us from rc.local
+sed -i '/local.fix/d' /etc/rc.local
+reboot
+EOT
+
 # On the next boot, exec our fix script
 echo "sh /etc/rc.local.fix >> /var/log/rc.local.fix 2>&1" >> /etc/rc.local
 
@@ -19,12 +26,4 @@ sleep 10
 /opt/xensource/libexec/create_templates
 echo yes | /opt/xensource/bin/xe-reset-networking --device=eth0 --mode=dhcp
 sleep 20
-
-# This is our fix script
-cat <<EOT >> /etc/rc.local.fix
-# Remove us from rc.local
-sed -i '/local.fix/d' /etc/rc.local
-reboot
-EOT
-
 reboot

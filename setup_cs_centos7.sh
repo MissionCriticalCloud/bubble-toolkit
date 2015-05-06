@@ -21,3 +21,4 @@ wget https://raw.githubusercontent.com/remibergsma/dotfiles/master/.screenrc
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python get-pip.py
 pip install mysql-connector-python --allow-external mysql-connector-python requests
+pip install cloudmonkey

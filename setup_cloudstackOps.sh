@@ -17,6 +17,7 @@ if [ ! -d "${BASEDIR}/python_cloud" ]; then
   echo "Setting up virtualenv.."
   sudo yum -y install python-virtualenv
   virtualenv ${BASEDIR}/python_cloud
+  source ${BASEDIR}/python_cloud/bin/activate
   pip install mysql-connector-python --allow-external mysql-connector-python requests
   pip install -Iv ${BASEDIR}/cloudstackOps/marvin/Marvin-0.1.0.tar.gz
   pip install prettytable clint
@@ -31,7 +32,7 @@ sed -i "/secretkey/c\secretkey = $SECRETKEY" ${BASEDIR}/cloudstackOps/config
 sed -i "/url/c\url = http://cs1.cloud.lan:8080/client/api" ${BASEDIR}/cloudstackOps/config
 echo "Done. To get started:"
 echo
-echo " virtualenv ${BASEDIR}/python_cloud" 
+echo " source ${BASEDIR}/python_cloud/bin/activate" 
 echo " cd ${BASEDIR}/cloudstackOps"
 echo " python listVirtualMachines.py -o MCCT-XEN-1"
 

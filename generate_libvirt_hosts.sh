@@ -6,12 +6,12 @@ MACADDR="52:54:00:1d:aa:"
 CATEGORY="xen
 kvm
 ovm
-hyv
-esx
+net
+prx
 cs
 db
 sdn
-sto
+gen
 "
 # Basic
 echo "[default]

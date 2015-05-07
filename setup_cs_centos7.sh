@@ -2,7 +2,7 @@
 
 # Prepare CentOS7 bare box to compile CloudStack and run management server
 
-yum -y install maven tomcat6 mkisofs genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen
+yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen
 
 systemctl start mariadb.service
 systemctl enable mariadb.service
@@ -22,3 +22,6 @@ wget https://raw.githubusercontent.com/remibergsma/dotfiles/master/.screenrc
 curl "https://bootstrap.pypa.io/get-pip.py" | python 
 pip install mysql-connector-python --allow-external mysql-connector-python requests
 pip install cloudmonkey
+
+easy_install nose
+easy_install pycrypto

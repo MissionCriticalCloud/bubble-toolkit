@@ -23,6 +23,5 @@ curl "https://bootstrap.pypa.io/get-pip.py" | python
 pip install mysql-connector-python --allow-external mysql-connector-python requests
 pip install cloudmonkey
 
-easy_install python-paramiko
 easy_install nose
 easy_install pycrypto

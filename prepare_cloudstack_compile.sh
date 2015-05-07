@@ -54,7 +54,7 @@ gpgcheck=1
 gpgkey=https://www.virtualbox.org/download/oracle_vbox.asc
 ORACLE_REPO
 
-install_pkg VirtualBox-4.3 ruby ruby-devel gcc-c++ zlib-devel libxml2-devel patch sharutils
+install_pkg VirtualBox-4.3 ruby ruby-devel gcc-c++ zlib-devel libxml2-devel patch sharutils genisoimage
 gem install bundler
 #cd ${BASEDIR}/tools/appliance
 ## bundle check || bundle install

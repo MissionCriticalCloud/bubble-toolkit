@@ -38,6 +38,7 @@ chmod 700 \$ADIR
 echo \$KEY > \$AFIL
 chown ${LOGNAME} \$AFIL
 chmod 400 \$AFIL
+echo "${LOGNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RSCRIPT
 
 sudo yum install -y sshpass

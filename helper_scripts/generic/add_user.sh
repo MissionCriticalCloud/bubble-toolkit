@@ -33,10 +33,10 @@ useradd ${LOGNAME}
 ADIR=/home/$LOGNAME/.ssh
 AFIL=\$ADIR/authorized_keys
 mkdir -p \$ADIR
-chown isoutham \$ADIR
+chown -R ${LOGNAME} \$ADIR
 chmod 700 \$ADIR
 echo \$KEY > \$AFIL
-chown isoutham \$AFIL
+chown ${LOGNAME} \$AFIL
 chmod 400 \$AFIL
 RSCRIPT
 

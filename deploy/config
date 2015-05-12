@@ -1,6 +1,6 @@
 [mct]
 # Needs trailing slash
-basedir = /data/git/remibergsma/MCT-shared/deploy/
+basedir = /data/shared/
 templatedir = /data/templates/
 imagedir = /data/images/
 

@@ -1,0 +1,12 @@
+[mct]
+# Needs trailing slash
+basedir = /data/git/remibergsma/MCT-shared/deploy/
+templatedir = /data/templates/
+imagedir = /data/images/
+
+# Relative to basedir
+offeringdir = offering
+hardwaredir = hardware
+firstbootdir = firstboot
+roledir = role
+clouddir = cloud

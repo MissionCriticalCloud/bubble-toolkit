@@ -1,6 +1,6 @@
 [mct]
 # Needs trailing slash
-basedir = /data/shared/
+basedir = /data/shared/deploy/
 templatedir = /data/templates/
 imagedir = /data/images/
 

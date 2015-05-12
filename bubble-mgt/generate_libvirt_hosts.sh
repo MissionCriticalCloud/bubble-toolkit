@@ -13,11 +13,6 @@ db
 sdn
 gen
 "
-# Basic
-echo "[default]
-public_bridge=virbr0
-
-[mac]" > /data/vm-easy-deploy/easydeployrc 
 
 for c in $CATEGORY; do
   for n in $(seq 0 9); do
@@ -25,7 +20,6 @@ for c in $CATEGORY; do
      HOST=$c$n
      IP=$IPADDRESS$START
      MAC=$MACADDR$START
-     echo "$HOST = $MAC" >> /data/vm-easy-deploy/easydeployrc
      echo "<host mac='$MAC' name='$HOST' ip='$IP'/>"
    done
 done

@@ -100,6 +100,7 @@ class kvm_local_deploy:
         self.DRYRUN = dryrun
         self.FORCE = force
         self.configfile = os.getcwd() + '/config'
+        self.config_data = {}
         try:
             self.conn = libvirt.open('qemu:///system')
         except Exception, e:
@@ -114,14 +115,7 @@ class kvm_local_deploy:
         config = ConfigParser.RawConfigParser()
         config.read(self.configfile)
         try:
-            self.basedir = config.get('mct', 'basedir')
-            self.templatedir = config.get('mct', 'templatedir')
-            self.imagedir = config.get('mct', 'imagedir')
-            self.offeringdir = self.basedir + config.get('mct', 'offeringdir')
-            self.hardwaredir = self.basedir + config.get('mct', 'hardwaredir')
-            self.firstbootdir = self.basedir + config.get('mct', 'firstbootdir')
-            self.roledir = self.basedir + config.get('mct', 'roledir')
-            self.clouddir = self.basedir + config.get('mct', 'clouddir')
+            self.config_data = self.get_config_section(self.configfile, 'mct')
         except:
             print "Error: Cannot read or parse mctDeploy config file '" + self.configfile + "'"
             print "Hint: Setup the local config file 'config', using 'config.sample' as a starting point. See documentation."
@@ -152,20 +146,20 @@ class kvm_local_deploy:
 
     # Get offering details
     def get_offering(self, offeringname):
-        offeringconfig = self.offeringdir + "/" + offeringname + '.conf'
+        offeringconfig = self.config_data['base_dir'] + "/" + self.config_data['offering_dir'] + "/" + offeringname + '.conf'
         return self.get_config_section(offeringconfig, 'offering')
 
     # Get role details
     def get_role(self, role_name):
         if self.role_exists(role_name):
-            role_config = self.roledir + "/" + role_name + '.conf'
+            role_config = self.config_data['base_dir'] + "/" + self.config_data['role_dir'] + "/" + role_name + '.conf'
             return self.get_config_section(role_config, 'role')
         else:
             return False
 
     # Check if role definition exists
     def role_exists(self, role_name):
-        role_config = self.roledir + "/" + role_name + '.conf'
+        role_config = self.config_data['base_dir'] + "/" + self.config_data['role_dir'] + "/" + role_name + '.conf'
         if os.path.isfile(role_config):
             return True
         else:
@@ -174,14 +168,14 @@ class kvm_local_deploy:
     # Get cloud details
     def get_cloud(self, cloud_name):
         if self.cloud_exists(cloud_name):
-            cloud_config = self.clouddir + "/" + cloud_name + '.conf'
+            cloud_config = self.config_data['base_dir'] + "/" + self.config_data['cloud_dir'] + "/" + cloud_name + '.conf'
             return self.get_config_section(cloud_config, 'cloud')
         else:
             return False
 
     # Check if cloud definition exists
     def cloud_exists(self, cloud_name):
-        cloud_config = self.clouddir + "/" + cloud_name + '.conf'
+        cloud_config = self.config_data['base_dir'] + "/" + self.config_data['cloud_dir'] + "/" + cloud_name + '.conf'
         if os.path.isfile(cloud_config):
             return True
         else:
@@ -246,8 +240,8 @@ class kvm_local_deploy:
     # Copy the qcow2 image we will use for our VM
     def copy_image(self, template, vm_name):
         try:
-            template_image = self.templatedir + template + ".qcow2"
-            new_image = self.imagedir + vm_name + ".img"
+            template_image = self.config_data['template_dir'] + template + ".qcow2"
+            new_image = self.config_data['image_dir'] + vm_name + ".img"
             shutil.copy2(template_image, new_image)
             return True
         except:
@@ -255,7 +249,7 @@ class kvm_local_deploy:
 
     # Read hardware xml
     def get_hardware_xml(self, hardware):
-       xml = self.hardwaredir + "/" + hardware + ".xml"
+       xml = self.config_data['base_dir'] + "/" + self.config_data['hardware_dir'] + "/" + hardware + ".xml"
        return xml
 
     # Generate the XML for the new VM
@@ -284,18 +278,18 @@ class kvm_local_deploy:
             return False
 
     # Execute actions before starting the VM, like adding a first-boot script
-    def pre_start_action(self, role_name, vm_name):
+    def firstboot_action(self, role_name, vm_name):
         role_dict = self.get_role(role_name)
         try:
-            command = "virt-customize -d " + vm_name + " --firstboot " + role_dict['firstboot']
+            command = "virt-customize -d " + vm_name + " --firstboot " + self.config_data['base_dir'] + "/" + self.config_data['firstboot_dir'] + role_dict['firstboot']
             if len(role_dict['firstboot']) > 0:
                 print "Note: Running pre_boot script: " + command
                 return_code = subprocess.call(command, shell=True)  
             else:
                 return_code = 0 
-                print "WARNING: No pre_start script defined."
+                print "WARNING: No firstboot script defined."
         except:
-            print "ERROR: pre_start script failed."
+            print "ERROR: firstboot script failed."
             return False
         return return_code
 
@@ -309,18 +303,18 @@ class kvm_local_deploy:
             return False
 
     # Exectute actions after starting the VM, like a ping check
-    def post_start_action(self, role_name, vm_name):
+    def postboot_action(self, role_name, vm_name):
         role_dict = self.get_role(role_name)
         try:
-            command = role_dict['post_start_script'] + " " + vm_name
-            if len(role_dict['post_start_script']) > 0:
-                print "Note: Running post_start script: " + command
+            command = self.config_data['base_dir'] + "/" + self.config_data['postboot_dir'] + role_dict['postboot'] + " " + vm_name
+            if len(role_dict['postboot']) > 0:
+                print "Note: Running postboot script: " + command
                 return_code = subprocess.call(command, shell=True)  
             else:
                 return_code = 0 
-                print "WARNING: No post_start script defined."
+                print "WARNING: No postboot script defined."
         except:
-            print "ERROR: post_start script failed."
+            print "ERROR: postboot script failed."
             return False
         return return_code
 
@@ -340,12 +334,12 @@ class kvm_local_deploy:
         self.copy_image(role_data['image'], vm_name)
         # Define the vm in Qemu
         self.define_vm(role_name, vm_name)
-        # Exec pre_start action
-        self.pre_start_action(role_name, vm_name)
+        # Exec firstboot action
+        self.firstboot_action(role_name, vm_name)
         # Start domain
         self.start_vm(vm_name)
-        # Exec post_start action
-        self.post_start_action(role_name, vm_name)
+        # Exec postboot action
+        self.postboot_action(role_name, vm_name)
 
     # Generate a name for the VM
     def generate_vm_name(self, role_name):

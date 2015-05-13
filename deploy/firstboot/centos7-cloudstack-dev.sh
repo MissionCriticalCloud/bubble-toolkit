@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Prepare CentOS7 bare box to compile CloudStack and run management server
-
+sleep 5
 yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen
 
 systemctl start mariadb.service

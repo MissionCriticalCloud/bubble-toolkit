@@ -99,6 +99,7 @@ class kvm_local_deploy:
         self.DEBUG = debug
         self.DRYRUN = dryrun
         self.FORCE = force
+        self.check_root()
         self.configfile = os.getcwd() + '/config'
         self.config_data = {}
         try:
@@ -109,6 +110,12 @@ class kvm_local_deploy:
 
         self.print_welcome()
         self.read_config_file(self.configfile)
+
+    # Check for root permissions
+    def check_root(self):
+        if not os.geteuid() == 0:
+            print "ERROR: Script must be run as root'"
+            sys.exit(1)
 
     # Read our own config file for settings
     def read_config_file(self, configfile):
@@ -124,9 +131,12 @@ class kvm_local_deploy:
     # Read section from config file
     def get_config_section(self, configfile, section):
         config = ConfigParser.RawConfigParser()
-        config.read(configfile)
-        confdict = {}
-        options = config.options(section)
+        try:
+            config.read(configfile)
+            confdict = {}
+            options = config.options(section)
+        except:
+            return False
         for option in options:
             try:
                 confdict[option] = config.get(section, option)
@@ -145,15 +155,27 @@ class kvm_local_deploy:
         print
 
     # Get offering details
-    def get_offering(self, offeringname):
-        offeringconfig = self.config_data['base_dir'] + "/" + self.config_data['offering_dir'] + "/" + offeringname + '.conf'
-        return self.get_config_section(offeringconfig, 'offering')
+    def get_offering(self, offering_name):
+        if self.offering_exists(offering_name):
+            offering_config = self.config_data['base_dir'] + "/" + self.config_data['offering_dir'] + "/" + offering_name + '.conf'
+            return self.get_config_section(offering_config, 'offering')
+        else:
+            print "ERROR: Offering with name " + offering_name + " does not exist!"
+            sys.exit(1)
 
     # Get role details
     def get_role(self, role_name):
         if self.role_exists(role_name):
             role_config = self.config_data['base_dir'] + "/" + self.config_data['role_dir'] + "/" + role_name + '.conf'
             return self.get_config_section(role_config, 'role')
+        else:
+            return False
+
+    # Check if offering definition exists
+    def offering_exists(self, offering_name):
+        offering_config = self.config_data['base_dir'] + "/" + self.config_data['offering_dir'] + "/" + offering_name + '.conf'
+        if os.path.isfile(offering_config):
+            return True
         else:
             return False
 

@@ -48,7 +48,7 @@ yum install -y kernel-devel
 cat << ORACLE_REPO > /etc/yum.repos.d/oracle.repo
 [virtualbox]
 name=Oracle Linux / RHEL / CentOS-$releasever / $basearch - VirtualBox
-baseurl=http://download.virtualbox.org/virtualbox/rpm/el/$releasever/$basearch
+baseurl=http://download.virtualbox.org/virtualbox/rpm/el/7.1/x86_64
 enabled=1
 gpgcheck=1
 gpgkey=https://www.virtualbox.org/download/oracle_vbox.asc

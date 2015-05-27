@@ -1,1 +1,4 @@
 *.qcow2
+*.bz2
+*.vhd
+*.pyc

@@ -51,6 +51,8 @@ def handleArguments(argv):
     deploy_role = ''
     global deploy_cloud
     deploy_cloud = ''
+    global digit
+    digit = ''
     global display_state 
     display_state = False
 
@@ -58,13 +60,14 @@ def handleArguments(argv):
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
         '\n  --deploy-role -r \t\tDeploy VM with this role' + \
         '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
+        '\n  --digit -d \t\tDigit to append to the role-name instead of the next available' + \
         '\n  --status -s \t\t\tDisplay status of your VMs' + \
         '\n  --debug\t\t\tEnable debug mode'
 
     try:
         opts, args = getopt.getopt(
-            argv, "hr:c:s", [
-                "deploy-role=", "deploy-cloud=", "status", "debug"])
+            argv, "hr:c:d:s", [
+                "deploy-role=", "deploy-cloud=", "digit=", "status", "debug"])
     except getopt.GetoptError as e:
         print "Error: " + str(e)
         print help
@@ -75,6 +78,7 @@ def handleArguments(argv):
         sys.exit(2)
 
     for opt, arg in opts:
+        print "processing option " + opt + " arg " + arg
         if opt == '-h':
             print help
             sys.exit()
@@ -82,6 +86,8 @@ def handleArguments(argv):
             deploy_role = arg
         elif opt in ("-c", "--deploy-cloud"):
             deploy_cloud = arg
+        elif opt in ("-d", "--digit"):
+            digit = arg
         elif opt in ("-s", "--status"):
             display_state = True 
         elif opt in ("--debug"):
@@ -367,12 +373,20 @@ class kvm_local_deploy:
     def generate_vm_name(self, role_name):
         role_dict = self.get_role(role_name)
         print "Note: Need a VM with name " + role_dict['vm_prefix']
-        for n in range (1, 10): 
-            name = role_dict['vm_prefix'] + str(n)
-            if not self.check_exists(name):
+        if digit == '':
+            for n in range (1, 9): 
+                name = role_dict['vm_prefix'] + str(n)
+                if not self.check_exists(name):
+                    print "Note: VM name " + name + " is available."
+                    return name
+                print "Note: VM name " + name + " is already in use."
+        else:
+            name = role_dict['vm_prefix'] + str(digit)
+            if self.check_exists(name):
+                print "Note: VM name " + name + " is already in use."
+            else:
                 print "Note: VM name " + name + " is available."
                 return name
-            print "Note: VM name " + name + " is already in use."
         print "ERROR: No available names for '" + role_dict['vm_prefix'] + "'"
         return False
 

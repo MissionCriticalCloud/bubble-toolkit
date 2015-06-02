@@ -10,12 +10,14 @@ mvn clean install -P developer,systemvm -DskipTests
 mvn -P developer -pl developer -Ddeploydb
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
-# Get rid of CentOS 5 crap
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET unique_name='tiny Linux KVM',name='tiny Linux',url='http://artifacts.schubergphilis.com/artifacts/cloudstack/mcct/tiny.qcow2',checksum='b6c1b60a55fe2e31afa32df10b342951', \
-    display_text='tiny Linux KVM', format='QCOW2', hypervisor_type='KVM'  where id=4;"
 
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET unique_name='tiny Linux Xen',name='tiny Linux',url='http://artifacts.schubergphilis.com/artifacts/cloudstack/tiny_vhd/ce5b212e-215a-3461-94fb-814a635b2215.vhd',checksum='046e134e642e6d344b34648223ba4bc1', \
-    display_text='tiny Linux Xen', format='VHD', hypervisor_type='XernServer'  where id=5;"
+# Adding the right SystemVMs, for both KVM and Xen
+# Adding the tiny linux VM templates for KVM and Xen
+mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2' where id=1;"
+mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
+mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
+mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
+mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
 
 # Run mgt
 mvn -pl :cloud-client-ui jetty:run

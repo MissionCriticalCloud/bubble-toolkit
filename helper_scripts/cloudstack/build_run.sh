@@ -10,6 +10,8 @@ mvn clean install -P developer,systemvm -DskipTests
 mvn -P developer -pl developer -Ddeploydb
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
+# Insert OVS bridge
+mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
 
 # Adding the right SystemVMs, for both KVM and Xen
 # Adding the tiny linux VM templates for KVM and Xen

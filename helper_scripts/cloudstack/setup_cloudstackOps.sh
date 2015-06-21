@@ -25,6 +25,7 @@ fi
 
 # Feed API keys to CloudMonkey config
 echo "Setting up API keys to ${BASEDIR}/cloudstackOps/config"
+cloudmonkey set display default
 APIKEY=$(cloudmonkey list accounts name=admin | grep 'apikey' | awk {'print $3'})
 SECRETKEY=$(cloudmonkey list accounts name=admin | grep 'secretkey' | awk {'print $3'})
 sed -i "/apikey/c\apikey = $APIKEY" ${BASEDIR}/cloudstackOps/config
@@ -35,4 +36,3 @@ echo
 echo " source ${BASEDIR}/python_cloud/bin/activate" 
 echo " cd ${BASEDIR}/cloudstackOps"
 echo " python listVirtualMachines.py -o MCCT-XEN-1"
-

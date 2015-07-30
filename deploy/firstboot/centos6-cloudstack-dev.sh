@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Prepare CentOS6 bare box to compile CloudStack and run management server
-sleep 5
+# Prepare CentOS6 box to install all dependencies of CloudStack and mount the storage
+sleep 15
 yum -y install mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git bzip2 python-setuptools mysql mysql-server python-devel vim nfs-utils screen setroubleshoot openssh-askpass java-1.8.0-openjdk-devel.x86_64 rpm-build
 
 # Installing Tomcat 7
@@ -15,10 +15,8 @@ mv apache-tomcat-7.0.63 /usr/local/tomcat7
 
 # Installing Maven3
 wget http://mirror.cc.columbia.edu/pub/software/apache/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz
-tar xzf apache-maven-3.3.3-bin.tar.gz -C /usr/local
-cd /usr/local
-ln -s apache-maven-3.3.3 maven
-cd ~
+tar xzf apache-maven-3.3.3-bin.tar.gz
+mv apache-maven-3.3.3 /usr/local/maven
 
 # Add exports to profile and execute it
 echo "export M2_HOME=/usr/local/maven" > /etc/profile.d/maven.sh

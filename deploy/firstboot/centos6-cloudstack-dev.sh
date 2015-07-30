@@ -1,17 +1,8 @@
 #!/bin/bash
 
 # Prepare CentOS6 box to install all dependencies of CloudStack and mount the storage
-sleep 15
-yum -y install mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git bzip2 python-setuptools mysql mysql-server python-devel vim nfs-utils screen setroubleshoot openssh-askpass java-1.8.0-openjdk-devel.x86_64 rpm-build
-
-# Installing Tomcat 7
-wget http://www.us.apache.org/dist/tomcat/tomcat-7/v7.0.63/bin/apache-tomcat-7.0.63.tar.gz
-tar xzf apache-tomcat-7.0.63.tar.gz
-mv apache-tomcat-7.0.63 /usr/local/tomcat7
-
-# We are not starting it yet
-#cd /usr/local/tomcat7
-#./bin/startup.sh
+sleep 25
+yum -y install tomcat6 mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git bzip2 python-setuptools mysql mysql-server python-devel vim nfs-utils screen setroubleshoot openssh-askpass java-1.8.0-openjdk-devel.x86_64 rpm-build
 
 # Installing Maven3
 wget http://mirror.cc.columbia.edu/pub/software/apache/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz

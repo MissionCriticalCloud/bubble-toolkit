@@ -21,5 +21,8 @@ mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl
 mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
 mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
 
+# Make service offering support HA
+mysql -u cloud -pcloud cloud --exec "UPDATE service_offering SET ha_enabled = 1;"
+
 # Run mgt
 mvn -pl :cloud-client-ui jetty:run

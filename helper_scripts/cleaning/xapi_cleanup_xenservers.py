@@ -14,8 +14,15 @@
 import XenAPI
 import sys
 
-session = XenAPI.Session(sys.argv[1])
-session.login_with_password(sys.argv[2],sys.argv[3])
+def print_help():
+    print "Usage: ./" + sys.argv[0] + " http://xenhost user password"
+    sys.exit()
+
+try:
+    session = XenAPI.Session(sys.argv[1])
+    session.login_with_password(sys.argv[2],sys.argv[3])
+except:
+    print_help()
 
 for x in session.xenapi.VM.get_all():
     if not session.xenapi.VM.get_is_a_template(x) and not session.xenapi.VM.get_is_control_domain(x):

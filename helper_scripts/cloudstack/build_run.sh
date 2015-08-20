@@ -24,5 +24,8 @@ mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl
 # Make service offering support HA
 mysql -u cloud -pcloud cloud --exec "UPDATE service_offering SET ha_enabled = 1;"
 
+# Install Marvin
+pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
+
 # Run mgt
 mvn -pl :cloud-client-ui jetty:run

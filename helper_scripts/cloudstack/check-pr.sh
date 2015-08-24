@@ -18,6 +18,7 @@ fi
 
 # Go the the source
 cd /data/git/${HOSTNAME}/cloudstack
+git checkout master
 
 # Get the PR
 git fetch origin pull/${prId}/head:pr/${prId}

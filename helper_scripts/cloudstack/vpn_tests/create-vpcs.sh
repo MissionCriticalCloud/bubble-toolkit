@@ -3,6 +3,7 @@
 # some vars
 zone_id=$(cloudmonkey list zones filter=id | grep -E ^id | awk {'print $3'} | head -n 1)
 serviceoffering_id=$(cloudmonkey  list vpcofferings name="Default VPC offering" filter=id | grep -E ^id | awk {'print $3'})
+domain_id=$(cloudmonkey list domains name=ROOT filter=id | grep -E ^id | awk {'print $3'} | head -n 1)
 count=0
 vpcs=2
 

@@ -25,3 +25,6 @@ pip install cloudmonkey
 
 easy_install nose
 easy_install pycrypto
+
+# Reboot
+reboot

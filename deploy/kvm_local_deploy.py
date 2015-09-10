@@ -105,7 +105,8 @@ class kvm_local_deploy:
         self.DEBUG = debug
         self.DRYRUN = dryrun
         self.FORCE = force
-        self.check_root()
+        # we can run as a user in the libvirt group
+        #self.check_root()
         self.configfile = os.getcwd() + '/config'
         self.config_data = {}
         try:

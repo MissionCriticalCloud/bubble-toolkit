@@ -10,7 +10,7 @@ if [ -z ${marvinCfg} ]; then
 fi
 
 # Go the the source
-cd /data/git/${HOSTNAME}/cloudstack
+cd /data/git/${HOSTNAME}/cloudstack/test/integration
 
 echo "Running tests with required_hardware=true"
 nosetests --with-marvin --marvin-config=${marvinCfg} -s -a tags=advanced,required_hardware=true \

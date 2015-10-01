@@ -13,6 +13,13 @@ if [ -z ${prId} ]; then
   exit 1
 fi
 
+# Check if a marvin dc file was specified
+marvinCfg=$2
+if [ -z ${marvinCfg} ]; then
+  echo "No Marvin config specified. Quiting."
+  exit 1
+fi
+
 # Perpare, checkout and stuff
 /data/shared/helper_scripts/cloudstack/prepare_cloudstack_compile.sh
 
@@ -25,4 +32,4 @@ git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 
 # Build and run it
-/data/shared/helper_scripts/cloudstack/build_run.sh
+/data/shared/helper_scripts/cloudstack/build_run_deploy.sh ${marvinCfg}

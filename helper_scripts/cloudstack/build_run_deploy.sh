@@ -49,6 +49,7 @@ pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-c
 
 # Run mgt
 echo "Starting CloudStack"
+killall -9 java
 mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
 
 # Wait until it comes up

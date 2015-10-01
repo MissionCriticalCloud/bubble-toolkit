@@ -16,7 +16,8 @@ echo "Running tests with required_hardware=true"
 nosetests --with-marvin --marvin-config=${marvinCfg} -s -a tags=advanced,required_hardware=true \
 component/test_vpc_redundant.py \
 component/test_routers_iptables_default_policy.py \
-component/test_vpc_router_nics.py
+component/test_vpc_router_nics.py \
+component/test_routers_network_ops.py 
 
 echo "Running tests with required_hardware=false"
 nosetests --with-marvin --marvin-config=${marvinCfg} -s -a tags=advanced,required_hardware=false \

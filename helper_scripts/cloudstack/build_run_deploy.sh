@@ -107,9 +107,32 @@ except:
  print ''
 " | cut -d/ -f3)
 
-# SSH/SCP helpers
-ssh_base="sshpass -p ${hvpass1} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-scp_base="sshpass -p ${hvpass1} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+# Install CloudStack packages to KVM
+function install_kvm_packages {
+  # Parameters
+  hvip=$1
+  hvuser=$2
+  hvpass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+
+  # scp packages to hypervisor, remove existing, then install new ones
+  ${ssh_base} ${hvuser}@${hvip} rm cloudstack-*
+  ${scp_base} ../dist/rpmbuild/RPMS/x86_64/* ${hvuser}@${hvip}:
+  ${ssh_base} ${hvuser}@${hvip} yum -y remove cloudstack-common
+  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
+  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent* cloudstack-common*
+
+  # Clean KVM in case it has been used before
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
+  ${ssh_base} ${hvuser}@${hvip} systemctl disable cloudstack-agent
+  ${ssh_base} ${hvuser}@${hvip} systemctl restart libvirtd
+  ${ssh_base} ${hvuser}@${hvip} "for host in \$(virsh list | awk '{print \$2;}' | grep -v Name |egrep -v '^\$'); do virsh destroy \$host; done"
+}
+
 
 # Compile CloudStack
 if [ -z ${skip} ]; then
@@ -122,18 +145,13 @@ if [ -z ${skip} ]; then
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
 
-    # scp packages to hypervisor, remove existing, then install new ones
-    ${ssh_base} ${hvuser1}@${hvip1} rm cloudstack-*
-    ${scp_base} ../dist/rpmbuild/RPMS/x86_64/* ${hvuser1}@${hvip1}:
-    ${ssh_base} ${hvuser1}@${hvip1} yum -y remove cloudstack-common
-    ${ssh_base} ${hvuser1}@${hvip1} yum -y localinstall cloudstack-agent* cloudstack-common*
+    # Push to hypervisor
+    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
 
     # Do we have a second hypervisor
     if [ ! -z  ${hvip2} ]; then
-      ${ssh_base} ${hvuser2}@${hvip2} rm cloudstack-*
-      ${scp_base} ../dist/rpmbuild/RPMS/x86_64/* ${hvuser2}@${hvip2}:
-      ${ssh_base} ${hvuser2}@${hvip2} yum -y remove cloudstack-common
-      ${ssh_base} ${hvuser2}@${hvip2} yum -y localinstall cloudstack-agent* cloudstack-common*
+      # Push to hypervisor
+      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
     fi
 
     # We do not need to clean the next compile
@@ -197,6 +215,7 @@ if [[ "${hypervisor}" == "kvm" ]]; then
 fi 
 
 echo "Install systemvm template.."
+# Consider using -f and point to local cached file
 bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -u ${systemvmurl} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 
 echo "Deploy data center.."

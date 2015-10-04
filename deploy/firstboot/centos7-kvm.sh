@@ -14,18 +14,19 @@ yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-late
 yum -y install qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim
 yum -y install http://jenkins.buildacloud.org/job/package-centos7-master/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-common-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm 
 yum -y install http://jenkins.buildacloud.org/job/package-centos7-master/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-agent-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm
-yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
 yum --enablerepo=epel -y install sshpass
 
 # Enable rpbind for NFS
 systemctl enable rpcbind
 systemctl start rpcbind
 
+# NFS to mct box
+mkdir -p /data
+mount -t nfs 192.168.22.1:/data /data
+echo "192.168.22.1:/data /data nfs rw,hard,intr,rsize=8192,wsize=8192,timeo=14 0 0" >> /etc/fstab
+
 # Enable nesting
 echo "options kvm_intel nested=1" >> /etc/modprobe.d/kvm-nested.conf
-
-# Set short hostname
-# hostnamectl --static set-hostname mccxvm22
 
 # Cloudstack agent.properties settings
 cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig

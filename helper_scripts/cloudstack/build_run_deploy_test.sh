@@ -146,8 +146,15 @@ if [ -z ${skip} ]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
     cd packaging
+
+    # Use 4 cores when compiling ACS
+    sed -i '/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests $FLAGS clean package -T 4' /data/git/${HOSTNAME}/cloudstack/packaging/centos7/cloud.spec
+
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
+
+    # Done, put it back
+    git reset --hard
 
     # Push to hypervisor
     install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}

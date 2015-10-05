@@ -173,7 +173,7 @@ function install_kvm_packages {
 
 
 # Compile CloudStack
-if [ ${skip} -eq 1 ]; then
+if [ ${skip} -eq 0 ]; then
 
   # Stop previous mgt server
   killall -9 java

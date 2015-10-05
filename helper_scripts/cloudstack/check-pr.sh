@@ -32,4 +32,4 @@ git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 
 # Build and run it
-/data/shared/helper_scripts/cloudstack/build_run_deploy.sh ${marvinCfg}
+/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh ${marvinCfg}

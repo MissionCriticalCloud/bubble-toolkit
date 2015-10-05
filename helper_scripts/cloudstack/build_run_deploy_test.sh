@@ -192,12 +192,12 @@ function clean_xenserver {
 
 }
 
+# Stop previous mgt server
+killall -9 java
+while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
+
 # Compile CloudStack
 if [ ${skip} -eq 0 ]; then
-
-  # Stop previous mgt server
-  killall -9 java
-  while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
   # Compile RPM packages for KVM hypervisor
   # When something VR related is changed, one must use the RPMs from the branch we're testing

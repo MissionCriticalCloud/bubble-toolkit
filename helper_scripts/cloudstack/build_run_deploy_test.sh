@@ -162,6 +162,17 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} yum -y remove cloudstack-common
   ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
   ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent* cloudstack-common*
+}
+
+function clean_kvm {
+  # Parameters
+  hvip=$1
+  hvuser=$2
+  hvpass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # Clean KVM in case it has been used before
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
@@ -171,6 +182,15 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} "for host in \$(virsh list | awk '{print \$2;}' | grep -v Name |egrep -v '^\$'); do virsh destroy \$host; done"
 }
 
+function clean_xenserver {
+  # Parameters
+  hvip=$1
+  hvuser=$2
+  hvpass=$3
+
+  /data/shared/helper_scripts/cleaning/xapi_cleanup_xenservers.py http://${hvip} ${hvuser} ${hvpass}
+
+}
 
 # Compile CloudStack
 if [ ${skip} -eq 0 ]; then
@@ -220,6 +240,25 @@ if [ ${skip} -eq 0 ]; then
   date
   mvn ${clean} install -P developer,systemvm -DskipTests -T 4
   date
+fi
+
+# Cleaning Hypervisor
+echo "Cleaning hypervisor"
+if [[ "$hypervisor" == "kvm" ]]; then
+    clean_kvm ${hvip1} ${hvuser1} ${hvpass1}
+
+    # Do we have a second hypervisor
+    if [ ! -z  ${hvip2} ]; then
+      clean_kvm ${hvip2} ${hvuser2} ${hvpass2}
+    fi
+elif [[ "$hypervisor" == "xenserver" ]]; then
+    clean_xenserver ${hvip1} ${hvuser1} ${hvpass1}
+
+    # Do we have a second hypervisor
+    if [ ! -z  ${hvip2} ]; then
+      # Push to hypervisor
+      clean_xenserver ${hvip2} ${hvuser2} ${hvpass2}
+    fi
 fi
 
 # Deploy DB

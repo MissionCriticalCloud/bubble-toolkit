@@ -14,6 +14,9 @@ fi
 # Parameter to skip compilation
 skip=$2
 
+echo "Started"
+date
+
 # Find ip
 host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
 
@@ -141,12 +144,14 @@ if [ -z ${skip} ]; then
   # When something VR related is changed, one must use the RPMs from the branch we're testing
   if [[ "$hypervisor" == "kvm" ]]; then
     echo "Creating rpm packages for ${hypervisor}"
+    date
     cd packaging
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
 
     # Push to hypervisor
     install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
+    date
 
     # Do we have a second hypervisor
     if [ ! -z  ${hvip2} ]; then
@@ -166,12 +171,15 @@ if [ -z ${skip} ]; then
   # cloudstack compile
   cd /data/git/$HOSTNAME/cloudstack
   echo "Compiling CloudStack"
+  date
   mvn ${clean} install -P developer,systemvm -DskipTests
+  date
 fi
 
 # Deploy DB
 echo "Deploying CloudStack DB"
 mvn -P developer -pl developer -Ddeploydb
+date
 
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
@@ -216,12 +224,22 @@ fi
 
 echo "Install systemvm template.."
 # Consider using -f and point to local cached file
+date
 bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -u ${systemvmurl} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
+date
 
 echo "Deploy data center.."
 python /data/git/$HOSTNAME/cloudstack/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
+date
 
 # Wait until templates are ready
+echo "Checking template status.."
 bash -x /data/shared/helper_scripts/cloudstack/wait_template_ready.sh
+date
 
-# We may want to run some tests here
+# Run the tests
+echo "Running Marvin tests.."
+bash -x /data/shared/helper_scripts/cloudstack/run_marvin_router_tests.sh ${marvinCfg}
+
+echo "Finished"
+date

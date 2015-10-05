@@ -1,12 +1,12 @@
 #!/bin/bash
 
 function check_templates {
-  cloudmonkey list templates templatefilter=all | grep isready | grep --quiet True
+  cloudmonkey list templates templatefilter=all | grep isready | grep --quiet False
   return $?
 }
 
 check_templates
-while [ $? -ne 0 ]; do
+while [ $? -ne 1 ]; do
   date | tr -d '\n'
   echo ": Templates not ready, waiting.."
   sleep 5

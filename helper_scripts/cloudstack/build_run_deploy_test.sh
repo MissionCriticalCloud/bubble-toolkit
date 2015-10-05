@@ -57,7 +57,6 @@ if [ $? -gt 0  ]; then
 fi
 
 echo "OK"
-exit
 
 # Parse marvin config
 # This should be done in python instead,

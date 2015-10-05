@@ -221,4 +221,7 @@ bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorag
 echo "Deploy data center.."
 python /data/git/$HOSTNAME/cloudstack/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
 
+# Wait until templates are ready
+bash -x /data/shared/helper_scripts/cloudstack/wait_template_ready.sh
+
 # We may want to run some tests here

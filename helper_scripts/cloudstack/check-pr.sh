@@ -25,6 +25,7 @@ fi
 
 # Go the the source
 cd /data/git/${HOSTNAME}/cloudstack
+git reset --hard
 git checkout master
 
 # Get the PR

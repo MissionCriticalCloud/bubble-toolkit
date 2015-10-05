@@ -215,17 +215,17 @@ while ! timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /de
 
 # Systemvm template for hypervisor type
 if [[ "${hypervisor}" == "kvm" ]]; then
-  systemvmurl="http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2"
+  systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"
   imagetype="qcow2"
  elif [[ "${hypervisor}" == "xenserver" ]]; then
-  systemvmurl="http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2"
+  systemtemplate="/data/templates/systemvm64template-master-4.6.0-xen.vhd"
   imagetype="vhd"
 fi 
 
 echo "Install systemvm template.."
 # Consider using -f and point to local cached file
 date
-bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -u ${systemvmurl} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
+bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
 echo "Deploy data center.."

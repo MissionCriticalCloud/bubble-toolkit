@@ -172,13 +172,13 @@ if [ -z ${skip} ]; then
   cd /data/git/$HOSTNAME/cloudstack
   echo "Compiling CloudStack"
   date
-  mvn ${clean} install -P developer,systemvm -DskipTests
+  mvn ${clean} install -P developer,systemvm -DskipTests -T 4
   date
 fi
 
 # Deploy DB
 echo "Deploying CloudStack DB"
-mvn -P developer -pl developer -Ddeploydb
+mvn -P developer -pl developer -Ddeploydb -T 4
 date
 
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud

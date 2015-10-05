@@ -142,6 +142,7 @@ if [ -z ${skip} ]; then
 
   # Stop previous mgt server
   killall -9 java
+  while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
   # Compile RPM packages for KVM hypervisor
   # When something VR related is changed, one must use the RPMs from the branch we're testing
@@ -215,13 +216,16 @@ echo "Installing Marvin"
 pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
 
 # Run the CloudStack management server
-echo "Starting CloudStack"
+echo "Double checking CloudStack is not already running"
 killall -9 java
+while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
+
+echo "Starting CloudStack"
 mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
 
 # Wait until it comes up
 echo "Waiting for CloudStack to start"
-while ! timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do sleep 10; done
+while ! timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for Mgt server to start.."; sleep 10; done
 
 # Systemvm template for hypervisor type
 if [[ "${hypervisor}" == "kvm" ]]; then

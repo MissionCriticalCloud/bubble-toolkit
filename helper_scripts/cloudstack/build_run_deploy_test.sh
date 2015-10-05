@@ -179,6 +179,7 @@ function clean_kvm {
   ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
   ${ssh_base} ${hvuser}@${hvip} systemctl disable cloudstack-agent
   ${ssh_base} ${hvuser}@${hvip} systemctl restart libvirtd
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
   ${ssh_base} ${hvuser}@${hvip} "for host in \$(virsh list | awk '{print \$2;}' | grep -v Name |egrep -v '^\$'); do virsh destroy \$host; done"
 }
 

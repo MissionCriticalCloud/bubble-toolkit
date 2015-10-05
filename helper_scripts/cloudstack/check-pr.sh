@@ -6,17 +6,61 @@
 # Stop executing when we encounter errors
 set -e
 
+function usage {
+  printf "Usage: %s: -m marvinCfg -p <pr id> [ -s <skip compile> -t <run tests> ]\n" $(basename $0) >&2
+}
+
+# Options
+skip=
+run_tests=
+while getopts 'm:p:st' OPTION
+do
+  case $OPTION in
+  m)    marvinCfg="$OPTARG"
+        ;;
+  p)    prId="$OPTARG"
+        ;;
+  s)    skip="-s"
+        ;;
+  t)    run_tests="-t"
+        ;;
+  esac
+done
+
+# Check if a marvin dc file was specified
+if [ -z ${marvinCfg} ]; then
+  echo "No Marvin config specified. Quiting."
+  usage
+  exit 1
+else
+  echo "Using Marvin config '${marvinCfg}'."
+fi
+
+if [ ! -f "${marvinCfg}" ]; then
+    echo "Supplied Marvin config not found!"
+    exit 1
+fi
+
+echo "Received arguments:"
+echo "skip = ${skip}"
+echo "run_tests = ${run_tests}"
+echo "marvinCfg = ${marvinCfg}"
+echo "prId = ${prId}"
+
+echo "Started!"
+date
+
 # Check if a pull request id was specified
-prId=$1
 if [ -z ${prId} ]; then
   echo "No PR number specified. Quiting."
+  usage
   exit 1
 fi
 
 # Check if a marvin dc file was specified
-marvinCfg=$2
 if [ -z ${marvinCfg} ]; then
   echo "No Marvin config specified. Quiting."
+  usage
   exit 1
 fi
 
@@ -32,5 +76,5 @@ git checkout master
 git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 
-# Build and run it
-/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh ${marvinCfg}
+# Build, run and test it
+/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip}

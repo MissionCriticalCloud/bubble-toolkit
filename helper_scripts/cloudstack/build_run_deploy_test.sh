@@ -2,19 +2,47 @@
 
 # This script builds and runs Apache CloudStack and deploys a data center using the supplied Marvin config.
 # When KVM is used, RPMs are built and installed on the hypervisor.
-# When done, you may run the desired tests.
+# When done, it runs the desired tests.
+
+function usage {
+  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> ]\n" $(basename $0) >&2
+}
+
+# Options
+skip=0
+run_tests=0
+while getopts 'm:st' OPTION
+do
+  case $OPTION in
+  m)    marvinCfg="$OPTARG"
+        ;;
+  s)    skip=1
+        ;;
+  t)    run_tests=1
+        ;;
+  esac
+done
 
 # Check if a marvin dc file was specified
-marvinCfg=$1
 if [ -z ${marvinCfg} ]; then
   echo "No Marvin config specified. Quiting."
+  usage
   exit 1
+else
+  echo "Using Marvin config '${marvinCfg}'."
 fi
 
-# Parameter to skip compilation
-skip=$2
+if [ ! -f "${marvinCfg}" ]; then
+    echo "Supplied Marvin config not found!"
+    exit 1
+fi
 
-echo "Started"
+echo "Received arguments:"
+echo "skip = ${skip}"
+echo "run_tests = ${run_tests}"
+echo "marvinCfg = ${marvinCfg}"
+
+echo "Started!"
 date
 
 # Find ip
@@ -22,6 +50,14 @@ host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/
 
 # We work from here
 cd /data/git/$HOSTNAME/cloudstack
+
+if [ $? -gt 0  ]; then
+  echo "ERROR: git repo not found!"
+  exit 1
+fi
+
+echo "OK"
+exit
 
 # Parse marvin config
 # This should be done in python instead,
@@ -138,7 +174,7 @@ function install_kvm_packages {
 
 
 # Compile CloudStack
-if [ -z ${skip} ]; then
+if [ ${skip} -eq 1 ]; then
 
   # Stop previous mgt server
   killall -9 java
@@ -252,8 +288,12 @@ bash -x /data/shared/helper_scripts/cloudstack/wait_template_ready.sh
 date
 
 # Run the tests
-echo "Running Marvin tests.."
-bash -x /data/shared/helper_scripts/cloudstack/run_marvin_router_tests.sh ${marvinCfg}
+if [ ${run_tests} -eq 1 ]; then
+  echo "Running Marvin tests.."
+  bash -x /data/shared/helper_scripts/cloudstack/run_marvin_router_tests.sh ${marvinCfg}
+else
+  echo "Not running tests (use -t flag to run them)"
+fi
 
 echo "Finished"
 date

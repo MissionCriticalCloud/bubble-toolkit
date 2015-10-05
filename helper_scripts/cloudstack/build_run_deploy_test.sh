@@ -140,6 +140,9 @@ function install_kvm_packages {
 # Compile CloudStack
 if [ -z ${skip} ]; then
 
+  # Stop previous mgt server
+  killall -9 java
+
   # Compile RPM packages for KVM hypervisor
   # When something VR related is changed, one must use the RPMs from the branch we're testing
   if [[ "$hypervisor" == "kvm" ]]; then

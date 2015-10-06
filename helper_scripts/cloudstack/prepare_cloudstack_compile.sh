@@ -39,25 +39,3 @@ fi
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=512m -Xdebug -Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=n -Djava.net.preferIPv4Stack=true"
 pwd
 echo "Done."
-
-# Prepare the box so that it can build systemvm images
-
-echo Installing tools to generate systemvm templates
-yum install -y kernel-devel
-
-gem install bundler
-#cd ${BASEDIR}/tools/appliance
-## bundle check || bundle install
-SONAME=1
-LIBS="${MYDIR}/faketime/libfaketime.so.${SONAME} ${MYDIR}/faketime/libfaketimeMT.so.${SONAME}"
-
-install -dm0755 "/usr/local/lib/faketime"
-install -m0644 ${LIBS} "/usr/local/lib/faketime"
-install -Dm0755 ${MYDIR}/faketime/faketime "/usr/local/bin/faketime"
-
-install -dm0755 "/usr/local/lib/vhd"
-install -m0644 ${MYDIR}/vhd-util/libvhd.so.1.0 "/usr/local/lib/vhd"
-install -Dm0755 ${MYDIR}/vhd-util/vhd-util "/usr/local/bin/vhd-util"
-echo "/usr/local/lib/vhd" > /etc/ld.so.conf.d/vhd-util-x86_64.conf
-ldconfig
-echo All tools for systemvm generation installed

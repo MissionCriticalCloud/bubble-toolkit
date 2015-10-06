@@ -9,7 +9,7 @@ check_templates
 while [ $? -ne 1 ]; do
   date | tr -d '\n'
   echo ": Templates not ready, waiting.."
-  sleep 5
+  sleep 15
   check_templates
 done
 

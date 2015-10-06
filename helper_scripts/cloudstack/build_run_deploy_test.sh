@@ -319,9 +319,14 @@ date
 
 echo "Deploy data center.."
 python /data/git/$HOSTNAME/cloudstack/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
-date
+if [ $? -ne 0 ]; then
+  date
+  echo "Deployment failed, please investigate!"
+  exit 1
+fi
 
 # Wait until templates are ready
+date
 echo "Checking template status.."
 bash -x /data/shared/helper_scripts/cloudstack/wait_template_ready.sh
 date

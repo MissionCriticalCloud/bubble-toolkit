@@ -3,9 +3,6 @@
 # This script checks out a PR branch and then starts a management server with that code. 
 # Next, you can run Marvin to setup whatever you need to verify the PR.
 
-# Stop executing when we encounter errors
-set -e
-
 function usage {
   printf "Usage: %s: -m marvinCfg -p <pr id> [ -s <skip compile> -t <run tests> ]\n" $(basename $0) >&2
 }
@@ -73,6 +70,7 @@ git reset --hard
 git checkout master
 
 # Get the PR
+git remote -D pr/${prId}
 git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 

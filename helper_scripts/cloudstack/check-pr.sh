@@ -70,7 +70,7 @@ git reset --hard
 git checkout master
 
 # Get the PR
-git remote -D pr/${prId}
+git branch -D pr/${prId}
 git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 

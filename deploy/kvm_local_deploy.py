@@ -60,7 +60,7 @@ def handleArguments(argv):
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
         '\n  --deploy-role -r \t\tDeploy VM with this role' + \
         '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
-        '\n  --digit -d \t\tDigit to append to the role-name instead of the next available' + \
+        '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
         '\n  --status -s \t\t\tDisplay status of your VMs' + \
         '\n  --debug\t\t\tEnable debug mode'
 

@@ -4,13 +4,14 @@
 # Next, you can run Marvin to setup whatever you need to verify the PR.
 
 function usage {
-  printf "Usage: %s: -m marvinCfg -p <pr id> [ -s <skip compile> -t <run tests> ]\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvinCfg -p <pr id> [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
 
 # Options
 skip=
 run_tests=
-while getopts 'm:p:st' OPTION
+compile_threads=1
+while getopts 'm:p:T:st' OPTION
 do
   case $OPTION in
   m)    marvinCfg="$OPTARG"
@@ -21,8 +22,17 @@ do
         ;;
   t)    run_tests="-t"
         ;;
+  T)    compile_threads="$OPTARG"
+        ;;
   esac
 done
+
+echo "Received arguments:"
+echo "skip = ${skip}"
+echo "run_tests = ${run_tests}"
+echo "marvinCfg = ${marvinCfg}"
+echo "prId = ${prId}"
+echo "compile_threads = ${compile_threads}"
 
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
@@ -37,12 +47,6 @@ if [ ! -f "${marvinCfg}" ]; then
     echo "Supplied Marvin config not found!"
     exit 1
 fi
-
-echo "Received arguments:"
-echo "skip = ${skip}"
-echo "run_tests = ${run_tests}"
-echo "marvinCfg = ${marvinCfg}"
-echo "prId = ${prId}"
 
 echo "Started!"
 date
@@ -75,4 +79,4 @@ git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 
 # Build, run and test it
-/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip}
+/data/remi/MCT-shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} -T ${compile_threads}

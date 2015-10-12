@@ -5,13 +5,14 @@
 # When done, it runs the desired tests.
 
 function usage {
-  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> ]\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
 
 # Options
 skip=0
 run_tests=0
-while getopts 'm:st' OPTION
+compile_threads=1
+while getopts 'm:T:st' OPTION
 do
   case $OPTION in
   m)    marvinCfg="$OPTARG"
@@ -20,8 +21,16 @@ do
         ;;
   t)    run_tests=1
         ;;
+  T)    compile_threads="$OPTARG"
+        ;;
   esac
 done
+
+echo "Received arguments:"
+echo "skip = ${skip}"
+echo "run_tests = ${run_tests}"
+echo "marvinCfg = ${marvinCfg}"
+echo "compile_threads = ${compile_threads}"
 
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
@@ -36,11 +45,6 @@ if [ ! -f "${marvinCfg}" ]; then
     echo "Supplied Marvin config not found!"
     exit 1
 fi
-
-echo "Received arguments:"
-echo "skip = ${skip}"
-echo "run_tests = ${run_tests}"
-echo "marvinCfg = ${marvinCfg}"
 
 echo "Started!"
 date
@@ -208,7 +212,7 @@ if [ ${skip} -eq 0 ]; then
     cd packaging
 
     # Use 4 cores when compiling ACS
-    sed -i '/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests $FLAGS clean package -T 4' /data/git/${HOSTNAME}/cloudstack/packaging/centos7/cloud.spec
+    sed -i "/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests \$FLAGS clean package -T ${compile_threads}" /data/git/${HOSTNAME}/cloudstack/packaging/centos7/cloud.spec
 
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
@@ -244,7 +248,7 @@ if [ ${skip} -eq 0 ]; then
   cd /data/git/$HOSTNAME/cloudstack
   echo "Compiling CloudStack"
   date
-  mvn ${clean} install -P developer,systemvm -DskipTests -T 4
+  mvn ${clean} install -P developer,systemvm -DskipTests -T ${compile_threads}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"

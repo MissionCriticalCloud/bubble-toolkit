@@ -79,4 +79,4 @@ git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 
 # Build, run and test it
-/data/remi/MCT-shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} -T ${compile_threads}
+/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} -T ${compile_threads}

@@ -212,6 +212,11 @@ if [ ${skip} -eq 0 ]; then
 
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
+    if [ $? -ne 0 ]; then
+      date
+      echo "RPM build failed, please investigate!"
+      exit 1
+    fi
 
     # Done, put it back
     git reset --hard
@@ -240,6 +245,11 @@ if [ ${skip} -eq 0 ]; then
   echo "Compiling CloudStack"
   date
   mvn ${clean} install -P developer,systemvm -DskipTests -T 4
+  if [ $? -ne 0 ]; then
+    date
+    echo "Build failed, please investigate!"
+    exit 1
+  fi
   date
 fi
 
@@ -265,6 +275,11 @@ fi
 # Deploy DB
 echo "Deploying CloudStack DB"
 mvn -P developer -pl developer -Ddeploydb -T 4
+if [ $? -ne 0 ]; then
+  date
+  echo "Build failed, please investigate!"
+  exit 1
+fi
 date
 
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud

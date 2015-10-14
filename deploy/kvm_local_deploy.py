@@ -32,6 +32,10 @@ import ConfigParser
 import shutil
 from jinja2 import Template
 import subprocess
+import json
+import socket
+import re
+from multiprocessing.dummy import Pool as ThreadPool
 
 # Colored terminals
 try:
@@ -47,27 +51,36 @@ def handleArguments(argv):
     DEBUG = 0
     global DRYRUN
     DRYRUN = 1
+    global FORCE
+    FORCE = 0
     global deploy_role
     deploy_role = ''
     global deploy_cloud
     deploy_cloud = ''
+    global deploy_marvin
+    deploy_marvin = ''
     global digit
     digit = ''
-    global display_state 
+    global delete
+    delete = ''
+    global display_state
     display_state = False
 
     # Usage message
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
         '\n  --deploy-role -r \t\tDeploy VM with this role' + \
         '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
+        '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
         '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
         '\n  --status -s \t\t\tDisplay status of your VMs' + \
-        '\n  --debug\t\t\tEnable debug mode'
+        '\n  --delete \t\t\tOnly delete the specified VM (needs --digit) or Marvin config' + \
+        '\n  --force \t\t\tDelete VMs when they already exist' + \
+        '\n  --debug \t\t\tEnable debug mode'
 
     try:
         opts, args = getopt.getopt(
-            argv, "hr:c:d:s", [
-                "deploy-role=", "deploy-cloud=", "digit=", "status", "debug"])
+            argv, "hr:c:d:m:s", [
+                "deploy-role=", "deploy-cloud=", "deploy-marvin=", "digit=", "delete", "status", "debug", "force"])
     except getopt.GetoptError as e:
         print "Error: " + str(e)
         print help
@@ -86,12 +99,18 @@ def handleArguments(argv):
             deploy_role = arg
         elif opt in ("-c", "--deploy-cloud"):
             deploy_cloud = arg
+        elif opt in ("-m", "--deploy-marvin"):
+            deploy_marvin = arg
         elif opt in ("-d", "--digit"):
             digit = arg
         elif opt in ("-s", "--status"):
-            display_state = True 
+            display_state = True
         elif opt in ("--debug"):
             DEBUG = 1
+        elif opt in ("--force"):
+            FORCE = 1
+        elif opt in ("--delete"):
+            delete = 1
 
 # Parse arguments
 if __name__ == "__main__":
@@ -99,12 +118,14 @@ if __name__ == "__main__":
 
 # Deploy local KVM class
 class kvm_local_deploy:
-    
+
     # Init function
-    def __init__(self, debug=0, dryrun=0, force=0):
+    def __init__(self, debug=0, dryrun=0, force=0, marvin_config=''):
         self.DEBUG = debug
         self.DRYRUN = dryrun
         self.FORCE = force
+        self.marvin_config = marvin_config
+        self.marvin_data = False
         # we can run as a user in the libvirt group
         #self.check_root()
         self.configfile = os.getcwd() + '/config'
@@ -210,6 +231,13 @@ class kvm_local_deploy:
         else:
             return False
 
+    # Check if Marvin definition exists
+    def marvin_exists(self, marvin_config):
+        if os.path.isfile(marvin_config):
+            return True
+        else:
+            return False
+
     # Overview of what runs and what not
     def print_state(self):
         print "Overview of current VMs:"
@@ -222,7 +250,7 @@ class kvm_local_deploy:
         for id in active_hosts:
           dom = self.conn.lookupByID(id)
           print "VM " + dom.name() + " is ON."
-        
+
     # List inactive Hosts
     def get_inactive_hosts(self):
         for name in self.conn.listDefinedDomains():
@@ -243,13 +271,13 @@ class kvm_local_deploy:
                 result['ip'] = d.get('ip')
         if len(result)==0:
             print "ERROR: host not defined in NAT DHCP config."
-            sys.exit(1)
+            return False
         return result
 
     # Get all VMs
     def get_all_vms(self):
         result = {}
-        for vm in self.conn.listAllDomains(): 
+        for vm in self.conn.listAllDomains():
             id = vm.ID()
             result[id] = {}
             result[id]['name'] = vm.name()
@@ -288,21 +316,24 @@ class kvm_local_deploy:
         with open(xml) as f:
             tmpl = Template(f.read())
         templatevars = self.get_role(role_name).copy()
-        templatevars.update(self.get_offering(role_dict['offering'])) 
+        templatevars.update(self.get_offering(role_dict['offering']))
         templatevars['name'] = vm_name
         templatevars['format'] = 'qcow2'
         templatevars['disk_dev'] = role_dict['disk_dev']
         templatevars['disk_bus'] = role_dict['disk_bus']
         templatevars['net_model'] = role_dict['net_model']
-        templatevars['mac']= self.get_ip_and_mac(vm_name)['mac']
+        try:
+            templatevars['mac'] = self.get_ip_and_mac(vm_name)['mac']
+        except:
+            return False
         return tmpl.render(templatevars)
 
     # Make the VM known to Qemu
     def define_vm(self, role_name, vm_name):
-        xml = self.generate_xml(role_name, vm_name)
         try:
+            xml = self.generate_xml(role_name, vm_name)
             domain = self.conn.defineXML(xml)
-            return domain  
+            return domain
         except:
             return False
 
@@ -312,13 +343,13 @@ class kvm_local_deploy:
         try:
             command = "virt-customize -d " + vm_name + " --firstboot " + self.config_data['base_dir'] + "/" + self.config_data['firstboot_dir'] + role_dict['firstboot']
             if len(role_dict['firstboot']) > 0:
-                print "Note: Running pre_boot script: " + command
-                return_code = subprocess.call(command, shell=True)  
+                print "Note: " + vm_name + ": Running pre_boot script: " + command
+                return_code = subprocess.call(command, shell=True)
             else:
-                return_code = 0 
-                print "WARNING: No firstboot script defined."
+                return_code = 0
+                print "WARNING: " + vm_name  + ": No firstboot script defined."
         except:
-            print "ERROR: firstboot script failed."
+            print "ERROR: " + vm_name  + ": Firstboot script failed."
             return False
         return return_code
 
@@ -337,13 +368,13 @@ class kvm_local_deploy:
         try:
             command = self.config_data['base_dir'] + "/" + self.config_data['postboot_dir'] + role_dict['postboot'] + " " + vm_name
             if len(role_dict['postboot']) > 0:
-                print "Note: Running postboot script: " + command
-                return_code = subprocess.call(command, shell=True)  
+                print "Note: " + vm_name + ": Running postboot script: " + command
+                return_code = subprocess.call(command, shell=True)
             else:
-                return_code = 0 
-                print "WARNING: No postboot script defined."
+                return_code = 0
+                print "WARNING: " + vm_name  + ": No postboot script defined."
         except:
-            print "ERROR: postboot script failed."
+            print "ERROR: " + vm_name  + ": Postboot script failed."
             return False
         return return_code
 
@@ -351,42 +382,79 @@ class kvm_local_deploy:
     def get_domain(self, vm_name):
         return self.conn.lookupByName(vm_name)
 
+    # Deploy a certain hostname
+    def deploy_host(self, hostname):
+        role = hostname.strip('0123456789')
+        digit = re.search(r'\d+$', hostname).group()
+        return self.deploy_role(role, digit)
+
+    # Delete
+    def delete_host(self, hostname):
+        print "Deleting vm '" + hostname + "'.."
+        try:
+            # Destroy
+            command = "virsh destroy " + hostname
+            return_code = subprocess.call(command, shell=True)
+            # Undefine
+            command = "virsh undefine " + hostname
+            return_code = subprocess.call(command, shell=True)
+            # Delete
+            command = "sudo rm /data/images/" + hostname + ".img"
+            return_code = subprocess.call(command, shell=True)
+        except:
+            return False
+        return True
+
     # Deploy a VM with a given role
-    def deploy_role(self, role_name):
+    def deploy_role(self, role_name, digit=''):
+        role_name = role_name.strip()
+        if role_name == '':
+            print "Error: no role_name supplied"
+            return False
+        # Clean is specific hostname
+        if digit != '' and self.FORCE == 1:
+            self.delete_host(role_name + digit)
         # Generate name
-        vm_name = self.generate_vm_name(role_name)
+        vm_name = self.generate_vm_name(role_name, digit)
         if vm_name is False:
-            sys.exit(1)
-        # Get role
-        role_data = self.get_role(role_name)
-        # Copy template to image
-        self.copy_image(role_data['image'], vm_name)
-        # Define the vm in Qemu
-        self.define_vm(role_name, vm_name)
-        # Exec firstboot action
-        self.firstboot_action(role_name, vm_name)
-        # Start domain
-        self.start_vm(vm_name)
-        # Exec postboot action
-        self.postboot_action(role_name, vm_name)
+            print "Note: Exiting while deploying '" + role_name + digit + "'"
+            return False
+        try:
+            # Get role
+            role_data = self.get_role(role_name)
+            # Copy template to image
+            self.copy_image(role_data['image'], vm_name)
+            # Define the vm in Qemu
+            self.define_vm(role_name, vm_name)
+            # Exec firstboot action
+            self.firstboot_action(role_name, vm_name)
+            # Start domain
+            self.start_vm(vm_name)
+            # Exec postboot action
+            self.postboot_action(role_name, vm_name)
+        except:
+            return False
+        return True
 
     # Generate a name for the VM
-    def generate_vm_name(self, role_name):
+    def generate_vm_name(self, role_name, digit=''):
         role_dict = self.get_role(role_name)
-        print "Note: Need a VM with name " + role_dict['vm_prefix']
+        if role_dict is False:
+            print "Error: role '" + role_name + "' unknown."
+            return False
         if digit == '':
-            for n in range (1, 9): 
+            for n in range (1, 9):
                 name = role_dict['vm_prefix'] + str(n)
                 if not self.check_exists(name):
-                    print "Note: VM name " + name + " is available."
+                    print "Note: VM name " + name + " is available"
                     return name
-                print "Note: VM name " + name + " is already in use."
+                print "Note: VM name " + name + " is already in use"
         else:
             name = role_dict['vm_prefix'] + str(digit)
             if self.check_exists(name):
-                print "Note: VM name " + name + " is already in use."
+                print "Note: VM name " + name + " is already in use"
             else:
-                print "Note: VM name " + name + " is available."
+                print "Note: VM name " + name + " is requested and available"
                 return name
         print "ERROR: No available names for '" + role_dict['vm_prefix'] + "'"
         return False
@@ -396,13 +464,76 @@ class kvm_local_deploy:
         # Read config file, for each role deploy_role
         cloud_data = self.get_cloud(cloud_name)
         roles = cloud_data['deploy_roles'].split(',')
-        for r in roles:
-            role = r.strip()
-            print "Note: deploying role " + role
-            self.deploy_role(role)
+        pool = ThreadPool(4)
+        results = pool.map(self.deploy_role, roles)
+        pool.close()
+        pool.join()
+        return True
+
+    # Load the json file
+    def load_marvin_json(self):
+        try:
+            print "Note: Processing Marvin config '" + self.marvin_config + "'"
+            config_lines = []
+            with open(self.marvin_config) as file_pointer:
+                for line in file_pointer:
+                    ws = line.strip()
+                    if not ws.startswith("#"):
+                        config_lines.append(ws)
+            self.marvin_data = json.loads("\n".join(config_lines))
+            return True
+        except:
+            print "Error: loading Marvin failed"
+            return False
+
+    # Get Marvin json
+    def get_marvin_json(self):
+        if not self.marvin_data:
+            self.load_marvin_json()
+        return self.marvin_data
+
+    # Hypervisor type
+    def get_hypervisor_type(self, zone=0, pod=0, cluster=0):
+        if not self.marvin_data:
+            self.load_marvin_json()
+        return self.marvin_data['zones'][zone]['pods'][pod]['clusters'][cluster]['hypervisor'].lower()
+
+    # Get hypervisors from Marvin
+    def get_hosts(self, zone=0, pod=0, cluster=0):
+        hosts = []
+        if not self.marvin_data:
+            self.load_marvin_json()
+        for h in self.marvin_data['zones'][zone]['pods'][pod]['clusters'][cluster]['hosts']:
+            url_split = h['url'].split('/')
+            hosts.append(url_split[2].split('.')[0])
+        return hosts
+
+    # Deploy Marvin infra
+    def deploy_marvin(self):
+        if not self.get_marvin_json():
+            return False
+        print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
+        hosts = self.get_hosts()
+        pool = ThreadPool(4)
+        results = pool.map(self.deploy_host, hosts)
+        pool.close()
+        pool.join()
+        return True
+
+    # Delete Marvin infra
+    def delete_marvin(self):
+        if not self.get_marvin_json():
+            return False
+        print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
+        hosts = self.get_hosts()
+        pool = ThreadPool(4)
+        results = pool.map(self.delete_host, hosts)
+        pool.close()
+        pool.join()
+        return True
 
 # Init our class
-d = kvm_local_deploy(DEBUG, DRYRUN)
+d = kvm_local_deploy(DEBUG, DRYRUN, FORCE, deploy_marvin)
 
 # Display status
 if display_state == True:
@@ -410,21 +541,45 @@ if display_state == True:
 
 # Deploy a cloud
 if len(deploy_cloud) > 0:
-    print "Note: You want to deploy a VM with cloud '" + deploy_cloud + "'.."
+    print "Note: You want to deploy a cloud based on config file '" + deploy_cloud + "'.."
     if not d.cloud_exists(deploy_cloud):
         print "Error: the cloud does not exist."
         sys.exit(1)
     # Deploy it
-    d.deploy_cloud(deploy_cloud)
+    if not d.deploy_cloud(deploy_cloud):
+        sys.exit(1)
+    sys.exit(0)
+
+# Deploy a Marvin data center
+if len(deploy_marvin) > 0:
+    # Delete
+    if delete == 1:
+       print "Note: Deleting"
+       d.delete_marvin()
+       sys.exit(0)
+
+    print "Note: You want to deploy a cloud based on Marvin config file '" + deploy_marvin + "'.."
+    if not d.marvin_exists(deploy_marvin):
+        print "Error: the Marvin config file '" + deploy_marvin  + "' does not exist."
+        sys.exit(1)
+    # Deploy it
+    if not d.deploy_marvin():
+        sys.exit(1)
     sys.exit(0)
 
 # Deploy a role
 if len(deploy_role) > 0:
+    # Delete
+    if delete == 1 and digit != '':
+        print "Note: Deleting"
+        d.delete_host(deploy_role + digit)
+        sys.exit(0)
+
+    # Create
     print "Note: You want to deploy a VM with role '" + deploy_role + "'.."
     if not d.role_exists(deploy_role):
         print "Error: the role does not exist."
         sys.exit(1)
-    # Deploy it
-    d.deploy_role(deploy_role)
+    if not d.deploy_role(deploy_role, digit):
+        sys.exit(1)
     sys.exit(0)
-

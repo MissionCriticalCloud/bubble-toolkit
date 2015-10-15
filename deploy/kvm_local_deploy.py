@@ -36,6 +36,7 @@ import json
 import socket
 import re
 from multiprocessing.dummy import Pool as ThreadPool
+import os
 
 # Colored terminals
 try:
@@ -128,7 +129,7 @@ class kvm_local_deploy:
         self.marvin_data = False
         # we can run as a user in the libvirt group
         #self.check_root()
-        self.configfile = os.getcwd() + '/config'
+        self.configfile = os.path.dirname(os.path.realpath(__file__)) + '/config'
         self.config_data = {}
         try:
             self.conn = libvirt.open('qemu:///system')
@@ -151,6 +152,7 @@ class kvm_local_deploy:
         config.read(self.configfile)
         try:
             self.config_data = self.get_config_section(self.configfile, 'mct')
+            self.config_data['base_dir'] = os.path.dirname(os.path.realpath(__file__))
         except:
             print "Error: Cannot read or parse mctDeploy config file '" + self.configfile + "'"
             print "Hint: Setup the local config file 'config', using 'config.sample' as a starting point. See documentation."

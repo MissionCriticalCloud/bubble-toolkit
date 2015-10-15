@@ -407,6 +407,11 @@ class kvm_local_deploy:
             return False
         return True
 
+    # Delete host role wrapper
+    def delete_host_role_wrapper(self, role_name, digit):
+        role_dict = self.get_role(role_name)
+        d.delete_host(role_dict['vm_prefix'] + digit)
+
     # Deploy a VM with a given role
     def deploy_role(self, role_name, digit=''):
         role_name = role_name.strip()
@@ -574,7 +579,7 @@ if len(deploy_role) > 0:
     # Delete
     if delete == 1 and digit != '':
         print "Note: Deleting"
-        d.delete_host(deploy_role + digit)
+        d.delete_host_role_wrapper(deploy_role, digit)
         sys.exit(0)
 
     # Create

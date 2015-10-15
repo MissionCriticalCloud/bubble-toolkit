@@ -1,7 +1,5 @@
 [mct]
 # Needs trailing slash
-# base_dir = /data/git/remibergsma/MCT-shared/deploy/
-base_dir = /data/shared/deploy/
 template_dir = /data/templates/
 image_dir = /data/images/
 

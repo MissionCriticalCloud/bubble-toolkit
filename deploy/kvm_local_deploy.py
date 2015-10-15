@@ -391,8 +391,9 @@ class kvm_local_deploy:
 
     # Deploy a certain hostname
     def deploy_host(self, hostname):
-        role = hostname.strip('0123456789')
-        digit = re.search(r'\d+$', hostname).group()
+        role = hostname[:-1]
+        digit = hostname[-1:]
+        print "Note: Found role '" + role + "' and digit '" + digit + "'"
         return self.deploy_role(role, digit)
 
     # Delete

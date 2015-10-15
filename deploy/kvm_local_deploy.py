@@ -56,6 +56,8 @@ def handleArguments(argv):
     FORCE = 0
     global deploy_role
     deploy_role = ''
+    global deploy_vm
+    deploy_vm = ''
     global deploy_cloud
     deploy_cloud = ''
     global deploy_marvin
@@ -70,6 +72,7 @@ def handleArguments(argv):
     # Usage message
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
         '\n  --deploy-role -r \t\tDeploy VM with this role' + \
+        '\n  --deploy-vm -n \t\tDeploy VM with this name' + \
         '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
         '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
         '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
@@ -80,8 +83,8 @@ def handleArguments(argv):
 
     try:
         opts, args = getopt.getopt(
-            argv, "hr:c:d:m:s", [
-                "deploy-role=", "deploy-cloud=", "deploy-marvin=", "digit=", "delete", "status", "debug", "force"])
+            argv, "hr:c:d:m:n:s", [
+                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "digit=", "delete", "status", "debug", "force"])
     except getopt.GetoptError as e:
         print "Error: " + str(e)
         print help
@@ -98,6 +101,8 @@ def handleArguments(argv):
             sys.exit()
         elif opt in ("-r", "--deploy-role"):
             deploy_role = arg
+        elif opt in ("-n", "--deploy-vm"):
+            deploy_vm = arg
         elif opt in ("-c", "--deploy-cloud"):
             deploy_cloud = arg
         elif opt in ("-m", "--deploy-marvin"):
@@ -588,5 +593,19 @@ if len(deploy_role) > 0:
         print "Error: the role does not exist."
         sys.exit(1)
     if not d.deploy_role(deploy_role, digit):
+        sys.exit(1)
+    sys.exit(0)
+
+# Deploy a vm
+if len(deploy_vm) > 0:
+    # Delete
+    if delete == 1:
+        print "Note: Deleting"
+        d.delete_host(deploy_vm + digit)
+        sys.exit(0)
+
+    # Create
+    print "Note: You want to deploy a VM with name '" + deploy_vm + "'.."
+    if not d.deploy_host(deploy_vm + digit):
         sys.exit(1)
     sys.exit(0)

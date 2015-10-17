@@ -4,7 +4,7 @@
 sleep 5
 yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen setroubleshoot openssh-askpass java-1.8.0-openjdk-devel.x86_64 rpm-build rubygems nc
 yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
-yum --enablerepo=epel -y install sshpass
+yum --enablerepo=epel -y install sshpass mariadb
 
 systemctl start mariadb.service
 systemctl enable mariadb.service

@@ -11,7 +11,7 @@ function usage {
 # Options
 skip=0
 run_tests=0
-compile_threads=1
+compile_threads=
 while getopts 'm:T:st' OPTION
 do
   case $OPTION in
@@ -21,7 +21,7 @@ do
         ;;
   t)    run_tests=1
         ;;
-  T)    compile_threads="$OPTARG"
+  T)    compile_threads="-T $OPTARG"
         ;;
   esac
 done
@@ -212,8 +212,12 @@ if [ ${skip} -eq 0 ]; then
     cd packaging
 
     # Use 4 cores when compiling ACS
-    sed -i "/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests \$FLAGS clean package -T ${compile_threads}" /data/git/${HOSTNAME}/cloudstack/packaging/centos7/cloud.spec
-
+    if [ ! -z "${compile_threads}" ]; then
+      echo "Patching cloud.spec (${compile_threads})"
+      sed -i "/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests \$FLAGS clean package ${compile_threads}" /data/git/${HOSTNAME}/cloudstack/packaging/centos7/cloud.spec
+    else
+      echo "No need to patch cloud.spec (${compile_threads})"
+    fi
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
     if [ $? -ne 0 ]; then
@@ -248,7 +252,7 @@ if [ ${skip} -eq 0 ]; then
   cd /data/git/$HOSTNAME/cloudstack
   echo "Compiling CloudStack"
   date
-  mvn ${clean} install -P developer,systemvm -DskipTests -T ${compile_threads}
+  mvn ${clean} install -P developer,systemvm -DskipTests ${compile_threads}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"

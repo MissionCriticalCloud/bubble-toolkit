@@ -10,7 +10,7 @@ function usage {
 # Options
 skip=
 run_tests=
-compile_threads=1
+compile_threads=
 while getopts 'm:p:T:st' OPTION
 do
   case $OPTION in
@@ -22,7 +22,7 @@ do
         ;;
   t)    run_tests="-t"
         ;;
-  T)    compile_threads="$OPTARG"
+  T)    compile_threads="-T $OPTARG"
         ;;
   esac
 done
@@ -79,4 +79,4 @@ git fetch origin pull/${prId}/head:pr/${prId}
 git checkout pr/${prId}
 
 # Build, run and test it
-/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} -T ${compile_threads}
+/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} ${compile_threads}

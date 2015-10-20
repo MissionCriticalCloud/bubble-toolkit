@@ -6,6 +6,8 @@ yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc 
 yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
 yum --enablerepo=epel -y install sshpass mariadb
 
+echo "max_allowed_packet=64M" >> /etc/my.cnf
+
 systemctl start mariadb.service
 systemctl enable mariadb.service
 systemctl stop firewalld.service
@@ -21,7 +23,7 @@ cd /root
 
 wget https://raw.githubusercontent.com/remibergsma/dotfiles/master/.screenrc
 
-curl "https://bootstrap.pypa.io/get-pip.py" | python 
+curl "https://bootstrap.pypa.io/get-pip.py" | python
 pip install mysql-connector-python --allow-external mysql-connector-python requests
 pip install cloudmonkey
 

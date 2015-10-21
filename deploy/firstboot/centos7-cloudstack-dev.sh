@@ -32,9 +32,3 @@ easy_install pycrypto
 
 # Reboot
 reboot
-
-# Keep the script running unti reboot happens
-while :
-do
-  # loop infinitely
-done

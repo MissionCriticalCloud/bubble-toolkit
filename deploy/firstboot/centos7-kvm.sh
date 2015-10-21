@@ -93,8 +93,3 @@ STP=yes" > /etc/sysconfig/network-scripts/ifcfg-cloudbr1
 # Reboot
 reboot
 
-# Keep the script running until the reboot happens
-while :
-do
-  # loop infinitely
-done

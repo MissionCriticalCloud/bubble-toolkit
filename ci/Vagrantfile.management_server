@@ -1,0 +1,39 @@
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = '2'
+
+Vagrant.require_version '>= 1.5.0'
+
+
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = ENV['CLOUDSTACK_TEMPLATE']
+
+  config.vm.synced_folder ".", "/vagrant", type: "rsync",
+    rsync__exclude: [".git/", "vendor"]
+  config.vm.synced_folder "#{ ENV['HOME'] }/.m2", "/home/#{ ENV['SSH_USER'] }.m2", type: "rsync"
+
+  config.vm.provider :cloudstack do |cloudstack, override|
+    cloudstack.host   = ENV['CLOUDSTACK_URL']
+    cloudstack.path   = "/client/api"
+    cloudstack.port   = "443"
+    cloudstack.scheme = "https"
+
+    cloudstack.api_key    = ENV['CLOUDSTACK_API_KEY']
+    cloudstack.secret_key = ENV['CLOUDSTACK_SECRET_KEY']
+
+    cloudstack.service_offering_name = ENV['CLOUDSTACK_SERVICE_OFFERING']
+    cloudstack.network_name          = ENV['CLOUDSTACK_NETWORK']
+    cloudstack.zone_name             = ENV['CLOUDSTACK_ZONE']
+    cloudstack.network_type          = ENV['CLOUDSTACK_NETWORK_TYPE']
+    cloudstack.pf_trusted_networks   = [ ENV['TRUSTED_NETWORK'] ]
+    cloudstack.ssh_key               = ENV['SSH_KEY']
+    cloudstack.ssh_user              = ENV['SSH_USER']
+  end
+
+  config.vm.provision "shell" do |s|
+    s.inline      = "#{ ENV['SCRIPTS_DIR'] }/run_management_server.sh > $HOME/run_management_server.log &"
+    s.name        = "management_server"
+    s.upload_path = "/home/#{ ENV['SSH_USER'] }/vagrant-shell"
+    s.privileged  = false
+  end
+end

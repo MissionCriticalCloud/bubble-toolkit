@@ -20,9 +20,8 @@ def mctCheckoutParameters = [
 def checkoutJobName  = 'mccloud/mct-checkout'
 def checkoutJobBuild = build job: 'mccloud/mct-checkout', parameters: mctCheckoutParameters
 
-print "==> Chekout Build Number = ${checkoutJobBuild.getNumber()}"
-
-def checkoutJobBuildNumber = checkoutJobBuild.getNumber()
+def checkoutJobBuildNumber = checkoutJobBuild.getNumber() as String
+print "==> Chekout Build Number = ${checkoutJobBuildNumber}"
 
 def mctDeployInfraParameters =[
   new StringParameterValue('parent_job', checkoutJobName, 'Parent Job Name'),
@@ -33,9 +32,8 @@ def mctDeployInfraParameters =[
 def deployInfraJobName  = 'mccloud/mct-deploy-infra'
 def deployInfraJobBuild = build job: 'mccloud/mct-deploy-infra', parameters: mctDeployInfraParameters
 
-print "==> Deploy Infra Build Number = ${deployInfraJobBuild.getNumber()}"
-
-def deployInfraJobBuildNumber = deployInfraJobBuild.getNumber()
+def deployInfraJobBuildNumber = deployInfraJobBuild.getNumber() as String
+print "==> Deploy Infra Build Number = ${deployInfraJobBuildNumber}"
 
 def mctDeployDcParameters =[
   new StringParameterValue('parent_job', deployInfraJobName, 'Parent Job Name'),
@@ -46,9 +44,8 @@ def mctDeployDcParameters =[
 def deployDcJobName  = 'mccloud/mct-deploy-data-center'
 def deployDcJobBuild = build job: 'mccloud/mct-deploy-data-center', parameters: mctDeployDcParameters
 
-print "==> Deploy DC Build Number = ${deployDcJobBuild.getNumber()}"
-
-def deployDcJobBuildNumber = deployDcJobBuild.getNumber()
+def deployDcJobBuildNumber = deployDcJobBuild.getNumber() as String
+print "==> Deploy DC Build Number = ${deployDcJobBuildNumber}"
 
 def mctRunMarvinTestsParameters = [
   new StringParameterValue('parent_job', deployDcJobName, 'Parent Job Name'),
@@ -61,9 +58,8 @@ def mctRunMarvinTestsParameters = [
 def runMarvinTestsJobName  = 'mccloud/mct-run-marvin-tests'
 def runMarvinTestsJobBuild = build job: runMarvinTestsJobName, parameters: mctRunMarvinTestsParameters
 
-print "==> Run Marvin Tests Build Number = ${runMarvinTestsJobBuild.getNumber()}"
-
-def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber()
+def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber() as String
+print "==> Run Marvin Tests Build Number = ${runMarvinTestsJobBuildNumber}"
 
 def mctCleanUpInfraParameters = [
   new StringParameterValue('parent_job', runMarvinTestsJobName, 'Parent Job Name'),

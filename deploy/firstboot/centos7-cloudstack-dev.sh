@@ -6,10 +6,13 @@ yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc 
 yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
 yum --enablerepo=epel -y install sshpass mariadb
 
-echo "max_allowed_packet=64M" >> /etc/my.cnf
+echo "JAVA_OPTS=\"-Djava.awt.headless=true -Dfile.encoding=UTF-8 -server -Xms1536m -Xmx3584m\"" >> ~tomcat/conf/tomcat.conf
+systemctl restart tomcat.service 
 
+echo "max_allowed_packet=64M" >> /etc/my.cnf
 systemctl start mariadb.service
 systemctl enable mariadb.service
+
 systemctl stop firewalld.service
 systemctl disable firewalld.service
 

@@ -17,8 +17,8 @@ def mctCheckoutParameters = [
   new CredentialsParameterValue('git_repo_credentials', gitRepoCredentials, 'Git repo credentials')
 ]
 
-def checkoutJobName  = 'mccloud/mct-checkout'
-def checkoutJobBuild = build job: 'mccloud/mct-checkout', parameters: mctCheckoutParameters
+def checkoutJobName  = './mct-checkout'
+def checkoutJobBuild = build job: checkoutJobName, parameters: mctCheckoutParameters
 
 def checkoutJobBuildNumber = checkoutJobBuild.getNumber() as String
 print "==> Chekout Build Number = ${checkoutJobBuildNumber}"
@@ -29,8 +29,8 @@ def mctDeployInfraParameters =[
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
-def deployInfraJobName  = 'mccloud/mct-deploy-infra'
-def deployInfraJobBuild = build job: 'mccloud/mct-deploy-infra', parameters: mctDeployInfraParameters
+def deployInfraJobName  = './mct-deploy-infra'
+def deployInfraJobBuild = build job: deployInfraJobName, parameters: mctDeployInfraParameters
 
 def deployInfraJobBuildNumber = deployInfraJobBuild.getNumber() as String
 print "==> Deploy Infra Build Number = ${deployInfraJobBuildNumber}"
@@ -41,8 +41,8 @@ def mctDeployDcParameters =[
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
-def deployDcJobName  = 'mccloud/mct-deploy-data-center'
-def deployDcJobBuild = build job: 'mccloud/mct-deploy-data-center', parameters: mctDeployDcParameters
+def deployDcJobName  = './mct-deploy-data-center'
+def deployDcJobBuild = build job: deployDcJobName, parameters: mctDeployDcParameters
 
 def deployDcJobBuildNumber = deployDcJobBuild.getNumber() as String
 print "==> Deploy DC Build Number = ${deployDcJobBuildNumber}"
@@ -55,7 +55,7 @@ def mctRunMarvinTestsParameters = [
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
-def runMarvinTestsJobName  = 'mccloud/mct-run-marvin-tests'
+def runMarvinTestsJobName  = './mct-run-marvin-tests'
 def runMarvinTestsJobBuild = build job: runMarvinTestsJobName, parameters: mctRunMarvinTestsParameters
 
 def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber() as String
@@ -67,7 +67,7 @@ def mctCleanUpInfraParameters = [
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
-def cleanUpInfraJobBuild = build job: 'mccloud/mct-cleanup-infra', parameters: mctCleanUpInfraParameters
+def cleanUpInfraJobBuild = build job: './mct-cleanup-infra', parameters: mctCleanUpInfraParameters
 
 print "==> Clean Up Infra Build Number = ${cleanUpInfraJobBuild.getNumber()}"
 

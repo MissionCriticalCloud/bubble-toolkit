@@ -1,6 +1,6 @@
-def DEFAULT_GIT_REPO_URL    = 'https://github.com/schubergphilis/MCCloud.git/'
-def DEFAULT_GIT_REPO_BRANCH = 'master'
-def DEFAULT_GIT_REPO_CREDENTIALS   = '298a5b23-7bfc-4b68-82aa-ca44465b157d'
+def DEFAULT_GIT_REPO_URL         = 'https://github.com/schubergphilis/MCCloud.git/'
+def DEFAULT_GIT_REPO_BRANCH      = 'master'
+def DEFAULT_GIT_REPO_CREDENTIALS = '298a5b23-7bfc-4b68-82aa-ca44465b157d'
 
 def MARVIN_TESTS_WITH_HARDWARE = [
   'component/test_vpc_redundant',

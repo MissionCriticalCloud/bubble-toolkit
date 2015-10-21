@@ -9,6 +9,7 @@ def gitBranch            = sha1
 def gitRepoCredentials   = git_repo_credentials
 def marvinTestsWithHw    = (marvin_tests_with_hw.split(' ') as List)
 def marvinTestsWithoutHw = (marvin_tests_without_hw.split(' ') as List)
+def marvinConfigFile     = marvin_config_file
 
 def mctCheckoutParameters = [
   new StringParameterValue('git_repo_url', gitRepoUrl, 'Git repository URL'),
@@ -28,9 +29,7 @@ def checkoutJobBuildNumber = checkoutJobBuild.getNumber()
 def mctDeployInfraParameters =[
   new StringParameterValue('parent_job', checkoutJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', checkoutJobBuildNumber, 'Parent Job Build Number'),
-  new StringParameterValue('hypervisor_hosts', 'kvm1 kvm2', 'Hypervisor Hosts'),
-  new StringParameterValue('secondary_storage_location', '/data/storage/secondary/MCCT-SHARED-1', 'Secondary Storage Location'),
-  new StringParameterValue('marvin_config_file', 'mct-zone1-kvm1-kvm2.cfg', 'Marvin Configuration File')
+  new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
 def deployInfraJobBuild = build job: 'mccloud/mct-deploy-infra', parameters: mctDeployInfraParameters
@@ -45,7 +44,7 @@ def deployInfraJobBuildNumber = deployInfraJobBuild.getNumber()
 def mctDeployDcParameters =[
   new StringParameterValue('parent_job', deployInfraJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', deployInfraJobBuildNumber, 'Parent Job Build Number'),
-  new StringParameterValue('marvin_config_file', 'mct-zone1-kvm1-kvm2.cfg', 'Marvin Configuration File')
+  new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
 def deployDcJobBuild = build job: 'mccloud/mct-deploy-data-center', parameters: mctDeployDcParameters
@@ -62,7 +61,7 @@ def mctRunMarvinTestsParameters = [
   new StringParameterValue('parent_job_build', deployDcJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_tests_with_hw', marvinTestsWithHw.join(' '), 'Marvin tests that require Hardware'),
   new StringParameterValue('marvin_tests_without_hw', marvinTestsWithoutHw.join(' '), 'Marvin tests that do not require Hardware'),
-  new StringParameterValue('marvin_config_file', 'mct-zone1-kvm1-kvm2.cfg', 'Marvin Configuration File')
+  new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
 def runMarvinTestsJobBuild = build job: 'mccloud/mct-run-marvin-tests', parameters: mctRunMarvinTestsParameters
@@ -77,7 +76,7 @@ def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber()
 def mctCleanUpInfraParameters = [
   new StringParameterValue('parent_job', runMarvinTestsJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', runMarvinTestsJobBuildNumber, 'Parent Job Build Number'),
-  new StringParameterValue('marvin_config_file', 'mct-zone1-kvm1-kvm2.cfg', 'Marvin Configuration File')
+  new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
 def cleanUpInfraJobBuild = build job: 'mccloud/mct-cleanup-infra', parameters: mctCleanUpInfraParameters

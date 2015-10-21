@@ -3,9 +3,10 @@ import hudson.plugins.copyartifact.SpecificBuildSelector
 // Job Parameters
 def parentJob        = parent_job
 def parentJobBuild   = parent_job_build
-def hosts            = hypervisor_hosts.split(' ') as List
-def secondaryStorage = secondary_storage_location
 def marvinConfigFile = marvin_config_file
+
+def HOSTS             = ['kvm1', 'kvm2']
+def SECONDARY_STORAGE = '/data/storage/secondary/MCCT-SHARED-1'
 
 def DB_SCRIPTS = [
   'setup/db/db/',
@@ -39,11 +40,11 @@ node('executor-mct') {
   parallel 'Deploy Management Server': {
     deployMctCs()
     deployDb()
-    installSystemVmTemplate('root@cs1', secondaryStorage)
+    installSystemVmTemplate('root@cs1', SECONDARY_STORAGE)
     deployWar()
   }, 'Deploy Hosts': {
     deployHosts(marvinConfigFile)
-    deployRpmsInParallel(hosts)
+    deployRpmsInParallel(HOSTS)
   }, failFast: true
 
   archive MARVIN_SCRIPTS.join(', ')

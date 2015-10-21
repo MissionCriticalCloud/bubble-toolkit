@@ -1,7 +1,7 @@
 // Job Parameters
 def gitRepoUrl           = git_repo_url
-def gitRepoCredentials   = git_repo_credentials
 def gitBranch            = sha1
+def gitRepoCredentials   = git_repo_credentials
 
 // Job constants
 

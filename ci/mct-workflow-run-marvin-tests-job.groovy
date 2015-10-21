@@ -18,13 +18,12 @@ node('executor') {
   def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS + [marvinConfigFile]
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
 
-  setupPython {
-    installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
-    parallel 'Marvin tests with hardware': {
-      runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true)
-    }, 'Marvin tests without hardware': {
-      runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithoutHw, false)
-    }
+  stash name: 'marvin', includes: filesToCopy.join(', ')
+
+  parallel 'Marvin tests with hardware': {
+    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true)
+  }, 'Marvin tests without hardware': {
+    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithoutHw, false)
   }
 }
 
@@ -58,10 +57,16 @@ def installMarvin(marvinDistFile) {
 }
 
 def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware) {
-  def branchNameFunction     = { t -> "Marvin test: ${t}" }
-  def runMarvinTestsFunction = { t -> runMarvinTest(t, marvinConfigFile, requireHardware) }
-  def marvinTestBranches = buildParallelBranches(marvinTests, branchNameFunction, runMarvinTestsFunction)
-  parallel(marvinTestBranches)
+  node('executor') {
+    unstash 'marvin'
+    setupPython {
+      installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
+      def branchNameFunction     = { t -> "Marvin test: ${t}" }
+      def runMarvinTestsFunction = { t -> runMarvinTest(t, marvinConfigFile, requireHardware) }
+      def marvinTestBranches = buildParallelBranches(marvinTests, branchNameFunction, runMarvinTestsFunction)
+      parallel(marvinTestBranches)
+    }
+  }
 }
 
 def runMarvinTest(testPath, configFile, requireHardware) {

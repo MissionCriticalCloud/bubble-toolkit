@@ -36,14 +36,14 @@ node('executor') {
 // --------------
 
 def checkoutAndBuild(gitRepoUrl, gitBranch, gitRepoCredentials) {
-  //checkout scm: [$class: 'GitSCM', branches:          [[name: gitBranch]],
-  //                                 userRemoteConfigs: [[url:  gitRepoUrl, credentialsId: gitRepoCredentials]]]
+  checkout scm: [$class: 'GitSCM', branches:          [[name: gitBranch]],
+                                   userRemoteConfigs: [[url:  gitRepoUrl, credentialsId: gitRepoCredentials]]]
 
   def projectVersion = version()
 
-  //mvn 'clean install -Pdeveloper,systemvm -T 4'
-  //reportJUnitResult('**/target/surefire-reports/*.xml')
-  //packageRpm('centos7')
+  mvn 'clean install -Pdeveloper,systemvm -T4'
+  reportJUnitResult('**/target/surefire-reports/*.xml')
+  packageRpm('centos7')
   archive "client/target/cloud-client-ui-${projectVersion}.war"
   archive "dist/rpmbuild/RPMS/x86_64/cloudstack-agent-${projectVersion}*.rpm"
   archive "dist/rpmbuild/RPMS/x86_64/cloudstack-common-${projectVersion}*.rpm"
@@ -73,7 +73,7 @@ def checkoutAndBuild(gitRepoUrl, gitBranch, gitRepoCredentials) {
 def deployInfra(hosts, secondaryStorage, marvinConfigFile) {
   node('executor-mct') {
     sh  "cp /data/shared/marvin/${marvinConfigFile} ."
-    updateManagementServerIp(marvinConfigFile, 'cs1')
+    updateManagementServerIp(marvinConfigFile, '192.168.22.61')
     stash name: 'marvin-config', includes: marvinConfigFile
 
     parallel 'Deploy Management Server': {
@@ -223,12 +223,12 @@ def deployDb() {
   ssh('root@cs1', 'mysql -u root < grant-remote-access.sql')
   mysqlScript('cs1', 'root',  '',      '', 'setup/db/create-database.sql')
   mysqlScript('cs1', 'root',  '',      '', 'setup/db/create-database-premium.sql')
-  mysqlScript('cs1', 'root',  '',      '',  'setup/db/create-schema.sql')
-  mysqlScript('cs1', 'root',  '',      '',  'setup/db/create-schema-premium.sql')
+  mysqlScript('cs1', 'root',  '',      '', 'setup/db/create-schema.sql')
+  mysqlScript('cs1', 'root',  '',      '', 'setup/db/create-schema-premium.sql')
   mysqlScript('cs1', 'cloud', 'cloud', '', 'setup/db/templates.sql')
   mysqlScript('cs1', 'cloud', 'cloud', '', 'developer/developer-prefill.sql')
   def extraDbConfig = [
-    'INSERT INTO cloud.configuration (instance, name, value) VALUE(\'DEFAULT\', \'host\', \'cs1\') ON DUPLICATE KEY UPDATE value = \'192.168.22.61\';',
+    'INSERT INTO cloud.configuration (instance, name, value) VALUE(\'DEFAULT\', \'host\', \'192.168.22.61\') ON DUPLICATE KEY UPDATE value = \'192.168.22.61\';',
     'INSERT INTO cloud.configuration (instance, name, value) VALUE(\'DEFAULT\', \'sdn.ovs.controller.default.label\', \'cloudbr0\') ON DUPLICATE KEY UPDATE value = \'cloudbr0\';',
     'UPDATE cloud.vm_template SET url=\'http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2\' where id=1;',
     'UPDATE cloud.vm_template SET url=\'http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2\' where id=3;',
@@ -274,7 +274,9 @@ def deployRpm(target) {
     'rm -f /etc/cloudstack/agent/agent.properties',
     'yum -q -y localinstall cloudstack-agent* cloudstack-common*'
   ]
-  ssh(target, hostCommands.join('; '))
+  makeBashScript('deploy_rpm.sh', hostCommands)
+  scp('deploy_rpm.sh', "${target}:./")
+  ssh(target, 'deploy_rpm.sh')
   echo "==> RPM deployed on ${target}"
 }
 
@@ -287,7 +289,8 @@ def deployRpmsInParallel(hosts) {
 def installSystemVmTemplate(target, secondaryStorage) {
   ssh(target, 'mkdir -p scripts/storage')
   scp('scripts/storage/secondary', "${target}:./scripts/storage/")
-  ssh(target, "chmod +x scripts/storage/secondary/*; bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondaryStorage} -f /data/templates/systemvm64template-master-4.6.0-kvm.qcow2 -h kvm -o localhost -r root -e qcow2 -F")
+  ssh(targte, 'chmod +x scripts/storage/secondary/*')
+  ssh(target, "bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondaryStorage} -f /data/templates/systemvm64template-master-4.6.0-kvm.qcow2 -h kvm -o localhost -r root -e qcow2 -F")
   echo '==> SystemVM installed'
 }
 
@@ -315,6 +318,11 @@ def version() {
   def matcher = readFile('pom.xml') =~ '<version>(.+)</version>'
   // first matche will be parent version, so we take the seccond ie, matcher[1]
   matcher ? matcher[1][1] : null
+}
+
+def makeBashScript(name, commands) {
+  writeFile file: name, text: '#! /bin/bash\n\n' + commands.join(';\n')
+  sh "chmod +x ${name}"
 }
 
 def buildParallelBranches(elements, branchNameFunction, actionFunction) {

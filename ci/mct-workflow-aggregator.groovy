@@ -3,10 +3,17 @@ import com.cloudbees.plugins.credentials.CredentialsParameterValue
 import com.cloudbees.plugins.credentials.CredentialsProvider
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials
 
+// Job Parameters
+def gitRepoUrl           = git_repo_url
+def gitBranch            = sha1
+def gitRepoCredentials   = git_repo_credentials
+def marvinTestsWithHw    = (marvin_tests_with_hw.split(' ') as List)
+def marvinTestsWithoutHw = (marvin_tests_without_hw.split(' ') as List)
+
 def mctCheckoutParameters = [
-  new StringParameterValue('git_repo_url', 'https://github.com/schubergphilis/MCCloud', 'Git repository URL'),
-  new StringParameterValue('sha1', 'tmp/combined-prs-496-497-498', 'Git branch'),
-  new CredentialsParameterValue('git_repo_credentials', '298a5b23-7bfc-4b68-82aa-ca44465b157d', 'Git repo credentials')
+  new StringParameterValue('git_repo_url', gitRepoUrl, 'Git repository URL'),
+  new StringParameterValue('sha1', gitBranch, 'Git branch'),
+  new CredentialsParameterValue('git_repo_credentials', gitRepoCredentials, 'Git repo credentials')
 ]
 
 def checkoutJobBuild = build job: 'mccloud/mct-checkout', parameters: mctCheckoutParameters
@@ -50,26 +57,6 @@ print "==> Deploy DC Build Number = ${deployDcJobBuild.getNumber()}"
 def deployDcJobName        = deployDcJobBuild.getName()
 def deployDcJobBuildNumber = deployDcJobBuild.getNumber()
 
-def marvinTestsWithHw = [
-  'component/test_vpc_redundant',
-  'component/test_routers_iptables_default_policy',
-  'component/test_routers_network_ops',
-  'component/test_vpc_router_nics',
-  'smoke/test_loadbalance'
-]
-
-def marvinTestsWithoutHw = [
-  'smoke/test_routers',
-  'smoke/test_network_acl',
-  'smoke/test_privategw_acl',
-  'smoke/test_reset_vm_on_reboot',
-  'smoke/test_vm_life_cycle',
-  'smoke/test_vpc_vpn',
-  'smoke/test_service_offerings',
-  'component/test_vpc_offerings',
-  'component/test_vpc_routers'
-]
-
 def mctRunMarvinTestsParameters = [
   new StringParameterValue('parent_job', deployDcJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', deployDcJobBuildNumber, 'Parent Job Build Number'),
@@ -79,6 +66,25 @@ def mctRunMarvinTestsParameters = [
 ]
 
 def runMarvinTestsJobBuild = build job: 'mccloud/mct-run-marvin-tests', parameters: mctRunMarvinTestsParameters
+
+print "==> Run Marvin Tests Job Id       = ${runMarvinTestsJobBuild.getId()}"
+print "==> Run Marvin Tests Job Name     = ${runMarvinTestsJobBuild.getName()}"
+print "==> Run Marvin Tests Build Number = ${runMarvinTestsJobBuild.getNumber()}"
+
+def runMarvinTestsJobName        = runMarvinTestsJobBuild.getName()
+def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber()
+
+def mctCleanUpInfraParameters = [
+  new StringParameterValue('parent_job', runMarvinTestsJobName, 'Parent Job Name'),
+  new StringParameterValue('parent_job_build', runMarvinTestsJobBuildNumber, 'Parent Job Build Number'),
+  new StringParameterValue('marvin_config_file', 'mct-zone1-kvm1-kvm2.cfg', 'Marvin Configuration File')
+]
+
+def cleanUpInfraJobBuild = build job: 'mccloud/mct-cleanup-infra', parameters: mctCleanUpInfraParameters
+
+print "==> Clean Up Infra Job Id       = ${cleanUpInfraJobBuild.getId()}"
+print "==> Clean Up Infra Job Name     = ${cleanUpInfraJobBuild.getName()}"
+print "==> Clean Up Infra Build Number = ${cleanUpInfraJobBuild.getNumber()}"
 
 //def credentials = findCredentials({ c -> c.id  == '298a5b23-7bfc-4b68-82aa-ca44465b157d' })
 def findCredentials(matcher) {

@@ -1,6 +1,7 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
 
 // Job Parameters
+def nodeExecutor         = executor
 def parentJob            = parent_job
 def parentJobBuild       = parent_job_build
 def marvinTestsWithHw    = (marvin_tests_with_hw.split(' ') as List)
@@ -14,9 +15,10 @@ def MARVIN_SCRIPTS = [
   'tools/travis/xunit-reader.py'
 ]
 
-node('executor') {
+node(nodeExecutor) {
   def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS + [marvinConfigFile]
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
+  archive filesToCopy.join(', ')
 
   stash name: 'marvin', includes: filesToCopy.join(', ')
 
@@ -24,6 +26,15 @@ node('executor') {
     runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true)
   }, 'Marvin tests without hardware': {
     runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithoutHw, false)
+  }
+
+  unarchive mapping: ['integration-test-results/': '.']
+  try {
+    sh 'python tools/travis/xunit-reader.py integration-test-results/'
+  } catch(all) {
+    echo 'Need to fix tools/travis/xunit-reader.py to not exit != 0'
+  }finally {
+    step([$class: 'JUnitResultArchiver', testResults: 'integration-test-results/**/test_*.xml'])
   }
 }
 
@@ -57,7 +68,7 @@ def installMarvin(marvinDistFile) {
 }
 
 def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware) {
-  node('executor') {
+  node(nodeExecutor) {
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')

@@ -23,7 +23,14 @@ def checkoutJobBuild = build job: checkoutJobName, parameters: mctCheckoutParame
 def checkoutJobBuildNumber = checkoutJobBuild.getNumber() as String
 print "==> Chekout Build Number = ${checkoutJobBuildNumber}"
 
+def executor = 'NO_EXECUTOR'
+
+node('excutor-mct') {
+  executor = getSlaveHostName()
+}
+
 def mctDeployInfraParameters =[
+  new StringParameterValue('executor', executor, 'Executor'),
   new StringParameterValue('parent_job', checkoutJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', checkoutJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
@@ -36,6 +43,7 @@ def deployInfraJobBuildNumber = deployInfraJobBuild.getNumber() as String
 print "==> Deploy Infra Build Number = ${deployInfraJobBuildNumber}"
 
 def mctDeployDcParameters =[
+  new StringParameterValue('executor', executor, 'Executor'),
   new StringParameterValue('parent_job', deployInfraJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', deployInfraJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
@@ -48,6 +56,7 @@ def deployDcJobBuildNumber = deployDcJobBuild.getNumber() as String
 print "==> Deploy DC Build Number = ${deployDcJobBuildNumber}"
 
 def mctRunMarvinTestsParameters = [
+  new StringParameterValue('executor', executor, 'Executor'),
   new StringParameterValue('parent_job', deployDcJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', deployDcJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_tests_with_hw', marvinTestsWithHw.join(' '), 'Marvin tests that require Hardware'),
@@ -62,6 +71,7 @@ def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber() as String
 print "==> Run Marvin Tests Build Number = ${runMarvinTestsJobBuildNumber}"
 
 def mctCleanUpInfraParameters = [
+  new StringParameterValue('executor', executor, 'Executor'),
   new StringParameterValue('parent_job', runMarvinTestsJobName, 'Parent Job Name'),
   new StringParameterValue('parent_job_build', runMarvinTestsJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
@@ -80,4 +90,9 @@ def findCredentials(matcher) {
       }
   }
   return null
+}
+
+def getSlaveHostName() {
+  sh 'hostname > .tmpHostname'
+  readFile('.tmpHostname').replace('.localdomain', '').trim()
 }

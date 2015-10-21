@@ -2,6 +2,8 @@ def DEFAULT_GIT_REPO_URL         = 'https://github.com/schubergphilis/MCCloud.gi
 def DEFAULT_GIT_REPO_BRANCH      = 'master'
 def DEFAULT_GIT_REPO_CREDENTIALS = '298a5b23-7bfc-4b68-82aa-ca44465b157d'
 
+def EXECUTOR = 'executor-mct'
+
 def MARVIN_TESTS_WITH_HARDWARE = [
   'component/test_vpc_redundant',
   'component/test_routers_iptables_default_policy',
@@ -75,6 +77,7 @@ workflowJob(CHECKOUT_JOB_NAME) {
 
 workflowJob(DEPLOY_INFRA_JOB_NAME) {
   parameters {
+    textParam('executor', EXECUTOR, 'The executor label')
     textParam('parent_job', CHECKOUT_JOB_NAME, 'The parent job name')
     textParam('parent_job_build', '', 'The parent job build number')
     textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')
@@ -88,6 +91,7 @@ workflowJob(DEPLOY_INFRA_JOB_NAME) {
 
 workflowJob(DEPLOY_DC_JOB_NAME) {
   parameters {
+    textParam('executor', EXECUTOR, 'The executor label')
     textParam('parent_job', DEPLOY_INFRA_JOB_NAME, 'The parent job name')
     textParam('parent_job_build', '', 'The parent job build number')
     textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')
@@ -102,6 +106,7 @@ workflowJob(DEPLOY_DC_JOB_NAME) {
 
 workflowJob(RUN_MARVIN_TESTS_JOB_NAME) {
   parameters {
+    textParam('executor', EXECUTOR, 'The executor label')
     textParam('parent_job', DEPLOY_DC_JOB_NAME, 'The parent job name')
     textParam('parent_job_build', '', 'The parent job build number')
     textParam('marvin_tests_with_hw', MARVIN_TESTS_WITH_HARDWARE.join(' '), 'Marvin tests tagged as require_hardware=true')
@@ -117,6 +122,7 @@ workflowJob(RUN_MARVIN_TESTS_JOB_NAME) {
 
 workflowJob(CLEANUP_INFRA_JOB_NAME) {
   parameters {
+    textParam('executor', EXECUTOR, 'The executor label')
     textParam('parent_job', RUN_MARVIN_TESTS_JOB_NAME, 'The parent job name')
     textParam('parent_job_build', '', 'The parent job build number')
     textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')

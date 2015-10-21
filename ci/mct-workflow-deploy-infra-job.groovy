@@ -1,6 +1,7 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
 
 // Job Parameters
+def nodeExecutor     = executor
 def parentJob        = parent_job
 def parentJobBuild   = parent_job_build
 def marvinConfigFile = marvin_config_file
@@ -30,7 +31,7 @@ def MARVIN_SCRIPTS = [
   'tools/travis/xunit-reader.py'
 ]
 
-node('executor-mct') {
+node(nodeExecutor) {
   def filesToCopy = BUILD_ARTEFACTS + DB_SCRIPTS + TEMPLATE_SCRIPTS + MARVIN_SCRIPTS
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
 
@@ -43,7 +44,7 @@ node('executor-mct') {
   stash name: 'rpms',              includes: 'dist/rpmbuild/RPMS/x86_64/'
 
   parallel 'Deploy Management Server': {
-    node(getSlaveHostName()) {
+    node(nodeExecutor) {
       unstash 'management-server'
       deployMctCs()
       deployDb()
@@ -51,7 +52,7 @@ node('executor-mct') {
       deployWar()
     }
   }, 'Deploy Hosts': {
-    node(getSlaveHostName()) {
+    node(nodeExecutor) {
       deployHosts(marvinConfigFile)
       deployRpmsInParallel(HOSTS)
     }
@@ -196,5 +197,5 @@ def makeBashScript(name, commands) {
 
 def getSlaveHostName() {
   sh 'hostname > .tmpHostname'
-  readFile('.tmpHostname').trim()
+  readFile('.tmpHostname').replace('.localdomain', '').trim()
 }

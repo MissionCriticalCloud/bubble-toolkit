@@ -44,6 +44,7 @@ FOLDERS.each { folder_name ->
   def cleanUpInfraJobName   = "${folder_name}/mct-cleanup-infra"
 
   workflowJob(aggregatodJobName) {
+    quietPeriod(60)
     parameters {
       textParam('git_repo_url', DEFAULT_GIT_REPO_URL, 'The git repository url ')
       textParam('sha1', DEFAULT_GIT_REPO_BRANCH, 'The git branch (or commit hash)')

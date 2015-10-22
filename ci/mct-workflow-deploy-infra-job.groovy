@@ -52,10 +52,8 @@ node(nodeExecutor) {
       deployWar()
     }
   }, 'Deploy Hosts': {
-    node(nodeExecutor) {
-      deployHosts(marvinConfigFile)
-      deployRpmsInParallel(HOSTS)
-    }
+    deployHosts(marvinConfigFile)
+    deployRpmsInParallel(HOSTS, nodeExecutor)
   }, failFast: true
 
   archive MARVIN_SCRIPTS.join(', ')
@@ -86,7 +84,6 @@ def deployMctCs() {
 }
 
 def deployHosts(marvinConfig) {
-  unstash 'marving-config'
   deplyMctVm('-m', marvinConfig)
   echo '==> kvm1 & kvm2 deployed'
 }
@@ -146,9 +143,9 @@ def deployRpm(target) {
   echo "==> RPM deployed on ${target}"
 }
 
-def deployRpmsInParallel(hosts) {
+def deployRpmsInParallel(hosts, executor) {
   def branchNameFunction = { h -> "Deploying RPM in ${h}" }
-  def deployRpmFunction  = { h -> node(getSlaveHostName()) { deployRpm("root@${h}") } }
+  def deployRpmFunction  = { h -> node(executor) { deployRpm("root@${h}") } }
   parallel buildParallelBranches(hosts, branchNameFunction, deployRpmFunction)
 }
 
@@ -193,9 +190,4 @@ def mysqlScript(host, user, pass, db, script) {
 def makeBashScript(name, commands) {
   writeFile file: name, text: '#! /bin/bash\n\n' + commands.join(';\n')
   sh "chmod +x ${name}"
-}
-
-def getSlaveHostName() {
-  sh 'hostname > .tmpHostname'
-  readFile('.tmpHostname').replace('.localdomain', '').trim()
 }

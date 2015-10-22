@@ -1,6 +1,7 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
 
 // Job Parameters
+def nodeExecutor     = executor
 def parentJob        = parent_job
 def parentJobBuild   = parent_job_build
 def marvinConfigFile = marvin_config_file
@@ -12,7 +13,7 @@ def MARVIN_SCRIPTS = [
   'tools/travis/xunit-reader.py'
 ]
 
-node('executor') {
+node(nodeExecutor) {
   def filesToCopy = [marvinConfigFile] + MARVIN_DIST_FILE + MARVIN_SCRIPTS
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
 

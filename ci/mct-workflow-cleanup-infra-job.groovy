@@ -1,11 +1,12 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
 
 // Job Parameters
+def nodeExecutor         = executor
 def parentJob            = parent_job
 def parentJobBuild       = parent_job_build
 def marvinConfigFile     = marvin_config_file
 
-node('executor-mct') {
+node(nodeExecutor) {
   copyFilesFromParentJob(parentJob, parentJobBuild, [marvinConfigFile])
 
   scp('root@cs1:~tomcat/vmops.log', '.')

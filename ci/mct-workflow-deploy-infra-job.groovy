@@ -1,6 +1,7 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
 
 // Job Parameters
+def nodeExecutor     = executor
 def parentJob        = parent_job
 def parentJobBuild   = parent_job_build
 def marvinConfigFile = marvin_config_file
@@ -30,21 +31,31 @@ def MARVIN_SCRIPTS = [
   'tools/travis/xunit-reader.py'
 ]
 
-node('executor-mct') {
+node(nodeExecutor) {
   def filesToCopy = BUILD_ARTEFACTS + DB_SCRIPTS + TEMPLATE_SCRIPTS + MARVIN_SCRIPTS
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
 
   sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
   updateManagementServerIp(marvinConfigFile, 'cs1')
 
+  def managementServerFiles = DB_SCRIPTS + TEMPLATE_SCRIPTS + ['client/target/']
+  stash name: 'management-server', includes: managementServerFiles.join(', ')
+  stash name: 'marving-config',    includes: marvinConfigFile
+  stash name: 'rpms',              includes: 'dist/rpmbuild/RPMS/x86_64/'
+
   parallel 'Deploy Management Server': {
-    deployMctCs()
-    deployDb()
-    installSystemVmTemplate('root@cs1', SECONDARY_STORAGE)
-    deployWar()
+    node(nodeExecutor) {
+      unstash 'management-server'
+      deployMctCs()
+      deployDb()
+      installSystemVmTemplate('root@cs1', SECONDARY_STORAGE)
+      deployWar()
+    }
   }, 'Deploy Hosts': {
-    deployHosts(marvinConfigFile)
-    deployRpmsInParallel(HOSTS)
+    node(nodeExecutor) {
+      deployHosts(marvinConfigFile)
+      deployRpmsInParallel(HOSTS)
+    }
   }, failFast: true
 
   archive MARVIN_SCRIPTS.join(', ')
@@ -75,7 +86,8 @@ def deployMctCs() {
 }
 
 def deployHosts(marvinConfig) {
-  deplyMctVm('-m', "/data/shared/marvin/${marvinConfig}")
+  unstash 'marving-config'
+  deplyMctVm('-m', marvinConfig)
   echo '==> kvm1 & kvm2 deployed'
 }
 
@@ -120,6 +132,7 @@ def installSystemVmTemplate(target, secondaryStorage) {
 }
 
 def deployRpm(target) {
+  unstash 'rpms'
   scp('dist/rpmbuild/RPMS/x86_64/cloudstack-agent-*.rpm', "${target}:./")
   scp('dist/rpmbuild/RPMS/x86_64/cloudstack-common-*.rpm', "${target}:./")
   def hostCommands = [
@@ -135,7 +148,7 @@ def deployRpm(target) {
 
 def deployRpmsInParallel(hosts) {
   def branchNameFunction = { h -> "Deploying RPM in ${h}" }
-  def deployRpmFunction  = { h -> deployRpm("root@${h}") }
+  def deployRpmFunction  = { h -> node(getSlaveHostName()) { deployRpm("root@${h}") } }
   parallel buildParallelBranches(hosts, branchNameFunction, deployRpmFunction)
 }
 
@@ -180,4 +193,9 @@ def mysqlScript(host, user, pass, db, script) {
 def makeBashScript(name, commands) {
   writeFile file: name, text: '#! /bin/bash\n\n' + commands.join(';\n')
   sh "chmod +x ${name}"
+}
+
+def getSlaveHostName() {
+  sh 'hostname > .tmpHostname'
+  readFile('.tmpHostname').replace('.localdomain', '').trim()
 }

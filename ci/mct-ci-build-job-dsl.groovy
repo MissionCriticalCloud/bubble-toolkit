@@ -9,7 +9,9 @@ def MARVIN_TESTS_WITH_HARDWARE = [
   'component/test_routers_iptables_default_policy',
   'component/test_routers_network_ops',
   'component/test_vpc_router_nics',
-  'smoke/test_loadbalance'
+  'smoke/test_loadbalance',
+  'smoke/test_internal_lb.py',
+  'smoke/test_ssvm.py'
 ]
 
 def MARVIN_TESTS_WITHOUT_HARDWARE = [

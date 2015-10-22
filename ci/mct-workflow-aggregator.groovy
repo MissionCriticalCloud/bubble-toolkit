@@ -1,3 +1,4 @@
+import jenkins.model.Jenkins
 import hudson.model.StringParameterValue
 import com.cloudbees.plugins.credentials.CredentialsParameterValue
 import com.cloudbees.plugins.credentials.CredentialsProvider
@@ -23,11 +24,9 @@ def checkoutJobBuild = build job: checkoutJobName, parameters: mctCheckoutParame
 def checkoutJobBuildNumber = checkoutJobBuild.getNumber() as String
 print "==> Chekout Build Number = ${checkoutJobBuildNumber}"
 
-def executor = 'NO_EXECUTOR'
-
-node('excutor-mct') {
-  executor = getSlaveHostName()
-}
+// NOTE: This only works if we set a quiet period for the job, otherwise two jobs might be scheduled too fast
+// and the same executoer might be picked for both.
+def executor = getAvailableNode('executor-mct')
 
 def mctDeployInfraParameters =[
   new StringParameterValue('executor', executor, 'Executor'),
@@ -92,7 +91,21 @@ def findCredentials(matcher) {
   return null
 }
 
-def getSlaveHostName() {
-  sh 'hostname > .tmpHostname'
-  readFile('.tmpHostname').replace('.localdomain', '').trim()
+def getAvailableNodes(label) {
+  def nodeNames = []
+  Jenkins.instance.nodes.each { n ->
+    def labels = n.getLabelString().split('\\s+')
+    if(labels.contains(label) && n.getComputer().countBusy() == 0) {
+      nodeNames += n.getNodeName()
+    }
+  }
+  nodeNames
+}
+
+def getAvailableNode(label) {
+  def nodes = getAvailableNodes(label)
+  if(nodes.size() < 1) {
+    throw new Exception('Can\'t find an available \'executor-mct\' node')
+  }
+  nodes.getAt(0)
 }

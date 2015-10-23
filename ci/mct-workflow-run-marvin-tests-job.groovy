@@ -23,9 +23,9 @@ node(nodeExecutor) {
   stash name: 'marvin', includes: filesToCopy.join(', ')
 
   parallel 'Marvin tests with hardware': {
-    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true)
+    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true, nodeExecutor)
   }, 'Marvin tests without hardware': {
-    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithoutHw, false)
+    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithoutHw, false, nodeExecutor)
   }
 
   unarchive mapping: ['integration-test-results/': '.']
@@ -67,29 +67,29 @@ def installMarvin(marvinDistFile) {
   sh 'pip install nose --upgrade --force'
 }
 
-def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware) {
+def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware, nodeExecutor) {
+  def branchNameFunction     = { t -> "Marvin test: ${t}" }
+  def runMarvinTestsFunction = { t -> runMarvinTest(t, marvinConfigFile, requireHardware, nodeExecutor) }
+  def marvinTestBranches = buildParallelBranches(marvinTests, branchNameFunction, runMarvinTestsFunction)
+  parallel(marvinTestBranches)
+}
+
+def runMarvinTest(testPath, configFile, requireHardware, nodeExecutor) {
   node(nodeExecutor) {
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
-      def branchNameFunction     = { t -> "Marvin test: ${t}" }
-      def runMarvinTestsFunction = { t -> runMarvinTest(t, marvinConfigFile, requireHardware) }
-      def marvinTestBranches = buildParallelBranches(marvinTests, branchNameFunction, runMarvinTestsFunction)
-      parallel(marvinTestBranches)
+      sh 'mkdir -p integration-test-results/smoke/misc integration-test-results/component'
+      try {
+        sh "nosetests --with-xunit --xunit-file=integration-test-results/${testPath}.xml --with-marvin --marvin-config=${configFile} test/integration/${testPath}.py -s -a tags=advanced,required_hardware=${requireHardware}"
+      } catch(e) {
+        echo "Test ${testPath} was not successful"
+      }
+      sh 'cp -rf /tmp/MarvinLogs .'
+      archive 'MarvinLogs'
+      archive 'integration-test-results/'
     }
   }
-}
-
-def runMarvinTest(testPath, configFile, requireHardware) {
-  sh 'mkdir -p integration-test-results/smoke/misc integration-test-results/component'
-  try {
-    sh "nosetests --with-xunit --xunit-file=integration-test-results/${testPath}.xml --with-marvin --marvin-config=${configFile} test/integration/${testPath}.py -s -a tags=advanced,required_hardware=${requireHardware}"
-  } catch(e) {
-    echo "Test ${testPath} was not successful"
-  }
-  sh 'cp -rf /tmp/MarvinLogs .'
-  archive 'MarvinLogs'
-  archive 'integration-test-results/'
 }
 
 def buildParallelBranches(elements, branchNameFunction, actionFunction) {

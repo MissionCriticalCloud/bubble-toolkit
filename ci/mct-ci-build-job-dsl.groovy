@@ -92,7 +92,7 @@ FOLDERS.each { folder_name ->
     }
     definition {
       cps {
-        script(readFileFromWorkspace('ci/mct-workflow-cleanup-infra-job.groovy'))
+        script(readFileFromWorkspace('ci/mct-workflow-deploy-infra-job.groovy'))
       }
     }
   }

@@ -42,6 +42,8 @@ node('executor') {
   archive DB_SCRIPTS.join(', ')
   archive TEMPLATE_SCRIPTS.join(', ')
   archive MARVIN_SCRIPTS.join(', ')
+
+  sh 'rm -rf dist'
 }
 
 // ----------------

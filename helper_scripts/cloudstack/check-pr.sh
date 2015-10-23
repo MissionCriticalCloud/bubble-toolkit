@@ -76,7 +76,15 @@ git checkout master
 # Get the PR
 git branch -D pr/${prId}
 git fetch origin pull/${prId}/head:pr/${prId}
+if [ $? -gt 0  ]; then
+  echo "ERROR: Fetching failed!"
+  exit 1
+fi
 git checkout pr/${prId}
+if [ $? -gt 0  ]; then
+  echo "ERROR: Checkout failed!"
+  exit 1
+fi
 
 # Build, run and test it
 /data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} ${compile_threads}

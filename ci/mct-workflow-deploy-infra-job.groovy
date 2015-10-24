@@ -38,14 +38,10 @@ node(nodeExecutor) {
   sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
   updateManagementServerIp(marvinConfigFile, 'cs1')
 
-  def managementServerFiles = DB_SCRIPTS + TEMPLATE_SCRIPTS + ['client/target/']
-  stash name: 'management-server', includes: managementServerFiles.join(', ')
-  stash name: 'marving-config',    includes: marvinConfigFile
-  stash name: 'rpms',              includes: 'dist/rpmbuild/RPMS/x86_64/'
-
   parallel 'Deploy Management Server': {
     node(nodeExecutor) {
-      unstash 'management-server'
+      def managementServerFiles = DB_SCRIPTS + TEMPLATE_SCRIPTS + ['client/target/']
+      copyFilesFromParentJob(parentJob, parentJobBuild, managementServerFiles)
       deployMctCs()
       deployDb()
       installSystemVmTemplate('root@cs1', SECONDARY_STORAGE)
@@ -53,7 +49,7 @@ node(nodeExecutor) {
     }
   }, 'Deploy Hosts': {
     deployHosts(marvinConfigFile)
-    deployRpmsInParallel(HOSTS, nodeExecutor)
+    deployRpmsInParallel(HOSTS, nodeExecutor, parentJob, parentJobBuild, ['dist/rpmbuild/RPMS/x86_64/'])
   }, failFast: true
 
   archive MARVIN_SCRIPTS.join(', ')
@@ -129,7 +125,6 @@ def installSystemVmTemplate(target, secondaryStorage) {
 }
 
 def deployRpm(target) {
-  unstash 'rpms'
   scp('dist/rpmbuild/RPMS/x86_64/cloudstack-agent-*.rpm', "${target}:./")
   scp('dist/rpmbuild/RPMS/x86_64/cloudstack-common-*.rpm', "${target}:./")
   def hostCommands = [
@@ -143,9 +138,14 @@ def deployRpm(target) {
   echo "==> RPM deployed on ${target}"
 }
 
-def deployRpmsInParallel(hosts, executor) {
+def deployRpmsInParallel(hosts, executor, parentJob, parentJobBuild, filesToCopy) {
   def branchNameFunction = { h -> "Deploying RPM in ${h}" }
-  def deployRpmFunction  = { h -> node(executor) { deployRpm("root@${h}") } }
+  def deployRpmFunction  = { h ->
+    node(executor) {
+      copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
+      deployRpm("root@${h}")
+    }
+  }
   parallel buildParallelBranches(hosts, branchNameFunction, deployRpmFunction)
 }
 

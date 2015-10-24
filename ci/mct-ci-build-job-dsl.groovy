@@ -33,8 +33,6 @@ def FOLDERS = [
   'mccloud-dev'
 ]
 
-
-
 FOLDERS.each { folder_name ->
   folder(folder_name)
 
@@ -47,6 +45,10 @@ FOLDERS.each { folder_name ->
 
   workflowJob(aggregatodJobName) {
     quietPeriod(60)
+    logRotator {
+      numToKeep(5)
+      artifactNumToKeep(5)
+    }
     parameters {
       textParam('git_repo_url', DEFAULT_GIT_REPO_URL, 'The git repository url ')
       textParam('sha1', DEFAULT_GIT_REPO_BRANCH, 'The git branch (or commit hash)')
@@ -67,6 +69,10 @@ FOLDERS.each { folder_name ->
   }
 
   workflowJob(checkoutJobName) {
+    logRotator {
+      numToKeep(5)
+      artifactNumToKeep(5)
+    }
     parameters {
       textParam('git_repo_url', DEFAULT_GIT_REPO_URL, 'The git repository url ')
       textParam('sha1', DEFAULT_GIT_REPO_BRANCH, 'The git branch (or commit hash)')
@@ -84,6 +90,10 @@ FOLDERS.each { folder_name ->
   }
 
   workflowJob(deployInfraJobName) {
+    logRotator {
+      numToKeep(5)
+      artifactNumToKeep(5)
+    }
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', checkoutJobName, 'The parent job name')
@@ -98,6 +108,10 @@ FOLDERS.each { folder_name ->
   }
 
   workflowJob(deployDcJobName) {
+    logRotator {
+      numToKeep(5)
+      artifactNumToKeep(5)
+    }
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', deployInfraJobName, 'The parent job name')
@@ -113,6 +127,10 @@ FOLDERS.each { folder_name ->
 
 
   workflowJob(runMarvinTestsJobName) {
+    logRotator {
+      numToKeep(5)
+      artifactNumToKeep(5)
+    }
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', deployDcJobName, 'The parent job name')
@@ -129,6 +147,10 @@ FOLDERS.each { folder_name ->
   }
 
   workflowJob(cleanUpInfraJobName) {
+    logRotator {
+      numToKeep(5)
+      artifactNumToKeep(5)
+    }
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', runMarvinTestsJobName, 'The parent job name')
@@ -142,6 +164,3 @@ FOLDERS.each { folder_name ->
     }
   }
 }
-
-
-

@@ -10,10 +10,7 @@ def marvinConfigFile     = marvin_config_file
 
 def MARVIN_DIST_FILE = [ 'tools/marvin/dist/Marvin-*.tar.gz' ]
 
-def MARVIN_SCRIPTS = [
-  'test/integration/',
-  'tools/travis/xunit-reader.py'
-]
+def MARVIN_SCRIPTS = [ 'test/integration/' ]
 
 // each test will grab a node(nodeExecutor)
 node('executor') {
@@ -30,13 +27,7 @@ node('executor') {
   }
 
   unarchive mapping: ['integration-test-results/': '.']
-  try {
-    sh 'python tools/travis/xunit-reader.py integration-test-results/'
-  } catch(all) {
-    echo 'Need to fix tools/travis/xunit-reader.py to not exit != 0'
-  }finally {
-    step([$class: 'JUnitResultArchiver', testResults: 'integration-test-results/**/test_*.xml'])
-  }
+  step([$class: 'JUnitResultArchiver', testResults: 'integration-test-results/**/test_*.xml'])
 }
 
 // ----------------

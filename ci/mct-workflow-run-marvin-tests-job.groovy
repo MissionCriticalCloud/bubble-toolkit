@@ -15,7 +15,8 @@ def MARVIN_SCRIPTS = [
   'tools/travis/xunit-reader.py'
 ]
 
-node(nodeExecutor) {
+// each test will grab a node(nodeExecutor)
+node('executor') {
   def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS + [marvinConfigFile]
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
   archive filesToCopy.join(', ')

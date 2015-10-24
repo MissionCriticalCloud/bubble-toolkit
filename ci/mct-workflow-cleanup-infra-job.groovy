@@ -9,9 +9,9 @@ def marvinConfigFile     = marvin_config_file
 node(nodeExecutor) {
   copyFilesFromParentJob(parentJob, parentJobBuild, [marvinConfigFile])
 
-  scp('root@cs1:~tomcat/vmops.log', '.')
-  scp('root@cs1:~tomcat/api.log', '.')
-  archive 'vmops.log, api.log'
+  scp('root@cs1:~tomcat/vmops.log*', '.')
+  scp('root@cs1:~tomcat/api.log*', '.')
+  archive 'vmops.log*, api.log*'
   // TODO: replace hardcoded box names
   sh '/data/vm-easy-deploy/remove_vm.sh -f cs1'
   sh '/data/vm-easy-deploy/remove_vm.sh -f kvm1'

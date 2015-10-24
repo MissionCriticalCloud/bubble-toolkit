@@ -27,6 +27,7 @@ print "==> Chekout Build Number = ${checkoutJobBuildNumber}"
 // NOTE: This only works if we set a quiet period for the job, otherwise two jobs might be scheduled too fast
 // and the same executoer might be picked for both.
 def executor = getAvailableNode('executor-mct')
+print "==> Elected MCT executor ${executor} for this build"
 
 def mctDeployInfraParameters =[
   new StringParameterValue('executor', executor, 'Executor'),

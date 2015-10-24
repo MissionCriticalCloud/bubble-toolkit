@@ -20,6 +20,9 @@ node('executor') {
 
   stash name: 'marvin', includes: filesToCopy.join(', ')
 
+  node(nodeExecutor) {
+    sh 'rm -rf /tmp/MarvinLogs'
+  }
   parallel 'Marvin tests with hardware': {
     runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true, nodeExecutor)
   }, 'Marvin tests without hardware': {
@@ -68,6 +71,7 @@ def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware, nod
 
 def runMarvinTest(testPath, configFile, requireHardware, nodeExecutor) {
   node(nodeExecutor) {
+    sh 'rm -rf ./*'
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
@@ -77,10 +81,12 @@ def runMarvinTest(testPath, configFile, requireHardware, nodeExecutor) {
       } catch(e) {
         echo "Test ${testPath} was not successful"
       }
-      sh "mkdir -p MarvinLogs/${testPath}"
-      sh "cp -rf /tmp/MarvinLogs/* MarvinLogs/${testPath}/"
-      archive 'MarvinLogs/'
       archive 'integration-test-results/'
+
+      def testName = testPath.replaceFirst('^.*/','')
+      sh "mkdir -p MarvinLogs/${testPath}"
+      sh "cp -rf /tmp/MarvinLogs/${testName}_*/* MarvinLogs/${testPath}/"
+      archive 'MarvinLogs/'
     }
   }
 }

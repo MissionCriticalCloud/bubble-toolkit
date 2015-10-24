@@ -77,8 +77,9 @@ def runMarvinTest(testPath, configFile, requireHardware, nodeExecutor) {
       } catch(e) {
         echo "Test ${testPath} was not successful"
       }
-      sh 'cp -rf /tmp/MarvinLogs .'
-      archive 'MarvinLogs'
+      sh "mkdir -p MarvinLogs/${testPath}"
+      sh "cp -rf /tmp/MarvinLogs/* MarvinLogs/${testPath}/"
+      archive 'MarvinLogs/'
       archive 'integration-test-results/'
     }
   }

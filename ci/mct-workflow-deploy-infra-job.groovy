@@ -112,7 +112,11 @@ def deployDb() {
   ]
   writeFile file: 'extraDbConfig.sql', text: extraDbConfig.join('\n')
   mysqlScript('cs1', 'cloud', 'cloud', 'cloud', 'extraDbConfig.sql')
-  sh 'rm -f grant-remote-access.sql extraDbConfig.sql'
+  writeFile file: 'dumpDb.sh', text: 'mysqldump -u root cloud > fresh-db-dump.sql'
+  scp('dumpDb.sh', 'root@cs1:./')
+  ssh('root@cs1', 'chmod +x dumpDb.sh; ./dumpDb.sh')
+  archive 'fresh-db-dump.sql'
+  sh 'rm -f grant-remote-access.sql extraDbConfig.sql fresh-db-dump.sql'
   echo '==> DB deployed'
 }
 

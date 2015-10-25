@@ -7,7 +7,9 @@ def parentJobBuild       = parent_job_build
 def marvinConfigFile     = marvin_config_file
 
 node(nodeExecutor) {
-  copyFilesFromParentJob(parentJob, parentJobBuild, [marvinConfigFile, 'fresh-db-dump.sql'])
+  copyFilesFromParentJob(parentJob, parentJobBuild, ['fresh-db-dump.sql'])
+
+  sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
 
   scp('root@cs1:~tomcat/vmops.log*', '.')
   scp('root@cs1:~tomcat/api.log*', '.')

@@ -44,8 +44,8 @@ print "==> Deploy Infra Build Number = ${deployInfraJobBuildNumber}"
 
 def mctDeployDcParameters =[
   new StringParameterValue('executor', executor, 'Executor'),
-  new StringParameterValue('parent_job', deployInfraJobName, 'Parent Job Name'),
-  new StringParameterValue('parent_job_build', deployInfraJobBuildNumber, 'Parent Job Build Number'),
+  new StringParameterValue('parent_job', checkoutJobName, 'Parent Job Name'),
+  new StringParameterValue('parent_job_build', checkoutJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
@@ -57,29 +57,38 @@ print "==> Deploy DC Build Number = ${deployDcJobBuildNumber}"
 
 def mctRunMarvinTestsParameters = [
   new StringParameterValue('executor', executor, 'Executor'),
-  new StringParameterValue('parent_job', deployDcJobName, 'Parent Job Name'),
-  new StringParameterValue('parent_job_build', deployDcJobBuildNumber, 'Parent Job Build Number'),
+  new StringParameterValue('parent_job', checkoutJobName, 'Parent Job Name'),
+  new StringParameterValue('parent_job_build', checkoutJobBuildNumber, 'Parent Job Build Number'),
   new StringParameterValue('marvin_tests_with_hw', marvinTestsWithHw.join(' '), 'Marvin tests that require Hardware'),
   new StringParameterValue('marvin_tests_without_hw', marvinTestsWithoutHw.join(' '), 'Marvin tests that do not require Hardware'),
   new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
 ]
 
-def runMarvinTestsJobName  = './mct-run-marvin-tests'
-def runMarvinTestsJobBuild = build job: runMarvinTestsJobName, parameters: mctRunMarvinTestsParameters
+try {
+  def runMarvinTestsJobName  = './mct-run-marvin-tests'
+  def runMarvinTestsJobBuild = build job: runMarvinTestsJobName, parameters: mctRunMarvinTestsParameters
+}
+catch(e) {
+  echo "==> Marvin tests build was not successful"
+}
+finally {
+  def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber() as String
+  print "==> Run Marvin Tests Build Number = ${runMarvinTestsJobBuildNumber}"
 
-def runMarvinTestsJobBuildNumber = runMarvinTestsJobBuild.getNumber() as String
-print "==> Run Marvin Tests Build Number = ${runMarvinTestsJobBuildNumber}"
+  def mctCleanUpInfraParameters = [
+    new StringParameterValue('executor', executor, 'Executor'),
+    new StringParameterValue('parent_job', deployDcJobName, 'Parent Job Name'),
+    new StringParameterValue('parent_job_build', deployDcJobBuildNumber, 'Parent Job Build Number'),
+    new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
+  ]
 
-def mctCleanUpInfraParameters = [
-  new StringParameterValue('executor', executor, 'Executor'),
-  new StringParameterValue('parent_job', runMarvinTestsJobName, 'Parent Job Name'),
-  new StringParameterValue('parent_job_build', runMarvinTestsJobBuildNumber, 'Parent Job Build Number'),
-  new StringParameterValue('marvin_config_file', marvinConfigFile, 'Marvin Configuration File')
-]
+  def cleanUpInfraJobBuild = build job: './mct-cleanup-infra', parameters: mctCleanUpInfraParameters
 
-def cleanUpInfraJobBuild = build job: './mct-cleanup-infra', parameters: mctCleanUpInfraParameters
+  print "==> Clean Up Infra Build Number = ${cleanUpInfraJobBuild.getNumber()}"
+}
 
-print "==> Clean Up Infra Build Number = ${cleanUpInfraJobBuild.getNumber()}"
+
+
 
 //def credentials = findCredentials({ c -> c.id  == '298a5b23-7bfc-4b68-82aa-ca44465b157d' })
 def findCredentials(matcher) {

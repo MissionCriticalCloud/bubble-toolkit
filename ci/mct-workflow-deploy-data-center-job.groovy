@@ -8,14 +8,12 @@ def marvinConfigFile = marvin_config_file
 
 def MARVIN_DIST_FILE = [ 'tools/marvin/dist/Marvin-*.tar.gz' ]
 
-def MARVIN_SCRIPTS = [
-  'test/integration/',
-  'tools/travis/xunit-reader.py'
-]
-
 node(nodeExecutor) {
-  def filesToCopy = [marvinConfigFile] + MARVIN_DIST_FILE + MARVIN_SCRIPTS
+  def filesToCopy = MARVIN_DIST_FILE
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
+
+  sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
+  updateManagementServerIp(marvinConfigFile, 'cs1')
 
   setupPython {
     installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
@@ -23,9 +21,6 @@ node(nodeExecutor) {
     deployDataCenter(marvinConfigFile)
     waitForSystemVmTemplates()
   }
-
-  archive filesToCopy.join(', ')
-  echo '==> Data Center ready'
 }
 
 // ----------------
@@ -35,6 +30,10 @@ node(nodeExecutor) {
 // TODO: move to library
 def copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy) {
   step ([$class: 'CopyArtifact',  projectName: parentJob,  selector: new SpecificBuildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+}
+
+def updateManagementServerIp(configFile, vmIp) {
+  sh "sed -i 's/\"mgtSvrIp\": \"localhost\"/\"mgtSvrIp\": \"${vmIp}\"/' ${configFile}"
 }
 
 def waitForManagementServer(hostname) {

@@ -14,11 +14,13 @@ def MARVIN_SCRIPTS = [ 'test/integration/' ]
 
 // each test will grab a node(nodeExecutor)
 node('executor') {
-  def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS + [marvinConfigFile]
+  def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
-  archive filesToCopy.join(', ')
 
-  stash name: 'marvin', includes: filesToCopy.join(', ')
+  sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
+  updateManagementServerIp(marvinConfigFile, 'cs1')
+
+  stash name: 'marvin', includes: (filesToCopy + [marvinConfigFile]).join(', ')
 
   runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, true, nodeExecutor)
   runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, false, nodeExecutor)
@@ -34,6 +36,10 @@ node('executor') {
 // TODO: move to library
 def copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy) {
   step ([$class: 'CopyArtifact',  projectName: parentJob,  selector: new SpecificBuildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+}
+
+def updateManagementServerIp(configFile, vmIp) {
+  sh "sed -i 's/\"mgtSvrIp\": \"localhost\"/\"mgtSvrIp\": \"${vmIp}\"/' ${configFile}"
 }
 
 def setupPython(action) {

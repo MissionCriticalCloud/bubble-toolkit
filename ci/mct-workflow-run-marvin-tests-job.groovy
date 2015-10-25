@@ -18,9 +18,6 @@ node('executor') {
   def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
 
-  sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
-  updateManagementServerIp(marvinConfigFile, 'cs1')
-
   stash name: 'marvin', includes: (filesToCopy + [marvinConfigFile]).join(', ')
 
   runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, true, nodeExecutor)
@@ -81,6 +78,10 @@ def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware, nod
 def runMarvinTest(testPath, configFile, requireHardware, nodeExecutor) {
   node(nodeExecutor) {
     sh 'rm -rf ./*'
+
+    sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
+    updateManagementServerIp(marvinConfigFile, 'cs1')
+
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
@@ -109,10 +110,13 @@ def runMultipleMarvinTests(tests, configFile, requireHardware, nodeExecutor) {
   node(nodeExecutor) {
     sh 'rm -rf /tmp/MarvinLogs'
     sh 'rm -rf ./*'
+
+    sh  "cp /data/shared/marvin/${configFile} ./"
+    updateManagementServerIp(configFile, 'cs1')
+
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
-      sh 'mkdir -p integration-test-results/smoke/misc integration-test-results/component'
       try {
         sh "nosetests --with-xunit --with-marvin --marvin-config=${configFile} -s -a tags=advanced,required_hardware=${requireHardware} ${fullPathTests.join(' ')}"
       } catch(e) {

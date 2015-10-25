@@ -97,7 +97,7 @@ FOLDERS.each { folder_name ->
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', checkoutJobName, 'The parent job name')
-      textParam('parent_job_build', '', 'The parent job build number')
+      textParam('parent_job_build', 'last_completed', 'The parent job build number')
       textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')
     }
     definition {
@@ -115,7 +115,7 @@ FOLDERS.each { folder_name ->
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', checkoutJobName, 'The parent job name')
-      textParam('parent_job_build', '', 'The parent job build number')
+      textParam('parent_job_build', 'last_completed', 'The parent job build number')
       textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')
     }
     definition {
@@ -134,7 +134,7 @@ FOLDERS.each { folder_name ->
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', checkoutJobName, 'The parent job name')
-      textParam('parent_job_build', '', 'The parent job build number')
+      textParam('parent_job_build', 'last_completed', 'The parent job build number')
       textParam('marvin_tests_with_hw', MARVIN_TESTS_WITH_HARDWARE.join(' '), 'Marvin tests tagged as require_hardware=true')
       textParam('marvin_tests_without_hw', MARVIN_TESTS_WITHOUT_HARDWARE.join(' '), 'Marvin tests tagged as require_hardware=false')
       textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')
@@ -154,7 +154,7 @@ FOLDERS.each { folder_name ->
     parameters {
       textParam('executor', EXECUTOR, 'The executor label')
       textParam('parent_job', deployInfraJobName, 'The parent job name')
-      textParam('parent_job_build', '', 'The parent job build number')
+      textParam('parent_job_build', 'last_completed', 'The parent job build number')
       textParam('marvin_config_file', MARVIN_CONFIG_FILE, 'Marvin configuration file')
     }
     definition {

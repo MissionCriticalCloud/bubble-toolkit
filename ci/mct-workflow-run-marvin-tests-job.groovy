@@ -1,4 +1,5 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
+import hudson.plugins.copyartifact.LastCompletedBuildSelector
 
 // Job Parameters
 def nodeExecutor         = executor
@@ -35,7 +36,15 @@ node('executor') {
 
 // TODO: move to library
 def copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy) {
-  step ([$class: 'CopyArtifact',  projectName: parentJob,  selector: new SpecificBuildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+  def buildSelector = { build ->
+    if(build == null || build.isEmpty() || build.equals('last_completed')) {
+      new LastCompletedBuildSelector()
+    } else {
+      new SpecificBuildSelector(build)
+    }
+  }
+
+  step ([$class: 'CopyArtifact',  projectName: parentJob, selector: buildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
 }
 
 def updateManagementServerIp(configFile, vmIp) {

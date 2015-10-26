@@ -8,5 +8,7 @@ offering_dir = offering/
 hardware_dir = hardware/
 firstboot_dir = firstboot/
 postboot_dir = postboot/
+pre_deploy_dir = pre_deploy/
+post_deploy_dir = post_deploy/
 role_dir = role/
 cloud_dir = cloud/

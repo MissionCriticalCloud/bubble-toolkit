@@ -1,4 +1,5 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
+import hudson.plugins.copyartifact.LastCompletedBuildSelector
 
 // Job Parameters
 def nodeExecutor     = executor
@@ -38,28 +39,20 @@ node(nodeExecutor) {
   sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
   updateManagementServerIp(marvinConfigFile, 'cs1')
 
-  def managementServerFiles = DB_SCRIPTS + TEMPLATE_SCRIPTS + ['client/target/']
-  stash name: 'management-server', includes: managementServerFiles.join(', ')
-  stash name: 'marving-config',    includes: marvinConfigFile
-  stash name: 'rpms',              includes: 'dist/rpmbuild/RPMS/x86_64/'
-
   parallel 'Deploy Management Server': {
     node(nodeExecutor) {
-      unstash 'management-server'
+      def managementServerFiles = DB_SCRIPTS + TEMPLATE_SCRIPTS + ['client/target/']
+      copyFilesFromParentJob(parentJob, parentJobBuild, managementServerFiles)
       deployMctCs()
       deployDb()
       installSystemVmTemplate('root@cs1', SECONDARY_STORAGE)
       deployWar()
     }
   }, 'Deploy Hosts': {
-    node(nodeExecutor) {
-      deployHosts(marvinConfigFile)
-      deployRpmsInParallel(HOSTS)
-    }
+    deployHosts(marvinConfigFile)
+    deployRpmsInParallel(HOSTS, nodeExecutor, parentJob, parentJobBuild, ['dist/rpmbuild/RPMS/x86_64/'])
   }, failFast: true
 
-  archive MARVIN_SCRIPTS.join(', ')
-  archive BUILD_ARTEFACTS.join(', ')
   archive marvinConfigFile
 }
 
@@ -69,7 +62,15 @@ node(nodeExecutor) {
 
 // TODO: move to library
 def copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy) {
-  step ([$class: 'CopyArtifact',  projectName: parentJob,  selector: new SpecificBuildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+  def buildSelector = { build ->
+    if(build == null || build.isEmpty() || build.equals('last_completed')) {
+      new LastCompletedBuildSelector()
+    } else {
+      new SpecificBuildSelector(build)
+    }
+  }
+
+  step ([$class: 'CopyArtifact',  projectName: parentJob, selector: buildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
 }
 
 def deployWar() {
@@ -86,7 +87,6 @@ def deployMctCs() {
 }
 
 def deployHosts(marvinConfig) {
-  unstash 'marving-config'
   deplyMctVm('-m', marvinConfig)
   echo '==> kvm1 & kvm2 deployed'
 }
@@ -119,7 +119,13 @@ def deployDb() {
   ]
   writeFile file: 'extraDbConfig.sql', text: extraDbConfig.join('\n')
   mysqlScript('cs1', 'cloud', 'cloud', 'cloud', 'extraDbConfig.sql')
-  sh 'rm -f grant-remote-access.sql extraDbConfig.sql'
+
+  writeFile file: 'dumpDb.sh', text: 'mysqldump -u root cloud > fresh-db-dump.sql'
+  scp('dumpDb.sh', 'root@cs1:./')
+  ssh('root@cs1', 'chmod +x dumpDb.sh; ./dumpDb.sh')
+  archive 'fresh-db-dump.sql'
+  sh 'rm -f grant-remote-access.sql extraDbConfig.sql fresh-db-dump.sql'
+
   echo '==> DB deployed'
 }
 
@@ -132,7 +138,6 @@ def installSystemVmTemplate(target, secondaryStorage) {
 }
 
 def deployRpm(target) {
-  unstash 'rpms'
   scp('dist/rpmbuild/RPMS/x86_64/cloudstack-agent-*.rpm', "${target}:./")
   scp('dist/rpmbuild/RPMS/x86_64/cloudstack-common-*.rpm', "${target}:./")
   def hostCommands = [
@@ -146,9 +151,14 @@ def deployRpm(target) {
   echo "==> RPM deployed on ${target}"
 }
 
-def deployRpmsInParallel(hosts) {
+def deployRpmsInParallel(hosts, executor, parentJob, parentJobBuild, filesToCopy) {
   def branchNameFunction = { h -> "Deploying RPM in ${h}" }
-  def deployRpmFunction  = { h -> node(getSlaveHostName()) { deployRpm("root@${h}") } }
+  def deployRpmFunction  = { h ->
+    node(executor) {
+      copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
+      deployRpm("root@${h}")
+    }
+  }
   parallel buildParallelBranches(hosts, branchNameFunction, deployRpmFunction)
 }
 
@@ -193,9 +203,4 @@ def mysqlScript(host, user, pass, db, script) {
 def makeBashScript(name, commands) {
   writeFile file: name, text: '#! /bin/bash\n\n' + commands.join(';\n')
   sh "chmod +x ${name}"
-}
-
-def getSlaveHostName() {
-  sh 'hostname > .tmpHostname'
-  readFile('.tmpHostname').replace('.localdomain', '').trim()
 }

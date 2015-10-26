@@ -1,20 +1,20 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
+import hudson.plugins.copyartifact.LastCompletedBuildSelector
 
 // Job Parameters
+def nodeExecutor     = executor
 def parentJob        = parent_job
 def parentJobBuild   = parent_job_build
 def marvinConfigFile = marvin_config_file
 
 def MARVIN_DIST_FILE = [ 'tools/marvin/dist/Marvin-*.tar.gz' ]
 
-def MARVIN_SCRIPTS = [
-  'test/integration/',
-  'tools/travis/xunit-reader.py'
-]
-
-node('executor') {
-  def filesToCopy = [marvinConfigFile] + MARVIN_DIST_FILE + MARVIN_SCRIPTS
+node(nodeExecutor) {
+  def filesToCopy = MARVIN_DIST_FILE
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
+
+  sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
+  updateManagementServerIp(marvinConfigFile, 'cs1')
 
   setupPython {
     installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
@@ -22,9 +22,6 @@ node('executor') {
     deployDataCenter(marvinConfigFile)
     waitForSystemVmTemplates()
   }
-
-  archive filesToCopy.join(', ')
-  echo '==> Data Center ready'
 }
 
 // ----------------
@@ -33,7 +30,19 @@ node('executor') {
 
 // TODO: move to library
 def copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy) {
-  step ([$class: 'CopyArtifact',  projectName: parentJob,  selector: new SpecificBuildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+  def buildSelector = { build ->
+    if(build == null || build.isEmpty() || build.equals('last_completed')) {
+      new LastCompletedBuildSelector()
+    } else {
+      new SpecificBuildSelector(build)
+    }
+  }
+
+  step ([$class: 'CopyArtifact',  projectName: parentJob, selector: buildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+}
+
+def updateManagementServerIp(configFile, vmIp) {
+  sh "sed -i 's/\"mgtSvrIp\": \"localhost\"/\"mgtSvrIp\": \"${vmIp}\"/' ${configFile}"
 }
 
 def waitForManagementServer(hostname) {

@@ -26,7 +26,9 @@ def MARVIN_SCRIPTS = [
 
 node('executor') {
   checkout scm: [$class: 'GitSCM', branches:          [[name: gitBranch]],
-                                   userRemoteConfigs: [[url:  gitRepoUrl, credentialsId: gitRepoCredentials]]]
+                                   userRemoteConfigs: [[url:  gitRepoUrl,
+                                                        credentialsId: gitRepoCredentials,
+                                                        refspec: '+refs/pull/*:refs/remotes/origin/pr/* +refs/heads/*:refs/remotes/origin/*']]]
 
   def projectVersion = version()
 
@@ -42,6 +44,8 @@ node('executor') {
   archive DB_SCRIPTS.join(', ')
   archive TEMPLATE_SCRIPTS.join(', ')
   archive MARVIN_SCRIPTS.join(', ')
+
+  sh 'rm -rf dist'
 }
 
 // ----------------

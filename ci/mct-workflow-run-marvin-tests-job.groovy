@@ -1,4 +1,5 @@
 import hudson.plugins.copyartifact.SpecificBuildSelector
+import hudson.plugins.copyartifact.LastCompletedBuildSelector
 
 // Job Parameters
 def nodeExecutor         = executor
@@ -10,32 +11,20 @@ def marvinConfigFile     = marvin_config_file
 
 def MARVIN_DIST_FILE = [ 'tools/marvin/dist/Marvin-*.tar.gz' ]
 
-def MARVIN_SCRIPTS = [
-  'test/integration/',
-  'tools/travis/xunit-reader.py'
-]
+def MARVIN_SCRIPTS = [ 'test/integration/' ]
 
-node(nodeExecutor) {
-  def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS + [marvinConfigFile]
+// each test will grab a node(nodeExecutor)
+node('executor') {
+  def filesToCopy = MARVIN_DIST_FILE + MARVIN_SCRIPTS
   copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy)
-  archive filesToCopy.join(', ')
 
-  stash name: 'marvin', includes: filesToCopy.join(', ')
+  stash name: 'marvin', includes: (filesToCopy + [marvinConfigFile]).join(', ')
 
-  parallel 'Marvin tests with hardware': {
-    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithHw, true)
-  }, 'Marvin tests without hardware': {
-    runMarvinTestsInParallel(marvinConfigFile, marvinTestsWithoutHw, false)
-  }
+  runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, true, nodeExecutor)
+  runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, false, nodeExecutor)
 
-  unarchive mapping: ['integration-test-results/': '.']
-  try {
-    sh 'python tools/travis/xunit-reader.py integration-test-results/'
-  } catch(all) {
-    echo 'Need to fix tools/travis/xunit-reader.py to not exit != 0'
-  }finally {
-    step([$class: 'JUnitResultArchiver', testResults: 'integration-test-results/**/test_*.xml'])
-  }
+  unarchive mapping: ['nosetests.xml': '.']
+  step([$class: 'JUnitResultArchiver', testResults: 'nosetests.xml'])
 }
 
 // ----------------
@@ -44,7 +33,19 @@ node(nodeExecutor) {
 
 // TODO: move to library
 def copyFilesFromParentJob(parentJob, parentJobBuild, filesToCopy) {
-  step ([$class: 'CopyArtifact',  projectName: parentJob,  selector: new SpecificBuildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+  def buildSelector = { build ->
+    if(build == null || build.isEmpty() || build.equals('last_completed')) {
+      new LastCompletedBuildSelector()
+    } else {
+      new SpecificBuildSelector(build)
+    }
+  }
+
+  step ([$class: 'CopyArtifact',  projectName: parentJob, selector: buildSelector(parentJobBuild), filter: filesToCopy.join(', ')]);
+}
+
+def updateManagementServerIp(configFile, vmIp) {
+  sh "sed -i 's/\"mgtSvrIp\": \"localhost\"/\"mgtSvrIp\": \"${vmIp}\"/' ${configFile}"
 }
 
 def setupPython(action) {
@@ -67,33 +68,74 @@ def installMarvin(marvinDistFile) {
   sh 'pip install nose --upgrade --force'
 }
 
-def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware) {
+def runMarvinTestsInParallel(marvinConfigFile, marvinTests, requireHardware, nodeExecutor) {  //def branchNameFunction     = { t -> "Marvin test: ${t}" }
+  def branchNameFunction     = { t -> "Marvin test: ${t}" }
+  def runMarvinTestsFunction = { t -> runMarvinTest(t, marvinConfigFile, requireHardware, nodeExecutor) }
+  def marvinTestBranches = buildParallelBranches(marvinTests, branchNameFunction, runMarvinTestsFunction)
+  parallel(marvinTestBranches)
+}
+
+def runMarvinTest(testPath, configFile, requireHardware, nodeExecutor) {
   node(nodeExecutor) {
+    sh 'rm -rf ./*'
+
+    sh  "cp /data/shared/marvin/${marvinConfigFile} ./"
+    updateManagementServerIp(marvinConfigFile, 'cs1')
+
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
-      def branchNameFunction     = { t -> "Marvin test: ${t}" }
-      def runMarvinTestsFunction = { t -> runMarvinTest(t, marvinConfigFile, requireHardware) }
-      def marvinTestBranches = buildParallelBranches(marvinTests, branchNameFunction, runMarvinTestsFunction)
-      parallel(marvinTestBranches)
+      sh 'mkdir -p integration-test-results/smoke/misc integration-test-results/component'
+      try {
+        sh "nosetests --with-xunit --xunit-file=integration-test-results/${testPath}.xml --with-marvin --marvin-config=${configFile} test/integration/${testPath}.py -s -a tags=advanced,required_hardware=${requireHardware}"
+      } catch(e) {
+        echo "Test ${testPath} was not successful"
+      }
+      archive 'integration-test-results/'
+
+      def testName = testPath.replaceFirst('^.*/','')
+      sh "mkdir -p MarvinLogs/${testPath}"
+      sh "cp -rf /tmp/MarvinLogs/${testName}_*/* MarvinLogs/${testPath}/"
+      archive 'MarvinLogs/'
     }
   }
 }
 
-def runMarvinTest(testPath, configFile, requireHardware) {
-  sh 'mkdir -p integration-test-results/smoke/misc integration-test-results/component'
-  try {
-    sh "nosetests --with-xunit --xunit-file=integration-test-results/${testPath}.xml --with-marvin --marvin-config=${configFile} test/integration/${testPath}.py -s -a tags=advanced,required_hardware=${requireHardware}"
-  } catch(e) {
-    echo "Test ${testPath} was not successful"
+def runMultipleMarvinTests(tests, configFile, requireHardware, nodeExecutor) {
+  def fullPathTests = []
+  for(int i = 0; i < tests.size; i++) {
+    fullPathTests.add('test/integration/' + tests.getAt(i) + '.py')
   }
-  sh 'cp -rf /tmp/MarvinLogs .'
-  archive 'MarvinLogs'
-  archive 'integration-test-results/'
+
+  node(nodeExecutor) {
+    sh 'rm -rf /tmp/MarvinLogs'
+    sh 'rm -rf ./*'
+
+    sh  "cp /data/shared/marvin/${configFile} ./"
+    updateManagementServerIp(configFile, 'cs1')
+
+    unstash 'marvin'
+    setupPython {
+      installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
+      def testsSuffix = "required_hardware-${requireHardware}"
+      def noseTestsReportFile = "nosetests-${testsSuffix}.xml"
+      def marvinLogsDir = "MarvinLogs-${testsSuffix}"
+      try {
+        sh "nosetests --with-xunit --xunit-file=${noseTestsReportFile} --with-marvin --marvin-config=${configFile} -s -a tags=advanced,required_hardware=${requireHardware} ${fullPathTests.join(' ')}"
+      } catch(e) {
+        echo "Test run was not successful"
+      }
+      archive noseTestsReportFile
+
+      sh "mkdir -p ${marvinLogsDir}"
+      sh "cp -rf /tmp/MarvinLogs/* ${marvinLogsDir}/"
+      archive "${marvinLogsDir}/"
+    }
+  }
 }
 
 def buildParallelBranches(elements, branchNameFunction, actionFunction) {
-  def branches = [failFast: true]
+  def branches = [:]
   for (int i = 0; i < elements.size(); i++) {
     def element = elements.getAt(i)
     def branchName = branchNameFunction(element)

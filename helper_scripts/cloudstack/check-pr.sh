@@ -86,11 +86,12 @@ if [ $? -gt 0  ]; then
   exit 1
 fi
 
-# Rebase with current master before tests
-git fetch
-git rebase master
+git checkout master
+git pull
+# merge before testing
+git merge pr/${prId}
 if [ $? -gt 0  ]; then
-  echo "ERROR: Rebase with master failed, please ask author to rebase and force-push commits. Then try again!"
+  echo "ERROR: merge with master failed, please ask author to rebase and force-push commits. Then try again!"
   exit 1
 fi
 

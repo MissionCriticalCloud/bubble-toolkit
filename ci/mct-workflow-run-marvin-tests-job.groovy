@@ -117,16 +117,19 @@ def runMultipleMarvinTests(tests, configFile, requireHardware, nodeExecutor) {
     unstash 'marvin'
     setupPython {
       installMarvin('tools/marvin/dist/Marvin-*.tar.gz')
+      def testsSuffix = "required_hardware-${requireHardware}"
+      def noseTestsReportFile = "nosetests-${testsSuffix}.xml"
+      def marvinLogsDir = "MarvinLogs-${testsSuffix}"
       try {
-        sh "nosetests --with-xunit --with-marvin --marvin-config=${configFile} -s -a tags=advanced,required_hardware=${requireHardware} ${fullPathTests.join(' ')}"
+        sh "nosetests --with-xunit --xunit-file=${noseTestsReportFile} --with-marvin --marvin-config=${configFile} -s -a tags=advanced,required_hardware=${requireHardware} ${fullPathTests.join(' ')}"
       } catch(e) {
         echo "Test run was not successful"
       }
-      archive 'nosetests.xml'
+      archive noseTestsReportFile
 
-      sh "mkdir -p MarvinLogs/"
-      sh "cp -rf /tmp/MarvinLogs/* MarvinLogs/"
-      archive 'MarvinLogs/'
+      sh "mkdir -p ${marvinLogsDir}"
+      sh "cp -rf /tmp/MarvinLogs/* ${marvinLogsDir}/"
+      archive "${marvinLogsDir}/"
     }
   }
 }

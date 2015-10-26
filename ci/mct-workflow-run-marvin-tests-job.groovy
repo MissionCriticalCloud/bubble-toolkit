@@ -23,8 +23,8 @@ node('executor') {
   runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, true, nodeExecutor)
   runMultipleMarvinTests(marvinTestsWithHw, marvinConfigFile, false, nodeExecutor)
 
-  unarchive mapping: ['nosetests.xml': '.']
-  step([$class: 'JUnitResultArchiver', testResults: 'nosetests.xml'])
+  unarchive mapping: ['nosetests*.xml': '.']
+  step([$class: 'JUnitResultArchiver', testResults: 'nosetests*.xml'])
 }
 
 // ----------------

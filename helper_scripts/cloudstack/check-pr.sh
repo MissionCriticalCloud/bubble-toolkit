@@ -86,5 +86,13 @@ if [ $? -gt 0  ]; then
   exit 1
 fi
 
+# Rebase with current master before tests
+git fetch
+git rebase master
+if [ $? -gt 0  ]; then
+  echo "ERROR: Rebase with master failed, please ask author to rebase and force-push commits. Then try again!"
+  exit 1
+fi
+
 # Build, run and test it
 /data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${skip} ${compile_threads}

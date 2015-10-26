@@ -11,7 +11,8 @@ def MARVIN_TESTS_WITH_HARDWARE = [
   'component/test_vpc_router_nics',
   'smoke/test_loadbalance',
   'smoke/test_internal_lb',
-  'smoke/test_ssvm'
+  'smoke/test_ssvm',
+  'smoke/test_network'
 ]
 
 def MARVIN_TESTS_WITHOUT_HARDWARE = [
@@ -23,7 +24,8 @@ def MARVIN_TESTS_WITHOUT_HARDWARE = [
   'smoke/test_vpc_vpn',
   'smoke/test_service_offerings',
   'component/test_vpc_offerings',
-  'component/test_vpc_routers'
+  'component/test_vpc_routers',
+  'smoke/test_network'
 ]
 
 def MARVIN_CONFIG_FILE = 'mct-zone1-kvm1-kvm2.cfg'

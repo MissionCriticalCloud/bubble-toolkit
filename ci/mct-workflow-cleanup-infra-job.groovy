@@ -16,6 +16,14 @@ node(nodeExecutor) {
   scp('root@cs1:~tomcat/api.log*', '.')
   archive 'vmops.log*, api.log*'
 
+  sh 'mkdir kvm1-agent-logs'
+  scp('root@kvm1:/var/log/cloudstack/agent/agent.log*', 'kvm1-agent-logs/')
+  archive 'kvm1-agent-logs/'
+
+  sh 'mkdir kvm2-agent-logs'
+  scp('root@kvm2:/var/log/cloudstack/agent/agent.log*', 'kvm2-agent-logs/')
+  archive 'kvm2-agent-logs/'
+
   writeFile file: 'dumpDb.sh', text: 'mysqldump -u root cloud > dirty-db-dump.sql'
   scp('dumpDb.sh', 'root@cs1:./')
   ssh('root@cs1', 'chmod +x dumpDb.sh; ./dumpDb.sh')

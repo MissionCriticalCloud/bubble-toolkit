@@ -72,6 +72,7 @@ fi
 cd /data/git/${HOSTNAME}/cloudstack
 git reset --hard
 git checkout master
+git pull
 
 # Get the PR
 git branch -D pr/${prId}
@@ -87,7 +88,6 @@ if [ $? -gt 0  ]; then
 fi
 
 # Rebase with current master before tests
-git fetch
 git rebase master
 if [ $? -gt 0  ]; then
   echo "ERROR: Rebase with master failed, please ask author to rebase and force-push commits. Then try again!"

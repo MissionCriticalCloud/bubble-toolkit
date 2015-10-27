@@ -74,14 +74,11 @@ git reset --hard
 git checkout master
 git pull
 
+git branch -D try/${prId}
+git branch try/${prId}
+git checkout try/${prId}
 # Get the PR
-git branch -D pr/${prId}
-git fetch origin pull/${prId}/head:pr/${prId}
-if [ $? -gt 0  ]; then
-  echo "ERROR: Fetching failed!"
-  exit 1
-fi
-git merge pr/${prId}
+tools/git/git-pr ${prId} --force
 if [ $? -gt 0  ]; then
   echo "ERROR: Merge failed!"
   exit 1

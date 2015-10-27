@@ -351,7 +351,7 @@ fi
 # Wait until templates are ready
 date
 echo "Checking template status.."
-bash -x /data/shared/helper_scripts/cloudstack/wait_template_ready.sh
+python /data/shared/helper_scripts/cloudstack/wait_template_ready.py
 date
 
 # Run the tests

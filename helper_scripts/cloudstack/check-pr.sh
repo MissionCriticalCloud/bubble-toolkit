@@ -72,6 +72,7 @@ fi
 cd /data/git/${HOSTNAME}/cloudstack
 git reset --hard
 git checkout master
+git pull
 
 # Get the PR
 git branch -D pr/${prId}
@@ -80,18 +81,9 @@ if [ $? -gt 0  ]; then
   echo "ERROR: Fetching failed!"
   exit 1
 fi
-git checkout pr/${prId}
-if [ $? -gt 0  ]; then
-  echo "ERROR: Checkout failed!"
-  exit 1
-fi
-
-git checkout master
-git pull
-# merge before testing
 git merge pr/${prId}
 if [ $? -gt 0  ]; then
-  echo "ERROR: merge with master failed, please ask author to rebase and force-push commits. Then try again!"
+  echo "ERROR: Merge failed!"
   exit 1
 fi
 

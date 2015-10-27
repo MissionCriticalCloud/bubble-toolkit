@@ -340,6 +340,9 @@ date
 bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
+echo "Deleting old Marvin logs, if any"
+rm -rf /tmp/MarvinLogs
+
 echo "Deploy data center.."
 python /data/git/$HOSTNAME/cloudstack/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
 if [ $? -ne 0 ]; then

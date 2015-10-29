@@ -12,19 +12,19 @@ def MARVIN_TESTS_WITH_HARDWARE = [
   'smoke/test_loadbalance',
   'smoke/test_internal_lb',
   'smoke/test_ssvm',
-  'smoke/test_network'
+  'smoke/test_network',
+  'smoke/test_vpc_vpn'
 ]
 
 def MARVIN_TESTS_WITHOUT_HARDWARE = [
+  'component/test_vpc_offerings',
+  'component/test_vpc_routers',
   'smoke/test_routers',
   'smoke/test_network_acl',
   'smoke/test_privategw_acl',
   'smoke/test_reset_vm_on_reboot',
   'smoke/test_vm_life_cycle',
-  'smoke/test_vpc_vpn',
   'smoke/test_service_offerings',
-  'component/test_vpc_offerings',
-  'component/test_vpc_routers',
   'smoke/test_network'
 ]
 

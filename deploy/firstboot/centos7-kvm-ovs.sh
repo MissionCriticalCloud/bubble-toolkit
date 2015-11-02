@@ -27,10 +27,11 @@ yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-late
 yum install -y ntp
 service ntpd restart
 
-# Add OVS package and start it
+# Rename builtin openvswitch module, add custom OVS package with STT support and start it
+mv /lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko /lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org
 yum -y install "kernel-devel-$(uname -r)"
-yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.4.0-1.el7.centos.x86_64.rpm
-yum -y install http://mctadm1/openvswitch/openvswitch-2.4.0-1.el7.centos.x86_64.rpm
+yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.4.1-1.el7.centos.x86_64.rpm
+yum -y install http://mctadm1/openvswitch/openvswitch-2.4.1-1.el7.centos.x86_64.rpm
 
 # Disable selinux (for now...)
 setenforce permissive

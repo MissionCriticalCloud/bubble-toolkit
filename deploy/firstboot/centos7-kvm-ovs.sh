@@ -1,8 +1,6 @@
 #!/bin/bash
-
-# Configure KVM POC Hypervisor (CentOS 7)
+# Configure KVM Hypervisor with openvswitch and STT (CentOS 7)
 # Fred Neubauer / Remi Bergsma
-sleep 5
 
 # Bring the second nic down to avoid routing problems
 ip link set dev eth1 down
@@ -10,28 +8,9 @@ ip link set dev eth1 down
 ### Settings ####
 # BetaCloud pub vlan
 VLANPUB=50
-# VLANTRANS=13
 
 # Bubble NSX Ctrl
 NSXMANAGER="192.168.22.83"
-
-# Create new initrd to disable co-mounts
-#sed -i "/JoinControllers/c\JoinControllers=''" /etc/systemd/system.conf
-#new-kernel-pkg --mkinitrd --install `uname -r`
-
-# Install deltarpm and epel repo
-yum -y install deltarpm
-yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
-
-# NTP
-yum install -y ntp
-service ntpd restart
-
-# Rename builtin openvswitch module, add custom OVS package with STT support and start it
-mv /lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko /lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org
-yum -y install "kernel-devel-$(uname -r)"
-yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.4.1-1.el7.centos.x86_64.rpm
-yum -y install http://mctadm1/openvswitch/openvswitch-2.4.1-1.el7.centos.x86_64.rpm
 
 # Disable selinux (for now...)
 setenforce permissive
@@ -42,17 +21,57 @@ systemctl stop firewall
 systemctl disable firewalld
 
 # Install dependencies for KVM on Cloudstack
-yum -y install qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass vlgothic-fonts adwaita-gtk3-theme dejavu-lgc-sans-fonts
-yum -y install http://jenkins.buildacloud.org/view/4.4/job/package-centos7-4.4-noredist/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-common-4.4.4-SNAPSHOT.el7.centos.x86_64.rpm
-yum -y install http://jenkins.buildacloud.org/view/4.4/job/package-centos7-4.4-noredist/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-agent-4.4.4-SNAPSHOT.el7.centos.x86_64.rpm
+sleep 5
+yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
+yum -y install qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim
+yum -y install http://jenkins.buildacloud.org/job/package-centos7-master/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-common-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm
+yum -y install http://jenkins.buildacloud.org/job/package-centos7-master/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-agent-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm
+yum --enablerepo=epel -y install sshpass
 
-# Crash kernel (kdump -- only on physical hypervisors)
-# yum install -y kexec-tools
-# sed -i 's/crashkernel=auto/crashkernel=128M/g' /etc/default/grub
-# grub2-mkconfig -o /boot/grub2/grub.cfg
-# systemctl enable kdump.service
+# Enable rpbind for NFS
+systemctl enable rpcbind
+systemctl start rpcbind
+
+# NFS to mct box
+mkdir -p /data
+mount -t nfs 192.168.22.1:/data /data
+echo "192.168.22.1:/data /data nfs rw,hard,intr,rsize=8192,wsize=8192,timeo=14 0 0" >> /etc/fstab
+
+# Enable nesting
+echo "options kvm_intel nested=1" >> /etc/modprobe.d/kvm-nested.conf
+
+# Cloudstack agent.properties settings
+cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
+
+# Add these settings (before adding the host)
+echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties
+echo "network.bridge.type=openvswitch" >> /etc/cloudstack/agent/agent.properties
+echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties
+
+# Set the logging to DEBUG
+sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
+
+# Libvirtd parameters for Cloudstack
+echo 'listen_tls = 0' >> /etc/libvirt/libvirtd.conf
+echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf
+echo 'tcp_port = "16509"' >> /etc/libvirt/libvirtd.conf
+echo 'mdns_adv = 0' >> /etc/libvirt/libvirtd.conf
+echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
+
+# qemu.conf parameters for Cloudstack
+sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
+
+# Create new initrd to disable co-mounts
+sed -i "/JoinControllers/c\JoinControllers=''" /etc/systemd/system.conf
+new-kernel-pkg --mkinitrd --install `uname -r`
 
 ### OVS ###
+# Rename builtin openvswitch module, add custom OVS package with STT support and start it
+mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
+yum -y install "kernel-devel-$(uname -r)"
+yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.4.1-1.el7.centos.x86_64.rpm
+yum -y install http://mctadm1/openvswitch/openvswitch-2.4.1-1.el7.centos.x86_64.rpm
+
 # Bridges
 systemctl start openvswitch
 echo "Creating bridges cloudbr0 and cloudbr1.."
@@ -64,7 +83,6 @@ IFACES=$(ls /sys/class/net | grep -E '^em|^eno|^eth|^p2' | tr '\n' ' ')
 
 # Create Bond with them
 echo "Creating bond with $IFACES"
-#ovs-vsctl add-bond cloudbr0 bond0 $IFACES bond_mode=balance-tcp lacp=active other_config:lacp-time=fast
 ovs-vsctl add-bond cloudbr0 bond0 $IFACES
 
 # Integration bridge
@@ -94,7 +112,7 @@ BOOTPROTO=none
 NM_CONTROLLED=no
 " > /etc/sysconfig/network-scripts/ifcfg-$i
 done
- 
+
 # Config cloudbr0
 echo "Configuring cloubbr0"
 echo "DEVICE=\"cloudbr0\"
@@ -105,7 +123,7 @@ BOOTPROTO=dhcp
 HOTPLUG=no
 MACADDR=$BRMAC
 " > /etc/sysconfig/network-scripts/ifcfg-cloudbr0
- 
+
 # Config trans0
 echo "Configuring trans0"
 echo "DEVICE=\"trans0\"
@@ -117,7 +135,7 @@ HOTPLUG=no
 #MACADDR=$BRMAC
 " > /etc/sysconfig/network-scripts/ifcfg-trans0
 
-# Config bond0 
+# Config bond0
 echo "Configuring bond0"
 echo "DEVICE=\"bond0\"
 ONBOOT=yes
@@ -144,41 +162,6 @@ ovs-vsctl set-manager ssl:$NSXMANAGER:6632
 
 ### End OVS ###
 ifup cloudbr0
-
-# Enable rpbind for NFS
-systemctl enable rpcbind
-systemctl start rpcbind
-
-# Enable nesting
-echo "options kvm_intel nested=1
-options kvm_intel enable_shadow_vmcs=1
-options kvm_intel enable_apicv=1
-options kvm_intel ept=1
-" >> /etc/modprobe.d/kvm-nested.conf
-
-# Set short hostname
-hostnamectl --static set-hostname $(hostname --fqdn | cut -d. -f1)
-
-# Cloudstack agent.properties settings
-cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
-
-# Add these settings (before adding the host)
-echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties
-echo "network.bridge.type=openvswitch" >> /etc/cloudstack/agent/agent.properties
-echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties
-
-# Set the logging to DEBUG
-sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
-
-# Libvirtd parameters for Cloudstack
-echo 'listen_tls = 0' >> /etc/libvirt/libvirtd.conf
-echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf
-echo 'tcp_port = "16509"' >> /etc/libvirt/libvirtd.conf
-echo 'mdns_adv = 0' >> /etc/libvirt/libvirtd.conf
-echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
-
-# qemu.conf parameters for Cloudstack
-sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 # Reboot
 reboot

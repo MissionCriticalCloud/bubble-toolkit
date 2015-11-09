@@ -426,7 +426,7 @@ class kvm_local_deploy:
             return False
         # Clean is specific hostname
         if digit != '' and self.FORCE == 1:
-            self.delete_host(role_name + digit)
+            self.delete_host_role_wrapper(role_name, digit)
         # Generate name
         vm_name = self.generate_vm_name(role_name, digit)
         if vm_name is False:

@@ -43,6 +43,12 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cloudstack-common
   ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
   ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent*.rpm cloudstack-common*.rpm
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
+  ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
+  ${ssh_base} ${hvuser}@${hvip} echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties
+  ${ssh_base} ${hvuser}@${hvip} systemctl start cloudstack-agent
 
   say "KVM packages installed in ${hvip}"
 }

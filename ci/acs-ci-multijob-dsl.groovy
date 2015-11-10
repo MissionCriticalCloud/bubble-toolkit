@@ -56,12 +56,14 @@ def CLEAN_UP_JOB_ARTIFACTS = [
 ]
 
 def FOLDERS = [
-  'multijob-build',
-  'multijob-build-dev'
+  'acs-ci-build',
+  'acs-ci-build-dev'
 ]
 
 FOLDERS.each { folderName ->
   folder(folderName)
+
+  def shellPrefix = folderName.endsWith('-dev') ? 'bash -x' : ''
 
   def fullBuildJobName               = "${folderName}/001-full-build"
   def checkoutJobName                = "${folderName}/002-checkout-and-build"
@@ -102,7 +104,7 @@ FOLDERS.each { folderName ->
       }
     }
     steps {
-      phase('Checkout Code and Build with Maven') {
+      phase('Checkout Code, Build and Package') {
         phaseJob(checkoutJobName) {
           currentJobParameters(true)
           parameters {
@@ -129,11 +131,13 @@ FOLDERS.each { folderName ->
         phaseJob(runMarvinTestsWithHwJobName) {
           parameters {
             sameNode()
+            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobName.replaceAll('[^A-Za-z0-9]', '_')}_BUILD_NUMBER}")
           }
         }
         phaseJob(runMarvinTestsWithoutHwJobName) {
           parameters {
             sameNode()
+            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobName.replaceAll('[^A-Za-z0-9]', '_')}_BUILD_NUMBER}")
           }
         }
       }
@@ -225,7 +229,7 @@ FOLDERS.each { folderName ->
         mavenOpts('-Xmx1024m')
         mavenInstallation('Maven 3.1.1')
       }
-      shell('/data/shared/ci/ci-package-rpms.sh')
+      shell("${shellPrefix} /data/shared/ci/ci-package-rpms.sh")
     }
     publishers {
       archiveArtifacts {
@@ -263,7 +267,7 @@ FOLDERS.each { folderName ->
           multiJobBuild()
         }
       }
-      shell('/data/shared/ci/ci-deploy-infra.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg')
+      shell("${shellPrefix} /data/shared/ci/ci-deploy-infra.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg")
     }
   }
 
@@ -290,7 +294,7 @@ FOLDERS.each { folderName ->
           multiJobBuild()
         }
       }
-      shell('/data/shared/ci/ci-deploy-data-center.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg')
+      shell("${shellPrefix} /data/shared/ci/ci-deploy-data-center.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg")
     }
   }
 
@@ -298,6 +302,7 @@ FOLDERS.each { folderName ->
     parameters {
       stringParam('REQUIRED_HARDWARE', null, 'Flag passed to Marvin to select test cases to execute')
       textParam('TESTS', '', 'Set of Marvin tests to execute')
+      stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
     }
     concurrentBuild()
     label(EXECUTOR)
@@ -318,10 +323,10 @@ FOLDERS.each { folderName ->
         includePatterns('test/integration/')
         fingerprintArtifacts(true)
         buildSelector {
-          multiJobBuild()
+          buildNumber('${CHECKOUT_JOB_BUILD_NUMBER}')
         }
       }
-      shell('/data/shared/ci/ci-run-marvin-tests.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -h ${REQUIRED_HARDWARE} "${TESTS}"')
+      shell("${shellPrefix} /data/shared/ci/ci-run-marvin-tests.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -h \${REQUIRED_HARDWARE} \"\${TESTS}\"")
     }
     publishers {
       archiveArtifacts {
@@ -331,6 +336,9 @@ FOLDERS.each { folderName ->
   }
 
   freeStyleJob(runMarvinTestsWithHwJobName) {
+    parameters {
+      stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
+    }
     concurrentBuild()
     label(EXECUTOR)
     throttleConcurrentBuilds {
@@ -356,6 +364,7 @@ FOLDERS.each { folderName ->
           parameters {
             predefinedProp('REQUIRED_HARDWARE', 'true')
             predefinedProp('TESTS', MARVIN_TESTS_WITH_HARDWARE.join(' '))
+            predefinedProp('CHECKOUT_JOB_BUILD_NUMBER', '${CHECKOUT_JOB_BUILD_NUMBER}')
           }
           sameNode()
         }
@@ -376,6 +385,9 @@ FOLDERS.each { folderName ->
   }
 
   freeStyleJob(runMarvinTestsWithoutHwJobName) {
+    parameters {
+      stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
+    }
     concurrentBuild()
     label(EXECUTOR)
     throttleConcurrentBuilds {
@@ -401,6 +413,7 @@ FOLDERS.each { folderName ->
           parameters {
             predefinedProp('REQUIRED_HARDWARE', 'false')
             predefinedProp('TESTS', MARVIN_TESTS_WITHOUT_HARDWARE.join(' '))
+            predefinedProp('CHECKOUT_JOB_BUILD_NUMBER', '${CHECKOUT_JOB_BUILD_NUMBER}')
           }
           sameNode()
         }
@@ -436,7 +449,7 @@ FOLDERS.each { folderName ->
     }
     steps {
       shell('rm -rf ./*')
-      shell('/data/shared/ci/ci-cleanup.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg')
+      shell("${shellPrefix} /data/shared/ci/ci-cleanup.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg")
     }
     publishers {
       archiveArtifacts {

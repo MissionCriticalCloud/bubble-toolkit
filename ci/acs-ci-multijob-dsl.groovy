@@ -102,7 +102,7 @@ FOLDERS.each { folderName ->
       }
     }
     steps {
-      phase('Checkout Code and Build with Maven') {
+      phase('Checkout Code, Build and Package') {
         phaseJob(checkoutJobName) {
           currentJobParameters(true)
           parameters {

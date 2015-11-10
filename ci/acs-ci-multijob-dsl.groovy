@@ -56,8 +56,8 @@ def CLEAN_UP_JOB_ARTIFACTS = [
 ]
 
 def FOLDERS = [
-  'multijob-build',
-  'multijob-build-dev'
+  'acs-ci-build',
+  'acs-ci-build-dev'
 ]
 
 FOLDERS.each { folderName ->

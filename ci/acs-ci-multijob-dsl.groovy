@@ -131,11 +131,13 @@ FOLDERS.each { folderName ->
         phaseJob(runMarvinTestsWithHwJobName) {
           parameters {
             sameNode()
+            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobName.replaceAll('[^A-Za-z0-9]', '_')}_BUILD_NUMBER}")
           }
         }
         phaseJob(runMarvinTestsWithoutHwJobName) {
           parameters {
             sameNode()
+            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobName.replaceAll('[^A-Za-z0-9]', '_')}_BUILD_NUMBER}")
           }
         }
       }
@@ -300,6 +302,7 @@ FOLDERS.each { folderName ->
     parameters {
       stringParam('REQUIRED_HARDWARE', null, 'Flag passed to Marvin to select test cases to execute')
       textParam('TESTS', '', 'Set of Marvin tests to execute')
+      stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
     }
     concurrentBuild()
     label(EXECUTOR)
@@ -320,7 +323,7 @@ FOLDERS.each { folderName ->
         includePatterns('test/integration/')
         fingerprintArtifacts(true)
         buildSelector {
-          multiJobBuild()
+          buildNumber('${CHECKOUT_JOB_BUILD_NUMBER}')
         }
       }
       shell("${shellPrefix} /data/shared/ci/ci-run-marvin-tests.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -h \${REQUIRED_HARDWARE} \"\${TESTS}\"")
@@ -333,6 +336,9 @@ FOLDERS.each { folderName ->
   }
 
   freeStyleJob(runMarvinTestsWithHwJobName) {
+    parameters {
+      stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
+    }
     concurrentBuild()
     label(EXECUTOR)
     throttleConcurrentBuilds {
@@ -358,6 +364,7 @@ FOLDERS.each { folderName ->
           parameters {
             predefinedProp('REQUIRED_HARDWARE', 'true')
             predefinedProp('TESTS', MARVIN_TESTS_WITH_HARDWARE.join(' '))
+            predefinedProp('CHECKOUT_JOB_BUILD_NUMBER', '${CHECKOUT_JOB_BUILD_NUMBER}')
           }
           sameNode()
         }
@@ -378,6 +385,9 @@ FOLDERS.each { folderName ->
   }
 
   freeStyleJob(runMarvinTestsWithoutHwJobName) {
+    parameters {
+      stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
+    }
     concurrentBuild()
     label(EXECUTOR)
     throttleConcurrentBuilds {
@@ -403,6 +413,7 @@ FOLDERS.each { folderName ->
           parameters {
             predefinedProp('REQUIRED_HARDWARE', 'false')
             predefinedProp('TESTS', MARVIN_TESTS_WITHOUT_HARDWARE.join(' '))
+            predefinedProp('CHECKOUT_JOB_BUILD_NUMBER', '${CHECKOUT_JOB_BUILD_NUMBER}')
           }
           sameNode()
         }

@@ -63,6 +63,8 @@ def FOLDERS = [
 FOLDERS.each { folderName ->
   folder(folderName)
 
+  def shellPrefix = folderName.endsWith('-dev') ? 'bash -x' : ''
+
   def fullBuildJobName               = "${folderName}/001-full-build"
   def checkoutJobName                = "${folderName}/002-checkout-and-build"
   def deployInfraJobName             = "${folderName}/003-deploy-infra"
@@ -225,7 +227,7 @@ FOLDERS.each { folderName ->
         mavenOpts('-Xmx1024m')
         mavenInstallation('Maven 3.1.1')
       }
-      shell('/data/shared/ci/ci-package-rpms.sh')
+      shell("${shellPrefix} /data/shared/ci/ci-package-rpms.sh")
     }
     publishers {
       archiveArtifacts {
@@ -263,7 +265,7 @@ FOLDERS.each { folderName ->
           multiJobBuild()
         }
       }
-      shell('/data/shared/ci/ci-deploy-infra.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg')
+      shell("${shellPrefix} /data/shared/ci/ci-deploy-infra.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg")
     }
   }
 
@@ -290,7 +292,7 @@ FOLDERS.each { folderName ->
           multiJobBuild()
         }
       }
-      shell('/data/shared/ci/ci-deploy-data-center.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg')
+      shell("${shellPrefix} /data/shared/ci/ci-deploy-data-center.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg")
     }
   }
 
@@ -321,7 +323,7 @@ FOLDERS.each { folderName ->
           multiJobBuild()
         }
       }
-      shell('/data/shared/ci/ci-run-marvin-tests.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -h ${REQUIRED_HARDWARE} "${TESTS}"')
+      shell("${shellPrefix} /data/shared/ci/ci-run-marvin-tests.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -h \${REQUIRED_HARDWARE} \"\${TESTS}\"")
     }
     publishers {
       archiveArtifacts {
@@ -436,7 +438,7 @@ FOLDERS.each { folderName ->
     }
     steps {
       shell('rm -rf ./*')
-      shell('/data/shared/ci/ci-cleanup.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg')
+      shell("${shellPrefix} /data/shared/ci/ci-cleanup.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg")
     }
     publishers {
       archiveArtifacts {

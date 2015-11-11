@@ -65,8 +65,10 @@ FOLDERS.each { folderName ->
 
   def shellPrefix = folderName.endsWith('-dev') ? 'bash -x' : ''
 
+  def checkoutJobBaseName = '002-checkout-and-build'
+
   def fullBuildJobName               = "${folderName}/001-full-build"
-  def checkoutJobName                = "${folderName}/002-checkout-and-build"
+  def checkoutJobName                = "${folderName}/${checkoutJobBaseName}"
   def deployInfraJobName             = "${folderName}/003-deploy-infra"
   def deployDcJobName                = "${folderName}/004-deploy-data-center"
   def runMarvinTestsWithHwJobName    = "${folderName}/005-run-marvin-tests-with-hardware"
@@ -131,13 +133,13 @@ FOLDERS.each { folderName ->
         phaseJob(runMarvinTestsWithHwJobName) {
           parameters {
             sameNode()
-            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobName.replaceAll('[^A-Za-z0-9]', '_')}_BUILD_NUMBER}")
+            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobBaseName.replaceAll('[^A-Za-z0-9]', '_').toUpperCase()}_BUILD_NUMBER}")
           }
         }
         phaseJob(runMarvinTestsWithoutHwJobName) {
           parameters {
             sameNode()
-            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobName.replaceAll('[^A-Za-z0-9]', '_')}_BUILD_NUMBER}")
+            prop('CHECKOUT_JOB_BUILD_NUMBER', "\${${checkoutJobBaseName.replaceAll('[^A-Za-z0-9]', '_').toUpperCase()}_BUILD_NUMBER}")
           }
         }
       }

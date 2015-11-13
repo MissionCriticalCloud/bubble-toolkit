@@ -48,7 +48,6 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
   ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
   ${ssh_base} ${hvuser}@${hvip} "echo \"guest.cpu.mode=host-model\" >> /etc/cloudstack/agent/agent.properties"
-  ${ssh_base} ${hvuser}@${hvip} systemctl start cloudstack-agent
 
   say "KVM packages installed in ${hvip}"
 }

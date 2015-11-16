@@ -38,11 +38,11 @@ function install_kvm_packages {
   scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm -f cloudstack-*
+  ${ssh_base} ${hvuser}@${hvip} rm -f cloudstack-\*
   ${scp_base} cloudstack-agent*.rpm cloudstack-common*.rpm ${hvuser}@${hvip}:./
   ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cloudstack-common
   ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent*.rpm cloudstack-common*.rpm
+  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent\*.rpm cloudstack-common\*.rpm
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
   ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
   ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml

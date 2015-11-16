@@ -218,6 +218,8 @@ if [ ${skip} -eq 0 ]; then
     else
       echo "No need to patch cloud.spec (${compile_threads})"
     fi
+    # Clean up better
+    rm -rf ../dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
     if [ $? -ne 0 ]; then

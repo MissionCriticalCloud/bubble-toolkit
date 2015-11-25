@@ -77,6 +77,7 @@ systemctl start openvswitch
 echo "Creating bridges cloudbr0 and cloudbr1.."
 ovs-vsctl add-br cloudbr0
 ovs-vsctl add-br cloudbr1
+ovs-vsctl add-br cloud0
 
 # Get interfaces
 IFACES=$(ls /sys/class/net | grep -E '^em|^eno|^eth|^p2' | tr '\n' ' ')
@@ -114,15 +115,27 @@ NM_CONTROLLED=no
 done
 
 # Config cloudbr0
-echo "Configuring cloubbr0"
+echo "Configuring cloudbr0"
 echo "DEVICE=\"cloudbr0\"
 ONBOOT=yes
 DEVICETYPE=ovs
-TYPE=OVSIntPort
+TYPE=OVSBridge
 BOOTPROTO=dhcp
 HOTPLUG=no
 MACADDR=$BRMAC
 " > /etc/sysconfig/network-scripts/ifcfg-cloudbr0
+
+# Config cloud0
+echo "Configuring cloud0"
+echo "DEVICE=\"cloud0\"
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSBridge
+IPADDR=169.254.0.1
+NETMASK=255.255.0.0
+BOOTPROTO=static
+HOTPLUG=no
+" > /etc/sysconfig/network-scripts/ifcfg-cloud0
 
 # Config trans0
 echo "Configuring trans0"

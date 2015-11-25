@@ -50,7 +50,7 @@ curl -k -b cookie.txt -X POST -d '{
     "display_name": "mct-service-node",
     "transport_connectors": [
         {
-            "ip_address": "'"${NSX_CONTROLLER_IP}"'",
+            "ip_address": "'"${NSX_SERVICE_IP}"'",
             "type": "STTConnector",
             "transport_zone_uuid": "'"${transportZoneUuid}"'"
         }

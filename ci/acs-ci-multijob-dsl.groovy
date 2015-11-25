@@ -52,7 +52,8 @@ def CLEAN_UP_JOB_ARTIFACTS = [
   'vmops.log*',
   'api.log*',
   'kvm1-agent-logs/',
-  'kvm2-agent-logs/'
+  'kvm2-agent-logs/',
+  'MarvinLogs/'
 ]
 
 def FOLDERS = [

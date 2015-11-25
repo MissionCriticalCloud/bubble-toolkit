@@ -52,7 +52,8 @@ def CLEAN_UP_JOB_ARTIFACTS = [
   'vmops.log*',
   'api.log*',
   'kvm1-agent-logs/',
-  'kvm2-agent-logs/'
+  'kvm2-agent-logs/',
+  'MarvinLogs/'
 ]
 
 def FOLDERS = [
@@ -64,6 +65,7 @@ FOLDERS.each { folderName ->
   folder(folderName)
 
   def shellPrefix = folderName.endsWith('-dev') ? 'bash -x' : ''
+  def executorLabel = EXECUTOR + (folderName.endsWith('-dev') ? '-dev' : '')
 
   def checkoutJobBaseName = '002-checkout-and-build'
 
@@ -81,7 +83,7 @@ FOLDERS.each { folderName ->
       stringParam('sha1', DEFAULT_GIT_REPO_BRANCH, 'Branch to be checked out and built')
     }
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(1)
     }
@@ -197,7 +199,7 @@ FOLDERS.each { folderName ->
       stringParam('sha1', DEFAULT_GIT_REPO_BRANCH, 'Branch to be checked out and built')
     }
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(1)
     }
@@ -248,7 +250,7 @@ FOLDERS.each { folderName ->
 
   freeStyleJob(deployInfraJobName) {
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(1)
     }
@@ -275,7 +277,7 @@ FOLDERS.each { folderName ->
 
   freeStyleJob(deployDcJobName) {
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(1)
     }
@@ -307,7 +309,7 @@ FOLDERS.each { folderName ->
       stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
     }
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(2)
     }
@@ -342,7 +344,7 @@ FOLDERS.each { folderName ->
       stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
     }
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(2)
     }
@@ -391,7 +393,7 @@ FOLDERS.each { folderName ->
       stringParam('CHECKOUT_JOB_BUILD_NUMBER', null, 'The build number of the checkout job ran in as part of the multijob')
     }
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(2)
     }
@@ -437,7 +439,7 @@ FOLDERS.each { folderName ->
 
   freeStyleJob(cleanUpJobName) {
     concurrentBuild()
-    label(EXECUTOR)
+    label(executorLabel)
     throttleConcurrentBuilds {
       maxPerNode(1)
     }

@@ -62,7 +62,7 @@ curl -k -b cookie.txt -X POST -d '{
 echo "Note: Getting KVM host certificate"
 kvmOvsCertificate=$(sshpass -p 'password' ssh ${SSH_OPTIONS} root@${KVM_HOST} cat /etc/openvswitch/ovsclient-cert.pem | sed -z "s/\n/\\\\n/g")
 
-echo "Note: Creating KVM host Transport Connector in Zone with UUID = ${transportZoneUuid} "
+echo "Note: Creating KVM host (${KVM_HOST}) Transport Connector in Zone with UUID = ${transportZoneUuid} "
 curl -k -b cookie.txt -X POST -d '{
     "credential": {
         "client_certificate": {
@@ -70,7 +70,7 @@ curl -k -b cookie.txt -X POST -d '{
         },
         "type": "SecurityCertificateCredential"
     },
-    "display_name": "mct-kvm1-node",
+    "display_name": "mct-'"${KVM_HOST}"'-node",
     "integration_bridge_id": "br-int",
     "transport_connectors": [
         {
@@ -79,5 +79,5 @@ curl -k -b cookie.txt -X POST -d '{
             "type": "STTConnector"
         }
     ]
-}' https://${NSX_CONTROLLER}/ws.v1/transport-node 2> /dev/null 1> transport-node-kvm1.json
+}' https://${NSX_CONTROLLER}/ws.v1/transport-node 2> /dev/null 1> transport-node-${KVM_HOST}.json
 

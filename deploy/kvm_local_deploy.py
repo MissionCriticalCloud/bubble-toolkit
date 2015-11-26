@@ -385,6 +385,36 @@ class kvm_local_deploy:
             return False
         return return_code
 
+    # Exectute actions before/after deploying cloud roles
+    def cloud_deploy_action(self, cloud_name, cloud_dict, phase, extra_arguments = None):
+        action = phase + '_deploy'
+        script_for_action = cloud_dict[action]
+        if self.is_defined(script_for_action):
+            try:
+                command = self.config_data['base_dir'] + "/" + self.config_data[action + '_dir'] + script_for_action
+                if extra_arguments is not None:
+                    command += " " + (" ".join(extra_arguments))
+                print "Note: " + cloud_name + ": Running " + action + " script: " + command
+                return_code = subprocess.call(command, shell=True)
+            except:
+                print "ERROR: " + cloud_name  + ": " + action + " script failed."
+                return False
+        else:
+            return_code = 0
+            print "WARNING: " + cloud_name  + ": No " + action + " script defined."
+        return return_code
+
+    def is_defined(self, string):
+        return bool(string and string.strip())
+
+    # Exectute actions before deploying cloud roles
+    def pre_deploy_action(self, cloud_name, cloud_data):
+        self.cloud_deploy_action(cloud_name, cloud_data, 'pre')
+
+    # Exectute actions before deploying cloud roles
+    def post_deploy_action(self, cloud_name, cloud_data, vm_names):
+        self.cloud_deploy_action(cloud_name, cloud_data, 'post', vm_names)
+
     # Get domain object from libvirt
     def get_domain(self, vm_name):
         return self.conn.lookupByName(vm_name)
@@ -426,7 +456,7 @@ class kvm_local_deploy:
             return False
         # Clean is specific hostname
         if digit != '' and self.FORCE == 1:
-            self.delete_host(role_name + digit)
+            self.delete_host_role_wrapper(role_name, digit)
         # Generate name
         vm_name = self.generate_vm_name(role_name, digit)
         if vm_name is False:
@@ -446,8 +476,8 @@ class kvm_local_deploy:
             # Exec postboot action
             self.postboot_action(role_name, vm_name)
         except:
-            return False
-        return True
+            return None
+        return vm_name
 
     # Generate a name for the VM
     def generate_vm_name(self, role_name, digit=''):
@@ -474,14 +504,44 @@ class kvm_local_deploy:
 
     # Deploy a set of roles
     def deploy_cloud(self, cloud_name):
-        # Read config file, for each role deploy_role
-        cloud_data = self.get_cloud(cloud_name)
-        roles = cloud_data['deploy_roles'].split(',')
+        try:
+            # Get cloud
+            cloud_data = self.get_cloud(cloud_name)
+            # Exec pre_deploy action
+            self.pre_deploy_action(cloud_name, cloud_data)
+            # Deploy Cloud Roles
+            vm_names = self.deploy_cloud_roles(cloud_data['deploy_roles'].split(','))
+            sort_function = self.sort_function_for_cloud(cloud_name)
+            # Exec post_deploy action
+            self.post_deploy_action(cloud_name, cloud_data, sorted(vm_names, key=sort_function))
+        except:
+            return False
+        return True
+
+    def sort_function_for_cloud(self, cloud_name):
+        if cloud_name == "nsx_cluster":
+            return self.sort_nsx_vm_name
+        else:
+            # id function returns it's argument: id(1) = 1
+            return id
+
+    # Helper for sorting NSX cluster VMs in the way post_deploy script expects them
+    def sort_nsx_vm_name(self, vm_name):
+        if 'mgr' in vm_name:
+            return 1
+        elif 'con':
+            return 2
+        elif 'svc':
+            return 3
+        else:
+            return 4
+
+    def deploy_cloud_roles(self, roles):
         pool = ThreadPool(4)
         results = pool.map(self.deploy_role, roles)
         pool.close()
         pool.join()
-        return True
+        return results
 
     # Load the json file
     def load_marvin_json(self):
@@ -593,7 +653,7 @@ if len(deploy_role) > 0:
     if not d.role_exists(deploy_role):
         print "Error: the role does not exist."
         sys.exit(1)
-    if not d.deploy_role(deploy_role, digit):
+    if d.deploy_role(deploy_role, digit) is None:
         sys.exit(1)
     sys.exit(0)
 
@@ -607,6 +667,6 @@ if len(deploy_vm) > 0:
 
     # Create
     print "Note: You want to deploy a VM with name '" + deploy_vm + "'.."
-    if not d.deploy_host(deploy_vm + digit):
+    if d.deploy_host(deploy_vm + digit) is None:
         sys.exit(1)
     sys.exit(0)

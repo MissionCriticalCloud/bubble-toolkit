@@ -218,6 +218,8 @@ if [ ${skip} -eq 0 ]; then
     else
       echo "No need to patch cloud.spec (${compile_threads})"
     fi
+    # Clean up better
+    rm -rf ../dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
     ./package.sh -d centos7
     if [ $? -ne 0 ]; then
@@ -340,6 +342,9 @@ date
 bash -x ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
+echo "Deleting old Marvin logs, if any"
+rm -rf /tmp/MarvinLogs
+
 echo "Deploy data center.."
 python /data/git/$HOSTNAME/cloudstack/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
 if [ $? -ne 0 ]; then
@@ -351,7 +356,7 @@ fi
 # Wait until templates are ready
 date
 echo "Checking template status.."
-bash -x /data/shared/helper_scripts/cloudstack/wait_template_ready.sh
+python /data/shared/helper_scripts/cloudstack/wait_template_ready.py
 date
 
 # Run the tests

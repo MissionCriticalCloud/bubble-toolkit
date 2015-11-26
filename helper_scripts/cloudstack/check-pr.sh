@@ -4,14 +4,14 @@
 # Next, you can run Marvin to setup whatever you need to verify the PR.
 
 function usage {
-  printf "Usage: %s: -m marvinCfg -p <pr id> [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvinCfg -p <pr id> [ -b <branch: default to master> -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
 
 # Options
 skip=
 run_tests=
 compile_threads=
-while getopts 'm:p:T:st' OPTION
+while getopts 'm:p:T:b:st' OPTION
 do
   case $OPTION in
   m)    marvinCfg="$OPTARG"
@@ -24,6 +24,8 @@ do
         ;;
   T)    compile_threads="-T $OPTARG"
         ;;
+  b)    branch_name="$OPTARG"
+        ;;
   esac
 done
 
@@ -33,6 +35,7 @@ echo "run_tests = ${run_tests}"
 echo "marvinCfg = ${marvinCfg}"
 echo "prId = ${prId}"
 echo "compile_threads = ${compile_threads}"
+echo "branch_name = ${branch_name}"
 
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
@@ -46,6 +49,12 @@ fi
 if [ ! -f "${marvinCfg}" ]; then
     echo "Supplied Marvin config not found!"
     exit 1
+fi
+
+# Default to master branch
+if [ -z "${branch_name}" ]; then
+    branch_name="master"
+    echo "branch_name = ${branch_name}"
 fi
 
 echo "Started!"
@@ -71,7 +80,8 @@ fi
 # Go the the source
 cd /data/git/${HOSTNAME}/cloudstack
 git reset --hard
-git checkout master
+git checkout ${branch_name}
+git branch --set-upstream-to=origin/${branch_name} ${branch_name}
 git pull
 
 git branch -D try/${prId}

@@ -118,7 +118,7 @@ echo "Removing Zone: $zone"
 for ((i=0;i<${#query[*]};i++)) 
 do
 	echo "Executing: ${query[i]} = $zone"
-	`mysql -h $host --user=$user --password=$password --skip-column-names cloud -e "${query[i]} = $zone"`
+	`mysql -h $host --user=$user --password=$password --skip-column-names cloud -e "SET FOREIGN_KEY_CHECKS=0; ${query[i]} = $zone"`
 	if [ "$?" != 0 ];then
 		echo "Error while removing zone: $zone"
 		exit 2

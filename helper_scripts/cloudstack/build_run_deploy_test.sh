@@ -201,6 +201,9 @@ function clean_xenserver {
 killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
+# Cleanup UI cached items
+find /data/git/$HOSTNAME/cloudstack/client -name \*.gz | xargs rm -f
+
 # Compile CloudStack
 if [ ${skip} -eq 0 ]; then
 

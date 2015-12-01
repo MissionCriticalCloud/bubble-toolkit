@@ -149,12 +149,31 @@ except:
  print ''
 " | cut -d/ -f3)
 
+hasNsxDevice=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  jsonObject = json.load(sys.stdin)
+  niciraProviders = filter(lambda provider: provider['name'] == 'NiciraNvp', reduce(lambda a, b: a+b, map(lambda physical_net: physical_net['providers'], jsonObject['zones'][0]['physical_networks'])))
+  if niciraProviders:
+    print True
+  else:
+    print False
+except:
+ print ERROR
+")
+
+if [ "$hasNsxDevice" == "ERROR" ]; then
+  echo "Failed to detect NSX provider in Marvin config"
+  exit 10
+fi
+
 # Install CloudStack packages to KVM
 function install_kvm_packages {
   # Parameters
   hvip=$1
   hvuser=$2
   hvpass=$3
+  hasNsxDevice=$4
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
@@ -166,6 +185,11 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} yum -y remove cloudstack-common
   ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
   ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent* cloudstack-common*
+  if [ "$hasNsxDevice" == "True" ]; then
+    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cloudstack/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties'
+  fi
 }
 
 function clean_kvm {
@@ -235,13 +259,13 @@ if [ ${skip} -eq 0 ]; then
     git reset --hard
 
     # Push to hypervisor
-    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
+    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1} ${hasNsxDevice}
     date
 
     # Do we have a second hypervisor
     if [ ! -z  ${hvip2} ]; then
       # Push to hypervisor
-      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
+      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2} ${hasNsxDevice}
     fi
 
     # We do not need to clean the next compile
@@ -337,7 +361,7 @@ if [[ "${hypervisor}" == "kvm" ]]; then
  elif [[ "${hypervisor}" == "xenserver" ]]; then
   systemtemplate="/data/templates/systemvm64template-master-4.6.0-xen.vhd"
   imagetype="vhd"
-fi 
+fi
 
 echo "Install systemvm template.."
 # Consider using -f and point to local cached file

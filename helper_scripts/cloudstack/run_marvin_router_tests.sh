@@ -24,6 +24,7 @@ smoke/test_loadbalance.py \
 smoke/test_internal_lb.py \
 smoke/test_ssvm.py \
 smoke/test_vpc_vpn.py \
+smoke/test_privategw_acl.py \
 smoke/test_network.py
 
 
@@ -31,7 +32,6 @@ echo "Running tests with required_hardware=false"
 nosetests --with-marvin --marvin-config=${marvinCfg} -s -a tags=advanced,required_hardware=false \
 smoke/test_routers.py \
 smoke/test_network_acl.py \
-smoke/test_privategw_acl.py \
 smoke/test_reset_vm_on_reboot.py \
 smoke/test_vm_life_cycle.py \
 smoke/test_service_offerings.py \

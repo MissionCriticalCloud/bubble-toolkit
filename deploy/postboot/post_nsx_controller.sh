@@ -12,6 +12,3 @@ sudo yum install -y -q sshpass
 
 echo "Joining cluster"
 sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NEWHOST} join control-cluster ${NSX_CONTROLLER_IP}
-
-echo "Restarting initial controller"
-sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER} restart controller

@@ -281,7 +281,7 @@ if [ ${skip} -eq 0 ]; then
   cd /data/git/$HOSTNAME/cloudstack
   echo "Compiling CloudStack"
   date
-  mvn ${clean} install -P developer,systemvm -DskipTests ${compile_threads}
+  mvn ${clean} install -P developer,systemvm ${compile_threads}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"

@@ -14,7 +14,7 @@ cd /data/git/${HOSTNAME}/cloudstack/test/integration
 
 echo "Running tests with required_hardware=true"
 nosetests --with-marvin --marvin-config=${marvinCfg} -s -a tags=advanced,required_hardware=true \
-component/test_password_server.py \
+smoke/test_password_server.py \
 smoke/test_vpc_redundant.py \
 smoke/test_routers_iptables_default_policy.py \
 smoke/test_routers_network_ops.py \

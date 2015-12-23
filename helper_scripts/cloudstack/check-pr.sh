@@ -79,6 +79,7 @@ fi
 
 # Go the the source
 cd /data/git/${HOSTNAME}/cloudstack
+git pull
 git reset --hard
 git checkout ${branch_name}
 git branch --set-upstream-to=origin/${branch_name} ${branch_name}

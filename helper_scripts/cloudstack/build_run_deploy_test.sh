@@ -323,6 +323,9 @@ date
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
 # Insert OVS bridge
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
+# Garbage collector
+mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '60') ON DUPLICATE KEY UPDATE value = '60';"
+mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '60') ON DUPLICATE KEY UPDATE value = '60';"
 
 # Adding the right SystemVMs, for both KVM and XenServer
 # Adding the tiny linux VM templates for KVM and XenServer

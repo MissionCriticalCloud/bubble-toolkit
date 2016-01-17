@@ -83,25 +83,15 @@ git pull
 git reset --hard
 git checkout ${branch_name}
 git branch --set-upstream-to=origin/${branch_name} ${branch_name}
-git pull --rebase
+git pull
 
+git branch -D try/${prId}
+git branch try/${prId}
+git checkout try/${prId}
 # Get the PR
-git branch -D pr/${prId}
-git fetch origin pull/${prId}/head:pr/${prId}
+tools/git/git-pr ${prId} --force
 if [ $? -gt 0  ]; then
-  echo "ERROR: Fetching failed!"
-  exit 1
-fi
-git checkout pr/${prId}
-if [ $? -gt 0  ]; then
-  echo "ERROR: Checkout failed!"
-  exit 1
-fi
-
-# Rebase with current ${branch_name} before tests
-git rebase ${branch_name}
-if [ $? -gt 0  ]; then
-  echo "ERROR: Rebase with ${branch_name} failed, please ask author to rebase and force-push commits. Then try again!"
+  echo "ERROR: Merge failed!"
   exit 1
 fi
 

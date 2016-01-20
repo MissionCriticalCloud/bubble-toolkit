@@ -25,6 +25,7 @@ This will build the hypervisors:
 ### Run the integration tests
 
 ```
+ssh cs1
 cd /data/shared/helper_script/cloudstack
  ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p PRNR -b BASE_BRANCH -t
 ```

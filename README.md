@@ -32,4 +32,10 @@ Example:
  ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p 1348 -b 4.7 -t
 ```
 
+### Results of a test:
+
 ![screen shot 2016-01-20 at 11 29 42](https://cloud.githubusercontent.com/assets/1630096/12446309/9433e286-bf69-11e5-8906-77bfeca86dea.png)
+
+### Testing to the Maxxx
+
+![screen shot 2015-10-23 at 16 47 08](https://cloud.githubusercontent.com/assets/1630096/12446386/f5b2548e-bf69-11e5-936d-94eedf41b548.png)

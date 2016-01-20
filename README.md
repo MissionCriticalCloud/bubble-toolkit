@@ -10,8 +10,8 @@ This repo is available in /data/shared on your MCT box. Feel free to add handy s
 This will build a VM capable of running the CloudStack management server:
 
 ```
-cd /data/shared/helper_scripts/cloudstack/
-./build_run_deploy_test.sh -r cloudstack-mgt-dev
+cd /data/shared/deploy/
+./kvm_local_deploy.py -r cloudstack-mgt-dev
 ```
 
 ### Perpare the infra as defined in the Marvin data center config file:
@@ -19,12 +19,13 @@ cd /data/shared/helper_scripts/cloudstack/
 This will build the hypervisors:
 
 ```
-./build_run_deploy_test.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg
+./kvm_local_deploy.py -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg
 ```
 
 ### Run the integration tests
 
 ```
+cd /data/shared/helper_script/cloudstack
  ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p PRNR -b BASE_BRANCH -t
 ```
 Example:

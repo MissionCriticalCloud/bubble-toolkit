@@ -239,12 +239,12 @@ if [ ${skip} -eq 0 ]; then
   if [[ "$hypervisor" == "kvm" ]]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
-    cd $COSMIC_BUILD_PATH/packaging
+    cd $COSMIC_BUILD_PATH/cosmic-packaging
 
     # Use 4 cores when compiling ACS
     if [ ! -z "${compile_threads}" ]; then
       echo "Patching cloud.spec (${compile_threads})"
-      sed -i "/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests \$FLAGS clean package ${compile_threads}" $COSMIC_BUILD_PATH/packaging/centos7/cloud.spec
+      sed -i "/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests \$FLAGS clean package ${compile_threads}" $COSMIC_BUILD_PATH/cosmic-packaging/centos7/cloud.spec
     else
       echo "No need to patch cloud.spec (${compile_threads})"
     fi

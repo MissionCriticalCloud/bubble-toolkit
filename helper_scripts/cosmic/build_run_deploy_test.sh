@@ -355,7 +355,7 @@ killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
 # Compile Cosmic
-cd "$COSMIC_RUN_PATH"
+cd "$COSMIC_BUILD_PATH"
 echo "Starting Cosmic"
 mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
 

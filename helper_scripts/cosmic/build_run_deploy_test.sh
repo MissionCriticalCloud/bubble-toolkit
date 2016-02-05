@@ -229,7 +229,7 @@ killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
 # Cleanup UI cached items
-find /data/git/$HOSTNAME/cosmic/cosmic-core/client -name \*.gz | xargs rm -f
+find /data/git/$HOSTNAME/cosmic/cosmic-client -name \*.gz | xargs rm -f
 
 # Compile Cosmic
 if [ ${skip} -eq 0 ]; then

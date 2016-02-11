@@ -25,6 +25,16 @@ if [ ! -d "cosmic/.git" ]; then
 else
   echo "Git Cosmic repo already found"
 fi
+if [ ! -d "cosmic/cosmic-packaging/.git" ]; then
+  echo "No git repo found, cloning packaging"
+  git clone --recursive git@github.com:MissionCriticalCloud/packaging.git cosmic/cosmic-packaging
+  echo "Please use 'git checkout' to checkout the branch you need."
+else
+  echo "Git packaging repo already found"
+fi
+ln -sf ../packaging cosmic/cosmic-packaging
+
+
 
 COSMIC_BUILD_PATH=/data/git/$HOSTNAME/cosmic
 cd $COSMIC_BUILD_PATH

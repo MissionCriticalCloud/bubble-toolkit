@@ -4,6 +4,10 @@
 # When KVM is used, RPMs are built and installed on the hypervisor.
 # When done, it runs the desired tests.
 
+# Source the helper functions and 
+. `dirname $0`/helperlib.sh
+
+
 function usage {
   printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
@@ -53,7 +57,7 @@ date
 host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
 
 COSMIC_BUILD_PATH=/data/git/$HOSTNAME/cosmic
-COSMIC_RUN_PATH=$COSMIC_BUILD_PATH/cosmic-core
+COSMIC_CORE_PATH=$COSMIC_BUILD_PATH/cosmic-core
 
 # We work from here
 cd $COSMIC_BUILD_PATH
@@ -66,170 +70,25 @@ fi
 echo "OK"
 
 # Parse marvin config
-# This should be done in python instead,
-# for now we just hack the common usecase together
+parse_marvin_config ${marvinCfg}
 
-# All we support is a single cluster with 1 or 2 hypervisors.
-
-# We grab some useful info from the supplied Marvin json file.
-
-# Zone name
-zone=$(cat ${marvinCfg} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['name']
-")
-
-# Hypervisor type
-hypervisor=$(cat ${marvinCfg} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
-")
-
-# Primary storage location
-primarystorage=$(cat ${marvinCfg} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['primaryStorages'][0]['url']" | cut -d: -f3
-)
+# Create storage paths
 mkdir -p ${primarystorage}
-
-secondarystorage=$(cat ${marvinCfg} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
-)
 mkdir -p ${secondarystorage}
-
-# username hypervisor 1
-hvuser1=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
-except:
- print ''
-")
-
-# password hypervisor 1
-hvpass1=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
-except:
- print ''
-")
-
-# ip adress hypervisor 1
-hvip1=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
-except:
- print ''
-" | cut -d/ -f3)
-
-# username hypervisor 2
-hvuser2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
-except:
- print ''
-")
-
-# password hypervisor 2
-hvpass2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
-except:
- print ''
-")
-
-# ip adress hypervisor 2
-hvip2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
-except:
- print ''
-" | cut -d/ -f3)
-
-hasNsxDevice=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  jsonObject = json.load(sys.stdin)
-  niciraProviders = filter(lambda provider: provider['name'] == 'NiciraNvp', reduce(lambda a, b: a+b, map(lambda physical_net: physical_net['providers'], jsonObject['zones'][0]['physical_networks'])))
-  if niciraProviders:
-    print True
-  else:
-    print False
-except:
- print ERROR
-")
 
 if [ "$hasNsxDevice" == "ERROR" ]; then
   echo "Failed to detect NSX provider in Marvin config"
   exit 10
 fi
 
-# Install Cosmic packages to KVM
-function install_kvm_packages {
-  # Parameters
-  hvip=$1
-  hvuser=$2
-  hvpass=$3
-  hasNsxDevice=$4
-
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
-
-  # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm cloudstack-*
-  ${scp_base} ../dist/rpmbuild/RPMS/x86_64/* ${hvuser}@${hvip}:
-  ${ssh_base} ${hvuser}@${hvip} yum -y remove cloudstack-common
-  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent* cloudstack-common*
-  if [ "$hasNsxDevice" == "True" ]; then
-    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cloudstack/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties'
-  fi
-}
-
-function clean_kvm {
-  # Parameters
-  hvip=$1
-  hvuser=$2
-  hvpass=$3
-
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
-
-  # Clean KVM in case it has been used before
-  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-  ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
-  ${ssh_base} ${hvuser}@${hvip} systemctl disable cloudstack-agent
-  ${ssh_base} ${hvuser}@${hvip} systemctl restart libvirtd
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
-  ${ssh_base} ${hvuser}@${hvip} "for host in \$(virsh list | awk '{print \$2;}' | grep -v Name |egrep -v '^\$'); do virsh destroy \$host; done"
-}
-
-function clean_xenserver {
-  # Parameters
-  hvip=$1
-  hvuser=$2
-  hvpass=$3
-
-  /data/shared/helper_scripts/cleaning/xapi_cleanup_xenservers.py http://${hvip} ${hvuser} ${hvpass}
-
-}
-
-# Stop previous mgt server
 killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
 # Cleanup UI cached items
 find /data/git/$HOSTNAME/cosmic/cosmic-client -name \*.gz | xargs rm -f
+
+# Short pre-compile may be needed to solve dependency
+mvn clean install -N
 
 # Compile Cosmic
 if [ ${skip} -eq 0 ]; then
@@ -312,7 +171,7 @@ elif [[ "$hypervisor" == "xenserver" ]]; then
     fi
 fi
 
-cd "$COSMIC_RUN_PATH"
+cd "$COSMIC_CORE_PATH"
 # Deploy DB
 echo "Deploying Cosmic DB"
 mvn -P developer -pl developer -Ddeploydb -T 4
@@ -324,26 +183,12 @@ fi
 date
 
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
-mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
 # Insert OVS bridge
-mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
 # Garbage collector
-mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '60') ON DUPLICATE KEY UPDATE value = '60';"
-mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '60') ON DUPLICATE KEY UPDATE value = '60';"
-
 # Adding the right SystemVMs, for both KVM and XenServer
 # Adding the tiny linux VM templates for KVM and XenServer
-echo "Config Templates"
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2' where id=1;"
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
-
 # Make service offering support HA
-echo "Set all offerings to HA"
-mysql -u cloud -pcloud cloud --exec "UPDATE service_offering SET ha_enabled = 1;"
-mysql -u cloud -pcloud cloud --exec "UPDATE vm_instance SET ha_enabled = 1;"
+cloud_conf_cosmic
 
 # Install Marvin
 echo "Installing Marvin"
@@ -355,7 +200,7 @@ killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
 # Compile Cosmic
-cd "$COSMIC_BUILD_PATH"
+cd $COSMIC_BUILD_PATH/cosmic-client
 echo "Starting Cosmic"
 mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
 
@@ -375,14 +220,14 @@ fi
 echo "Install systemvm template.."
 # Consider using -f and point to local cached file
 date
-bash -x $COSMIC_RUN_PATH/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
+bash -x $COSMIC_CORE_PATH/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
 echo "Deleting old Marvin logs, if any"
 rm -rf /tmp/MarvinLogs
 
 echo "Deploy data center.."
-python $COSMIC_RUN_PATH/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
+python $COSMIC_CORE_PATH/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
 if [ $? -ne 0 ]; then
   date
   echo "Deployment failed, please investigate!"

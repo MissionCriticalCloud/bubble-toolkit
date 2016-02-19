@@ -70,12 +70,6 @@ print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['primaryStorage
 )
 mkdir -p ${primarystorage}
 
-secondarystorage=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
-)
-mkdir -p ${secondarystorage}
-
 say "Creating Management Server: cs1"
 /data/shared/deploy/kvm_local_deploy.py -r cloudstack-mgt-dev -d 1 --force
 

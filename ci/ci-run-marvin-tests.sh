@@ -26,8 +26,8 @@ function run_marvin_tests {
 
   nose_tests_report_file=nosetests-required_hardware-${require_hardware}.xml
 
-  cd test/integration
-  nosetests --with-xunit --xunit-file=../../${nose_tests_report_file} --with-marvin --marvin-config=../../${config_file} -s -a tags=advanced,required_hardware=${require_hardware} ${tests}
+  cd cosmic-core/test/integration
+  nosetests --with-xunit --xunit-file=../../../${nose_tests_report_file} --with-marvin --marvin-config=../../../${config_file} -s -a tags=advanced,required_hardware=${require_hardware} ${tests}
   cd -
 }
 
@@ -82,4 +82,3 @@ update_management_server_in_marvin_config ${marvin_config_copy} ${cs1ip}
 
 say "Running tests"
 run_marvin_tests ${marvin_config_copy} ${require_hardware} "${marvin_tests}"
-

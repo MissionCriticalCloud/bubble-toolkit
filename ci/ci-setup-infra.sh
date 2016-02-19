@@ -38,21 +38,21 @@ function install_kvm_packages {
   scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm -f cloudstack-\*
-  ${scp_base} cloudstack-agent*.rpm cloudstack-common*.rpm ${hvuser}@${hvip}:./
-  ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cloudstack-common
-  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent\*.rpm cloudstack-common\*.rpm
+  ${ssh_base} ${hvuser}@${hvip} rm -f cosmic-\*
+  ${scp_base} dist/rpmbuild/RPMS/x86_64/cosmic-*.rpm ${hvuser}@${hvip}:./
+  ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cosmic-common
+  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
+  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent\*.rpm cosmic-common\*.rpm
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-  ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
-  ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
-  ${ssh_base} ${hvuser}@${hvip} "echo \"guest.cpu.mode=host-model\" >> /etc/cloudstack/agent/agent.properties"
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
+  ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cosmic/agent/agent.properties /etc/cosmic/agent/agent.properties.orig
+  ${ssh_base} ${hvuser}@${hvip} "echo \"guest.cpu.mode=host-model\" >> /etc/cosmic/agent/agent.properties"
 
   say "KVM packages installed in ${hvip}"
 }
 
-function deploy_cloudstack_db {
+function deploy_cosmic_db {
   csip=$1
   csuser=$2
   cspass=$3
@@ -64,12 +64,12 @@ function deploy_cloudstack_db {
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   ${ssh_base} ${csuser}@${csip} "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
-  mysql -h ${csip} -u root < setup/db/create-database.sql
-  mysql -h ${csip} -u root < setup/db/create-database-premium.sql
-  mysql -h ${csip} -u root < setup/db/create-schema.sql
-  mysql -h ${csip} -u root < setup/db/create-schema-premium.sql
-  mysql -h ${csip} -u cloud -pcloud < setup/db/templates.sql
-  mysql -h ${csip} -u cloud -pcloud < developer/developer-prefill.sql
+  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-database.sql
+  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-database-premium.sql
+  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-schema.sql
+  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-schema-premium.sql
+  mysql -h ${csip} -u cloud -pcloud < cosmic-client/copy-from-cosmic-core/scripts/db/templates.sql
+  mysql -h ${csip} -u cloud -pcloud < cosmic-core/developer/developer-prefill.sql
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
@@ -79,6 +79,11 @@ function deploy_cloudstack_db {
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE service_offering SET ha_enabled = 1;"
   mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE vm_instance SET ha_enabled = 1;"
+
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '10') ON DUPLICATE KEY UPDATE value = '10';"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '10') ON DUPLICATE KEY UPDATE value = '10';"
+
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
 
   say "CloudStack DB deployed at ${csip}"
 }
@@ -105,37 +110,13 @@ function install_systemvm_templates {
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  ${scp_base} -r ./scripts ${csuser}@${csip}:./
+  ${scp_base} -r ./cosmic-core/scripts ${csuser}@${csip}:./
   ${ssh_base} ${csuser}@${csip} ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 
   say "SystemVM templates installed"
 }
 
-function install_mysql_connector {
-  csip=$1
-  csuser=$2
-  cspass=$3
-
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-
-  ${ssh_base} ${csuser}@${csip} yum install -y -q mysql-connector-java
-
-  say "MySQL Connector Java installed"
-}
-
-function configure_tomcat_to_load_mysql_connector {
-  csip=$1
-  csuser=$2
-  cspass=$3
-
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-
-  ${ssh_base} ${csuser}@${csip} "echo \"CLASSPATH=\\\"/usr/share/java/mysql-connector-java.jar:\\\${CLASSPATH}\\\"\" >> /etc/sysconfig/tomcat"
-}
-
-function deploy_cloudstack_war {
+function deploy_cosmic_war {
   csip=$1
   csuser=$2
   cspass=$3
@@ -148,6 +129,8 @@ function deploy_cloudstack_war {
 
   ${ssh_base} ${csuser}@${csip} mkdir -p ~tomcat/db
   ${scp_base} ${dbscripts_dir} ${csuser}@${csip}:~tomcat/db/
+  ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
+  ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
   ${ssh_base} ${csuser}@${csip} service tomcat start
 }
@@ -178,24 +161,11 @@ if [ ! -f "${marvin_config}" ]; then
     exit 1
 fi
 
-
-zone=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['name']
-")
-
 # Hypervisor type
 hypervisor=$(cat ${marvin_config} | grep -v "#" | python -c "
 import sys, json
 print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
 ")
-
-# Primary storage location
-primarystorage=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['primaryStorages'][0]['url']" | cut -d: -f3
-)
-mkdir -p ${primarystorage}
 
 secondarystorage=$(cat ${marvin_config} | grep -v "#" | python -c "
 import sys, json
@@ -257,26 +227,13 @@ except:
  print ''
 " | cut -d/ -f3)
 
-say "Cleaning storage"
-sudo rm -rf /data/storage/secondary/*/*
-sudo rm -rf /data/storage/primary/*/*
-
-say "Creating Management Server: cs1"
-/data/shared/deploy/kvm_local_deploy.py -r cloudstack-mgt-dev -d 1 --force
-
 cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 
-say "Installing MySQL Connector Java"
-install_mysql_connector ${cs1ip} "root" "password"
-
-say "Configure Tomcat to load MySQL Connector"
-configure_tomcat_to_load_mysql_connector ${cs1ip} "root" "password"
-
 say "Deploying CloudStack DB"
-deploy_cloudstack_db ${cs1ip} "root" "password"
+deploy_cosmic_db ${cs1ip} "root" "password"
 
 say "Installing Marvin"
-install_marvin "tools/marvin/dist/Marvin-*.tar.gz"
+install_marvin "cosmic-core/tools/marvin/dist/Marvin-*.tar.gz"
 
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"
@@ -284,10 +241,7 @@ imagetype="qcow2"
 install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
 say "Deploying CloudStack WAR"
-deploy_cloudstack_war ${cs1ip} "root" "password" 'client/target/utilities/scripts/db/db/*' 'client/target/cloud-client-ui-*.war'
-
-say "Creating hosts"
-/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force
+deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/copy-from-cosmic-core/scripts/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 
 say "Installing KVM packages on hosts"
 install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}

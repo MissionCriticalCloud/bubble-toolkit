@@ -326,6 +326,8 @@ mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, 
 # Garbage collector
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '10') ON DUPLICATE KEY UPDATE value = '10';"
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '10') ON DUPLICATE KEY UPDATE value = '10';"
+# Number of VPC tiers (as required by smoke/test_privategw_acl.py)
+mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
 
 # Adding the right SystemVMs, for both KVM and XenServer
 # Adding the tiny linux VM templates for KVM and XenServer

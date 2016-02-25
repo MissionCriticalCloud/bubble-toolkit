@@ -88,6 +88,3 @@ say "Deploying Data Center"
 deploy_data_center ${marvin_configCopy}
 
 wait_for_systemvm_templates
-
-say "Removing old Marvin logs"
-sudo rm -rf /tmp/MarvinLogs

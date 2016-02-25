@@ -113,18 +113,23 @@ except:
 cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 
 say "Collecting Management Server Logs"
-collect_files_from_vm ${cs1ip} "root" "password" "~tomcat/vmops.log*" "."
-collect_files_from_vm ${cs1ip} "root" "password" "~tomcat/api.log*"   "."
+mkdir -p cs1-management-logs
+collect_files_from_vm ${cs1ip} "root" "password" "/var/log/cosmic/management/*.log*" "cs1-management-logs/"
+collect_files_from_vm ${cs1ip} "root" "password" "~tomcat/api.log*" "cs1-management-logs/"
 
 say "Collecting Hypervisor Agent Logs"
-mkdir -p kvm1-agent-logs kvm2-agent-logs
-collect_files_from_vm ${hvip1} ${hvuser1} ${hvpass2} "/var/log/cloudstack/agent/agent.log*" "kvm1-agent-logs/"
-collect_files_from_vm ${hvip2} ${hvuser2} ${hvpass2} "/var/log/cloudstack/agent/agent.log*" "kvm2-agent-logs/"
+mkdir -p kvm1-agent-logs kvm2-agent-logs 
+collect_files_from_vm ${hvip1} ${hvuser1} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm1-agent-logs/"
+collect_files_from_vm ${hvip2} ${hvuser2} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm2-agent-logs/"
 
-say "Collecting Marvin Logs"
-cp -rf /tmp/MarvinLogs .
+say "Cleaning MarvinLogs"
 rm -rf /tmp/MarvinLogs
 
+say "Destroying VMs"
 destroy_vm cs1
 destroy_vm ${hvip1}
 destroy_vm ${hvip2}
+
+say "Cleaning primary and secondary NFS storage"
+sudo rm -rf /data/storage/secondary/*/*
+sudo rm -rf /data/storage/primary/*/*

@@ -10,27 +10,29 @@ function install_kvm_packages {
   hasNsxDevice=$4
   
   
-  if [  -d /data/git/$HOSTNAME/cosmic/dist/rpmbuild/RPMS/x86_64 ]; then
-    distdir=/data/git/$HOSTNAME/cosmic/dist/rpmbuild/RPMS/x86_64
+  if [  -d /data/git/$HOSTNAME/cosmic/packaging/dist/rpmbuild/RPMS/x86_64 ]; then
+    distdir=/data/git/$HOSTNAME/cosmic/packaging/dist/rpmbuild/RPMS/x86_64
   fi
   if [  -d ../dist/rpmbuild/RPMS/x86_64 ]; then
     distdir=../dist/rpmbuild/RPMS/x86_64
   fi
+
+  echo "Dist dir is ${distdir}"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm cloudstack-*
+  ${ssh_base} ${hvuser}@${hvip} rm cosmic-*
   ${scp_base} ${distdir}/* ${hvuser}@${hvip}:
-  ${ssh_base} ${hvuser}@${hvip} yum -y remove cloudstack-common
-  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent* cloudstack-common*
+  ${ssh_base} ${hvuser}@${hvip} yum -y remove cosmic-common
+  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
+  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent* cosmic-common*
   if [ "$hasNsxDevice" == "True" ]; then
-    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cloudstack/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
   fi
 }
 
@@ -46,10 +48,10 @@ function clean_kvm {
 
   # Clean KVM in case it has been used before
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-  ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
-  ${ssh_base} ${hvuser}@${hvip} systemctl disable cloudstack-agent
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent
+  ${ssh_base} ${hvuser}@${hvip} systemctl disable cosmic-agent
   ${ssh_base} ${hvuser}@${hvip} systemctl restart libvirtd
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
   ${ssh_base} ${hvuser}@${hvip} "for host in \$(virsh list | awk '{print \$2;}' | grep -v Name |egrep -v '^\$'); do virsh destroy \$host; done"
 }
 

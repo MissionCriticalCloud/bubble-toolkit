@@ -92,6 +92,17 @@ mvn clean install -N
 
 # Compile Cosmic
 if [ ${skip} -eq 0 ]; then
+  # Compile Cosmic
+  cd "$COSMIC_BUILD_PATH"
+  echo "Compiling Cosmic"
+  date
+  mvn clean install -P developer,systemvm ${compile_threads}
+  if [ $? -ne 0 ]; then
+    date
+    echo "Build failed, please investigate!"
+    exit 1
+  fi
+  date
 
   # Compile RPM packages for KVM hypervisor
   # When something VR related is changed, one must use the RPMs from the branch we're testing
@@ -100,25 +111,15 @@ if [ ${skip} -eq 0 ]; then
     date
     cd $COSMIC_BUILD_PATH/packaging
 
-    # Use 4 cores when compiling ACS
-    if [ ! -z "${compile_threads}" ]; then
-      echo "Patching cloud.spec (${compile_threads})"
-      sed -i "/mvn -Psystemvm -DskipTests/c\mvn -Psystemvm -DskipTests \$FLAGS clean package ${compile_threads}" $COSMIC_BUILD_PATH/packaging/centos7/cloud.spec
-    else
-      echo "No need to patch cloud.spec (${compile_threads})"
-    fi
     # Clean up better
     rm -rf ../dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
-    ./package.sh -d centos7
+    ./package_cosmic.sh -d centos7 -f ${COSMIC_BUILD_PATH}
     if [ $? -ne 0 ]; then
       date
       echo "RPM build failed, please investigate!"
       exit 1
     fi
-
-    # Done, put it back
-    git reset --hard
 
     # Push to hypervisor
     install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1} ${hasNsxDevice}
@@ -130,26 +131,10 @@ if [ ${skip} -eq 0 ]; then
       install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2} ${hasNsxDevice}
     fi
 
-    # We do not need to clean the next compile
-    clean=""
   else
     echo "No RPM packages needed for ${hypervisor}"
-
-    # We use clean here since we didn't compile rpms
-    clean="clean"
   fi
 
-  # Compile Cosmic
-  cd "$COSMIC_BUILD_PATH"
-  echo "Compiling Cosmic"
-  date
-  mvn ${clean} install -P developer,systemvm ${compile_threads}
-  if [ $? -ne 0 ]; then
-    date
-    echo "Build failed, please investigate!"
-    exit 1
-  fi
-  date
 fi
 
 # Cleaning Hypervisor

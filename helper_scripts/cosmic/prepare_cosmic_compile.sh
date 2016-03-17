@@ -5,31 +5,52 @@
 # Get source
 BASEDIR=/data/git/${HOSTNAME}
 MYDIR=$(pwd -P)
+GITSSH=1
+REPOURL=git@github.com:MissionCriticalCloud/cosmic.git
 
-install_pkg() {
-	NAME=$*
-	yum install -y ${NAME}
-	if [ "$?" -ne "0" ]
-	then
-		echo Package Installation Failed exiting
-		exit 1
-	fi
+while getopts 'h' OPTION
+do
+  case $OPTION in
+  h)    GITSSH=0
+        ;;
+  esac
+done
+
+function gitclone_cosmic {
+  if [ "$GITSSH" -eq "1" ]; then
+    git clone --recursive $REPOURL
+  else
+    git clone `echo $REPOURL | sed 's@git\@github.com:@https://github.com/@'`
+    cd cosmic
+    git submodule init
+    sed -i 's@git\@github.com:@https://github.com/@' .git/config
+    git submodule update
+  fi
+  echo "Please use 'git checkout' to checkout the branch you need."
 }
+
+function gitclone_packaging {
+  if [ "$GITSSH" -eq "1" ]; then
+    git clone --recursive git@github.com:MissionCriticalCloud/packaging.git cosmic/packaging
+  else
+    git clone --recursive `echo git@github.com:MissionCriticalCloud/packaging.git | sed 's@git\@github.com:@https://github.com/@'` cosmic/packaging
+  fi
+  echo "Please use 'git checkout' to checkout the branch you need."
+}
+
 
 mkdir -p ${BASEDIR}
 cd ${BASEDIR}
 if [ ! -d "cosmic/.git" ]; then
   echo "No git repo found, cloning Cosmic"
-  git clone --recursive git@github.com:MissionCriticalCloud/cosmic.git
-  echo "Please use 'git checkout' to checkout the branch you need."
+  gitclone_cosmic
 else
   echo "Git Cosmic repo already found"
 fi
 
 if [ ! -d "cosmic/packaging/.git" ]; then
   echo "No git repo found, cloning packaging"
-  git clone --recursive git@github.com:MissionCriticalCloud/packaging.git cosmic/packaging
-  echo "Please use 'git checkout' to checkout the branch you need."
+  gitclone_packaging
 else
   echo "Git packaging repo already found"
 fi
@@ -40,7 +61,7 @@ COSMIC_BUILD_PATH=/data/git/$HOSTNAME/cosmic
 cd $COSMIC_BUILD_PATH
 
 # Check VHD-UTIL
-if [ ! -f "scripts/vm/hypervisor/xenserver/vhd-util" ]; then
+if [ ! -f "cosmic-core/scripts/vm/hypervisor/xenserver/vhd-util" ]; then
   echo "Fetching vhd-util.."
   cd cosmic-core/scripts/vm/hypervisor/xenserver
   wget http://download.cloud.com.s3.amazonaws.com/tools/vhd-util

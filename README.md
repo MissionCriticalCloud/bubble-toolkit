@@ -1,13 +1,13 @@
-# MCT-shared
-Shared repo for our MCT CloudStack environment.
+# Bubble Toolkit
+Shared toolkit repository to be used with Bubbles.
 
-This repo is available in /data/shared on your MCT box. Feel free to add handy scripts or alter where needed.
+This repo is available in /data/shared on your Bubble. Feel free to add handy scripts or alter where needed.
 
-## Testing CloudStack Pull Requests:
+## Testing CloudStack or Cosmic Pull Requests:
 
 ### Perpare management server:
 
-This will build a VM capable of running the CloudStack management server:
+This will build a VM capable of running the management server:
 
 ```
 cd /data/shared/deploy/
@@ -31,7 +31,7 @@ cd /data/shared/helper_script/cloudstack
 ```
 Example:
 ```
- ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p 1348 -b 4.7 -t
+ ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p 1348 -b 4.8 -t
 ```
 
 ### Results of a test:

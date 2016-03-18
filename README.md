@@ -45,4 +45,11 @@ Example:
 License and Authors
 -------------------
 License: Apache Version 2.0
-Authors: Fred Neubauer, Remi Bergsma, Bob van den Heuvel, Boris Schrijver, Miguel Ferreira, Wilder Rodrigues
+
+Authors:
+* Fred Neubauer
+* Remi Bergsma
+* Bob van den Heuvel
+* Boris Schrijver
+* Miguel Ferreira
+* Wilder Rodrigues

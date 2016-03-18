@@ -41,3 +41,8 @@ Example:
 ### Testing to the Maxxx
 
 ![screen shot 2015-10-23 at 16 47 08](https://cloud.githubusercontent.com/assets/1630096/12446386/f5b2548e-bf69-11e5-936d-94eedf41b548.png)
+
+License and Authors
+-------------------
+License: Apache Version 2.0
+Authors: Fred Neubauer, Remi Bergsma, Bob van den Heuvel, Boris Schrijver, Miguel Ferreira, Wilder Rodrigues

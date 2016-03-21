@@ -116,6 +116,18 @@ function install_systemvm_templates {
   say "SystemVM templates installed"
 }
 
+function configure_tomcat_to_load_jacoco_agent {
+  csip=$1
+  csuser=$2
+  cspass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+
+  ${scp_base} target/jacoco-agent.jar ${csuser}@${csip}:/tmp
+  ${ssh_base} ${csuser}@${csip} "echo \"JAVA_OPTS=\\\"-javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec\\\"\" >> /etc/sysconfig/tomcat"
+}
+
 function deploy_cosmic_war {
   csip=$1
   csuser=$2
@@ -239,6 +251,9 @@ say "Installing SystemVM templates"
 systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"
 imagetype="qcow2"
 install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
+
+say "Configuring tomcat to load JaCoCo Agent"
+configure_tomcat_to_load_jacoco_agent ${cs1ip} "root" "password"
 
 say "Deploying CloudStack WAR"
 deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/copy-from-cosmic-core/scripts/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'

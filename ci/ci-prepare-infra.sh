@@ -34,7 +34,7 @@ function configure_tomcat_to_load_mysql_connector {
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
 
-  ${ssh_base} ${csuser}@${csip} "echo \"CLASSPATH=\\\"/usr/share/java/mysql-connector-java.jar:\\\${CLASSPATH}\\\"\" >> /etc/sysconfig/tomcat"
+  ${ssh_base} ${csuser}@${csip} "echo \"CLASSPATH=\\\"/usr/share/java/mysql-connector-java.jar\\\"\" >> /etc/sysconfig/tomcat"
 }
 
 # Options

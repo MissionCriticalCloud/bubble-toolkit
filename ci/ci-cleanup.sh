@@ -118,7 +118,7 @@ collect_files_from_vm ${cs1ip} "root" "password" "/var/log/cosmic/management/*.l
 collect_files_from_vm ${cs1ip} "root" "password" "~tomcat/api.log*" "cs1-management-logs/"
 
 say "Collecting Hypervisor Agent Logs"
-mkdir -p kvm1-agent-logs kvm2-agent-logs 
+mkdir -p kvm1-agent-logs kvm2-agent-logs
 collect_files_from_vm ${hvip1} ${hvuser1} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm1-agent-logs/"
 collect_files_from_vm ${hvip2} ${hvuser2} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm2-agent-logs/"
 

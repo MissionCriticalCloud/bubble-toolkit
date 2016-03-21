@@ -58,6 +58,8 @@ def handleArguments(argv):
     deploy_role = ''
     global deploy_vm
     deploy_vm = ''
+    global destroy_vm
+    destroy_vm = ''
     global deploy_cloud
     deploy_cloud = ''
     global deploy_marvin
@@ -77,14 +79,15 @@ def handleArguments(argv):
         '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
         '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
         '\n  --status -s \t\t\tDisplay status of your VMs' + \
+        '\n  --destroy -x \t\t\tDestroys a VM' + \
         '\n  --delete \t\t\tOnly delete the specified VM (needs --digit) or Marvin config' + \
         '\n  --force \t\t\tDelete VMs when they already exist' + \
         '\n  --debug \t\t\tEnable debug mode'
 
     try:
         opts, args = getopt.getopt(
-            argv, "hr:c:d:m:n:s", [
-                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "digit=", "delete", "status", "debug", "force"])
+            argv, "hr:c:d:m:x:n:s", [
+                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "destroy_vm=", "digit=", "delete", "status", "debug", "force"])
     except getopt.GetoptError as e:
         print "Error: " + str(e)
         print help
@@ -103,6 +106,8 @@ def handleArguments(argv):
             deploy_role = arg
         elif opt in ("-n", "--deploy-vm"):
             deploy_vm = arg
+        elif opt in ("-x", "--destroy-vm"):
+            destroy_vm = arg
         elif opt in ("-c", "--deploy-cloud"):
             deploy_cloud = arg
         elif opt in ("-m", "--deploy-marvin"):
@@ -668,5 +673,13 @@ if len(deploy_vm) > 0:
     # Create
     print "Note: You want to deploy a VM with name '" + deploy_vm + "'.."
     if d.deploy_host(deploy_vm + digit) is None:
+        sys.exit(1)
+    sys.exit(0)
+
+# Destroy a vm
+if len(destroy_vm) > 0:
+    # Create
+    print "Note: You want to destroy a VM with name '" + destroy_vm + "'.."
+    if d.delete_host(destroy_vm) is None:
         sys.exit(1)
     sys.exit(0)

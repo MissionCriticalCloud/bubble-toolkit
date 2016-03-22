@@ -26,7 +26,7 @@ function collect_files_from_vm {
 function destroy_vm {
   vmname=$1
 
-  /data/vm-easy-deploy/remove_vm.sh -f ${vmname}
+  /data/shared/deploy/kvm_local_deploy.py -x ${vmname}
 }
 
 

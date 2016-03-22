@@ -116,7 +116,6 @@ say "Collecting Management Server Logs and Code Coverage Report"
 mkdir -p cs1-management-logs
 collect_files_from_vm ${cs1ip} "root" "password" "/var/log/cosmic/management/*.log*" "cs1-management-logs/"
 collect_files_from_vm ${cs1ip} "root" "password" "~tomcat/api.log*" "cs1-management-logs/"
-collect_files_from_vm ${cs1ip} "root" "password" "/tmp/jacoco-it.exec" "target/coverage-reports/"
 
 say "Collecting Hypervisor Agent Logs"
 mkdir -p kvm1-agent-logs kvm2-agent-logs

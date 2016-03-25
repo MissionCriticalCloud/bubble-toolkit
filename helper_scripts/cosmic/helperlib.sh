@@ -8,13 +8,13 @@ function install_kvm_packages {
   hvuser=$2
   hvpass=$3
   hasNsxDevice=$4
-  
-  
-  if [  -d /data/git/$HOSTNAME/cosmic/packaging/dist/rpmbuild/RPMS/x86_64 ]; then
-    distdir=/data/git/$HOSTNAME/cosmic/packaging/dist/rpmbuild/RPMS/x86_64
-  fi
-  if [  -d ../dist/rpmbuild/RPMS/x86_64 ]; then
-    distdir=../dist/rpmbuild/RPMS/x86_64
+
+  if [  -d /data/git/$HOSTNAME/packaging/dist/rpmbuild/RPMS/x86_64 ]; then
+    distdir=/data/git/$HOSTNAME/packaging/dist/rpmbuild/RPMS/x86_64
+  else
+    if [  -d ../dist/rpmbuild/RPMS/x86_64 ]; then
+      distdir=../dist/rpmbuild/RPMS/x86_64
+    fi
   fi
 
   echo "Dist dir is ${distdir}"

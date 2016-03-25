@@ -4,7 +4,7 @@
 # When KVM is used, RPMs are built and installed on the hypervisor.
 # When done, it runs the desired tests.
 
-# Source the helper functions and 
+# Source the helper functions and
 . `dirname $0`/helperlib.sh
 
 
@@ -58,6 +58,7 @@ host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/
 
 COSMIC_BUILD_PATH=/data/git/$HOSTNAME/cosmic
 COSMIC_CORE_PATH=$COSMIC_BUILD_PATH/cosmic-core
+PACKAGING_BUILD_PATH=/data/git/$HOSTNAME/packaging
 
 # We work from here
 cd $COSMIC_BUILD_PATH
@@ -109,7 +110,7 @@ if [ ${skip} -eq 0 ]; then
   if [[ "$hypervisor" == "kvm" ]]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
-    cd $COSMIC_BUILD_PATH/packaging
+    cd $PACKAING_BUILD_PATH
 
     # Clean up better
     rm -rf ../dist/rpmbuild/RPMS/
@@ -156,6 +157,10 @@ elif [[ "$hypervisor" == "xenserver" ]]; then
     fi
 fi
 
+# Install Marvin
+echo "Installing Marvin"
+pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
+
 cd "$COSMIC_CORE_PATH"
 # Deploy DB
 echo "Deploying Cosmic DB"
@@ -175,16 +180,12 @@ date
 # Make service offering support HA
 cloud_conf_cosmic
 
-# Install Marvin
-echo "Installing Marvin"
-pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
-
 # Run the Cosmic management server
 echo "Double checking Cosmic is not already running"
 killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
-# Compile Cosmic
+# Start Cosmic Management Server
 cd $COSMIC_BUILD_PATH/cosmic-client
 echo "Starting Cosmic"
 mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &

@@ -193,6 +193,8 @@ mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, 
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '60') ON DUPLICATE KEY UPDATE value = '60';"
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '60') ON DUPLICATE KEY UPDATE value = '60';"
 }
+# Number of VPC tiers (as required by smoke/test_privategw_acl.py)
+mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
 
 function cloud_conf_templ_system {
 # Adding the right SystemVMs, for both KVM and XenServer

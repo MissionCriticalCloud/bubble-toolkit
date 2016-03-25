@@ -4,7 +4,7 @@
 # When KVM is used, RPMs are built and installed on the hypervisor.
 # When done, it runs the desired tests.
 
-# Source the helper functions and 
+# Source the helper functions and
 . `dirname $0`/helperlib.sh
 
 
@@ -157,6 +157,10 @@ elif [[ "$hypervisor" == "xenserver" ]]; then
     fi
 fi
 
+# Install Marvin
+echo "Installing Marvin"
+pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
+
 cd "$COSMIC_CORE_PATH"
 # Deploy DB
 echo "Deploying Cosmic DB"
@@ -175,10 +179,6 @@ date
 # Adding the tiny linux VM templates for KVM and XenServer
 # Make service offering support HA
 cloud_conf_cosmic
-
-# Install Marvin
-echo "Installing Marvin"
-pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
 
 # Run the Cosmic management server
 echo "Double checking Cosmic is not already running"

@@ -58,6 +58,7 @@ host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/
 
 COSMIC_BUILD_PATH=/data/git/$HOSTNAME/cosmic
 COSMIC_CORE_PATH=$COSMIC_BUILD_PATH/cosmic-core
+PACKAGING_BUILD_PATH=/data/git/$HOSTNAME/packaging
 
 # We work from here
 cd $COSMIC_BUILD_PATH
@@ -109,7 +110,7 @@ if [ ${skip} -eq 0 ]; then
   if [[ "$hypervisor" == "kvm" ]]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
-    cd $COSMIC_BUILD_PATH/packaging
+    cd $PACKAING_BUILD_PATH
 
     # Clean up better
     rm -rf ../dist/rpmbuild/RPMS/

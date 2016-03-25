@@ -185,7 +185,7 @@ echo "Double checking Cosmic is not already running"
 killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
-# Compile Cosmic
+# Start Cosmic Management Server
 cd $COSMIC_BUILD_PATH/cosmic-client
 echo "Starting Cosmic"
 mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &

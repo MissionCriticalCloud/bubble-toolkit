@@ -79,92 +79,92 @@ function parse_marvin_config {
 
   # Zone name
   zone=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['name']
+import sys, json
+print json.load(sys.stdin)['zones'][0]['name']
   ")
 
   # Hypervisor type
   hypervisor=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
+import sys, json
+print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
   ")
 
   # Primary storage location
   primarystorage=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['primaryStorages'][0]['url']" | cut -d: -f3
+import sys, json
+print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['primaryStorages'][0]['url']" | cut -d: -f3
   )
 
   secondarystorage=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
+import sys, json
+print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
   )
 
   # username hypervisor 1
   hvuser1=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
-  except:
-   print ''
+try:
+  import sys, json
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
+except:
+  print ''
   ")
 
   # password hypervisor 1
   hvpass1=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
-  except:
-   print ''
+try:
+  import sys, json
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
+except:
+ print ''
   ")
 
   # ip adress hypervisor 1
   hvip1=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
-  except:
-   print ''
+try:
+  import sys, json
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
+except:
+ print ''
   " | cut -d/ -f3)
 
   # username hypervisor 2
   hvuser2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
-  except:
-   print ''
+try:
+  import sys, json
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
+except:
+ print ''
   ")
 
   # password hypervisor 2
   hvpass2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
-  except:
-   print ''
+try:
+  import sys, json
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
+except:
+ print ''
   ")
 
   # ip adress hypervisor 2
   hvip2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
-  except:
-   print ''
+try:
+  import sys, json
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
+except:
+ print ''
   " | cut -d/ -f3)
 
   hasNsxDevice=$(cat ${marvinCfg} | grep -v "#" | python -c "
-  try:
-    import sys, json
-    jsonObject = json.load(sys.stdin)
-    niciraProviders = filter(lambda provider: provider['name'] == 'NiciraNvp', reduce(lambda a, b: a+b, map(lambda physical_net: physical_net['providers'], jsonObject['zones'][0]['physical_networks'])))
-    if niciraProviders:
-      print True
-    else:
-      print False
-  except:
-   print ERROR
+try:
+  import sys, json
+  jsonObject = json.load(sys.stdin)
+  niciraProviders = filter(lambda provider: provider['name'] == 'NiciraNvp', reduce(lambda a, b: a+b, map(lambda physical_net: physical_net['providers'], jsonObject['zones'][0]['physical_networks'])))
+  if niciraProviders:
+    print True
+  else:
+    print False
+except:
+ print ERROR
   ")
 }
 

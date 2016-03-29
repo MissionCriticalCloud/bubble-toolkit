@@ -157,11 +157,12 @@ elif [[ "$hypervisor" == "xenserver" ]]; then
     fi
 fi
 
+cd "$COSMIC_CORE_PATH"
+
 # Install Marvin
 echo "Installing Marvin"
 pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
 
-cd "$COSMIC_CORE_PATH"
 # Deploy DB
 echo "Deploying Cosmic DB"
 mvn -P developer -pl developer -Ddeploydb -T 4

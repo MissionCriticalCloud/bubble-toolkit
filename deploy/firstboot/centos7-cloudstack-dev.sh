@@ -7,7 +7,7 @@ yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-late
 yum --enablerepo=epel -y install sshpass mariadb mysql-connector-python
 
 echo "JAVA_OPTS=\"-Djava.awt.headless=true -Dfile.encoding=UTF-8 -server -Xms1536m -Xmx3584m -XX:MaxPermSize=256M\"" >> ~tomcat/conf/tomcat.conf
-systemctl restart tomcat.service 
+systemctl restart tomcat.service
 
 echo "max_allowed_packet=64M" >> /etc/my.cnf
 systemctl start mariadb.service
@@ -31,6 +31,8 @@ pip install cloudmonkey
 
 easy_install nose
 easy_install pycrypto
+
+timedatectl set-timezone CET
 
 # Reboot
 reboot

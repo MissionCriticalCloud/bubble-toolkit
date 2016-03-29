@@ -64,11 +64,11 @@ function deploy_cosmic_db {
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   ${ssh_base} ${csuser}@${csip} "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
-  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-database.sql
-  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-database-premium.sql
-  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-schema.sql
-  mysql -h ${csip} -u root < cosmic-client/copy-from-cosmic-core/scripts/db/create-schema-premium.sql
-  mysql -h ${csip} -u cloud -pcloud < cosmic-client/copy-from-cosmic-core/scripts/db/templates.sql
+  mysql -h ${csip} -u root < cosmic-core/setup/db/create-database.sql
+  mysql -h ${csip} -u root < cosmic-core/setup/db/create-database-premium.sql
+  mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema.sql
+  mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema-premium.sql
+  mysql -h ${csip} -u cloud -pcloud < cosmic-core/setup/db/templates.sql
   mysql -h ${csip} -u cloud -pcloud < cosmic-core/developer/developer-prefill.sql
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"
@@ -256,7 +256,7 @@ say "Configuring tomcat to load JaCoCo Agent"
 configure_tomcat_to_load_jacoco_agent ${cs1ip} "root" "password"
 
 say "Deploying CloudStack WAR"
-deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/copy-from-cosmic-core/scripts/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/target/setup/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 
 say "Installing KVM packages on hosts"
 install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}

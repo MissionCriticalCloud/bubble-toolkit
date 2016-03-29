@@ -176,5 +176,7 @@ ovs-vsctl set-manager ssl:$NSXMANAGER:6632
 ### End OVS ###
 ifup cloudbr0
 
+timedatectl set-timezone CET
+
 # Reboot
 reboot

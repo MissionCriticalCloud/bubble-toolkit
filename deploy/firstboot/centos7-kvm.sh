@@ -88,6 +88,7 @@ IPV6_AUTOCONF=no
 DELAY=5
 STP=yes" > /etc/sysconfig/network-scripts/ifcfg-cloudbr1
 
+timedatectl set-timezone CET
+
 # Reboot
 reboot
-

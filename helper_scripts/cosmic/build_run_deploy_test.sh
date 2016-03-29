@@ -110,7 +110,7 @@ if [ ${skip} -eq 0 ]; then
   if [[ "$hypervisor" == "kvm" ]]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
-    cd $PACKAING_BUILD_PATH
+    cd $PACKAGING_BUILD_PATH
 
     # Clean up better
     rm -rf ../dist/rpmbuild/RPMS/

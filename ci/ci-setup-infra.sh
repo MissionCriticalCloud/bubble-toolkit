@@ -256,7 +256,7 @@ say "Configuring tomcat to load JaCoCo Agent"
 configure_tomcat_to_load_jacoco_agent ${cs1ip} "root" "password"
 
 say "Deploying CloudStack WAR"
-deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/target/setup/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 
 say "Installing KVM packages on hosts"
 install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}

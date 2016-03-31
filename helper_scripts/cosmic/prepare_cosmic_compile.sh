@@ -31,9 +31,9 @@ function gitclone_cosmic {
 
 function gitclone_packaging {
   if [ "$GITSSH" -eq "1" ]; then
-    git clone --recursive git@github.com:MissionCriticalCloud/packaging.git cosmic/packaging
+    git clone --recursive git@github.com:MissionCriticalCloud/packaging.git packaging
   else
-    git clone --recursive `echo git@github.com:MissionCriticalCloud/packaging.git | sed 's@git\@github.com:@https://github.com/@'` cosmic/packaging
+    git clone --recursive `echo git@github.com:MissionCriticalCloud/packaging.git | sed 's@git\@github.com:@https://github.com/@'` packaging
   fi
   echo "Please use 'git checkout' to checkout the branch you need."
 }
@@ -48,7 +48,7 @@ else
   echo "Git Cosmic repo already found"
 fi
 
-if [ ! -d "cosmic/packaging/.git" ]; then
+if [ ! -d "packaging/.git" ]; then
   echo "No git repo found, cloning packaging"
   gitclone_packaging
 else

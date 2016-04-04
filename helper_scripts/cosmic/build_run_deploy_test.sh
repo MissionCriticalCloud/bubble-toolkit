@@ -113,7 +113,7 @@ if [ ${skip} -eq 0 ]; then
     cd $PACKAGING_BUILD_PATH
 
     # Clean up better
-    rm -rf ../dist/rpmbuild/RPMS/
+    rm -rf dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
     ./package_cosmic.sh -d centos7 -f ${COSMIC_BUILD_PATH}
     if [ $? -ne 0 ]; then

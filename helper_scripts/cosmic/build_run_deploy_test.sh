@@ -88,6 +88,9 @@ while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/
 # Cleanup UI cached items
 find /data/git/$HOSTNAME/cosmic/cosmic-client -name \*.gz | xargs rm -f
 
+# Config nexus for maven
+config_maven
+
 # Short pre-compile may be needed to solve dependency
 mvn clean install -N
 

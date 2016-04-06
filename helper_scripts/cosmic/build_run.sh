@@ -1,11 +1,18 @@
 #!/bin/bash
 
+# Source the helper functions and
+. `dirname $0`/helperlib.sh
+
 host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
 
 COSMIC_BUILD_PATH=/data/git/$HOSTNAME/cosmic
 COSMIC_RUN_PATH=$COSMIC_BUILD_PATH/cosmic-core
 
 # We work from here
+
+# Config nexus for maven
+config_maven
+
 # Compile ACS
 cd $COSMIC_BUILD_PATH
 mvn clean install -P developer,systemvm

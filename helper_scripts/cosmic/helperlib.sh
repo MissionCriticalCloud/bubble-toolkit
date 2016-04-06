@@ -1,6 +1,16 @@
 #!/bin/sh
+HELPERLIB_SH_SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
+
+function config_maven {
+  if [ ! -f ~/.m2/settings.xml ]; then
+    if [ ! -d ~/.m2 ]; then
+      mkdir ~/.m2
+    fi
+    cp "${HELPERLIB_SH_SOURCE_DIR}/config/maven_settings.xml" ~/.m2/settings.xml
+  fi
+}
 
 function install_kvm_packages {
   # Parameters

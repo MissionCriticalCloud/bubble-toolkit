@@ -49,6 +49,29 @@ fi
 echo "Started!"
 date
 
+JAVA_VERSION_FOUND=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' | cut -d\. -f1,2)
+
+if [ "$JAVA_VERSION_FOUND" == "1.8" ]; then
+  echo
+  echo "*** WARNING: JAVA 8 FOUND! ***"
+  echo
+  echo "The active Java version is compatible with Cosmic, not with CloudStack."
+  echo
+  echo "CloudStack does not run on Java 8 yet. Since The Bubbles are also used for Cosmic, it has Java 8."
+  echo
+  echo "Run this to deinstall Java 8 and use Java 7:"
+
+  for j in $(rpm -qa| grep java-1.8); do echo " yum remove $j"; done
+  echo 
+  echo "You may also switch Java with:"
+  echo " alternatives --config java"
+  echo " alternatives --config javac"
+  echo
+  echo "In case you want to build Cosmic, look in the 'helper_scripts/cosmic' folder."
+  echo
+  exit
+fi
+
 # Find ip
 host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
 

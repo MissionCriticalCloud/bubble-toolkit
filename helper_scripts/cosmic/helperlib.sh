@@ -202,6 +202,8 @@ function cloud_conf_generic {
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '60') ON DUPLICATE KEY UPDATE value = '60';"
   # Number of VPC tiers (as required by smoke/test_privategw_acl.py)
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
+  # Force stop when destroying (makes it faster)
+  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vm.destroy.forcestop', 'true') ON DUPLICATE KEY UPDATE value = 'true';"
 }
 
 function cloud_conf_templ_system {

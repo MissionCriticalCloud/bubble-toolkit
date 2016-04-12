@@ -11,7 +11,7 @@ systemctl disable firewalld
 # Install dependencies for KVM on Cloudstack
 sleep 5
 yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
-yum -y install qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim
+yum -y install qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim socat
 yum --enablerepo=epel -y install sshpass
 
 # Enable rpbind for NFS

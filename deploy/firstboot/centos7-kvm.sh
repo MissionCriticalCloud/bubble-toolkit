@@ -48,10 +48,6 @@ echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
 # qemu.conf parameters for Cloudstack
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
-# Create new initrd to disable co-mounts
-sed -i "/JoinControllers/c\JoinControllers=''" /etc/systemd/system.conf
-new-kernel-pkg --mkinitrd --install `uname -r`
-
 # Network
 # Device
 echo "DEVICE=eth0

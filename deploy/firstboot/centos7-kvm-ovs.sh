@@ -22,10 +22,7 @@ systemctl disable firewalld
 
 # Install dependencies for KVM on Cloudstack
 sleep 5
-yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
-yum -y install qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim
-yum -y install http://jenkins.buildacloud.org/job/package-centos7-master/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-common-4.7.0-SNAPSHOT.el7.centos.x86_64.rpm
-yum -y install http://jenkins.buildacloud.org/job/package-centos7-master/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64/cloudstack-agent-4.7.0-SNAPSHOT.el7.centos.x86_64.rpm
+yum -y install epel-release qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim
 yum --enablerepo=epel -y install sshpass
 
 # Enable rpbind for NFS
@@ -65,8 +62,8 @@ sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 # Rename builtin openvswitch module, add custom OVS package with STT support and start it
 mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
 yum -y install "kernel-devel-$(uname -r)"
-yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.90-1.el7.centos.x86_64.rpm
-yum -y install http://mctadm1/openvswitch/openvswitch-2.5.90-1.el7.centos.x86_64.rpm
+yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
+yum -y install http://mctadm1/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
 
 # Bridges
 systemctl start openvswitch

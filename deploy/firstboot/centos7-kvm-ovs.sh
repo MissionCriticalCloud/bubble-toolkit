@@ -2,6 +2,10 @@
 # Configure KVM Hypervisor with openvswitch and STT (CentOS 7)
 # Fred Neubauer / Remi Bergsma
 
+# Disable mirrorlist in yum
+sed -i '/mirrorlist/s/^/#/' /etc/yum.repos.d/*.repo
+sed -i 's/#baseurl/baseurl/' /etc/yum.repos.d/*.repo
+
 # Bring the second nic down to avoid routing problems
 ip link set dev eth1 down
 

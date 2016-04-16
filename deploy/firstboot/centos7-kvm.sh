@@ -8,6 +8,10 @@ sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/selinux/config
 systemctl stop firewall
 systemctl disable firewalld
 
+# Disable mirrorlist in yum
+sed -i '/mirrorlist/s/^/#/' /etc/yum.repos.d/*.repo
+sed -i 's/#baseurl/baseurl/' /etc/yum.repos.d/*.repo
+
 # Install dependencies for KVM on Cloudstack
 sleep 5
 yum -y install epel-release qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim socat

@@ -58,30 +58,32 @@ ONBOOT=yes
 HOTPLUG=no
 BOOTPROTO=none
 TYPE=Ethernet
-BRIDGE=cloudbr0" > /etc/sysconfig/network-scripts/ifcfg-eth0
+BRIDGE=cloudbr1" > /etc/sysconfig/network-scripts/ifcfg-eth0
 
 # Pub
-echo "DEVICE=cloudbr0.50
+echo "DEVICE=eth0.50
 ONBOOT=yes
 HOTPLUG=no
 BOOTPROTO=none
-VLAN=yes" > /etc/sysconfig/network-scripts/ifcfg-cloudbr0.50
+TYPE=Ethernet
+BRIDGE=cloudbr0
+VLAN=yes" > /etc/sysconfig/network-scripts/ifcfg-eth0.50
 
 # Bridge0
 echo "DEVICE=cloudbr0
 TYPE=Bridge
 ONBOOT=yes
-BOOTPROTO=dhcp
+BOOTPROTO=none
 IPV6INIT=no
 IPV6_AUTOCONF=no
 DELAY=5
-STP=yes" > /etc/sysconfig/network-scripts/ifcfg-cloudbr0
+STP=no" > /etc/sysconfig/network-scripts/ifcfg-cloudbr0
 
 # Bridge1
 echo "DEVICE=cloudbr1
 TYPE=Bridge
 ONBOOT=yes
-BOOTPROTO=none
+BOOTPROTO=dhcp
 IPV6INIT=no
 IPV6_AUTOCONF=no
 DELAY=5

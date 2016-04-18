@@ -10,7 +10,6 @@ sed -i 's/#baseurl/baseurl/' /etc/yum.repos.d/*.repo
 ip link set dev eth1 down
 
 ### Settings ####
-# BetaCloud pub vlan
 VLANPUB=50
 
 # Bubble NSX Ctrl
@@ -24,7 +23,7 @@ sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/selinux/config
 systemctl stop firewall
 systemctl disable firewalld
 
-# Install dependencies for KVM on Cloudstack
+# Install dependencies for KVM
 sleep 5
 yum -y install epel-release qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim socat
 yum --enablerepo=epel -y install sshpass
@@ -41,7 +40,7 @@ echo "192.168.22.1:/data /data nfs rw,hard,intr,rsize=8192,wsize=8192,timeo=14 0
 # Enable nesting
 echo "options kvm_intel nested=1" >> /etc/modprobe.d/kvm-nested.conf
 
-# Cloudstack agent.properties settings
+# agent.properties settings
 cp -pr /etc/cosmic/agent/agent.properties /etc/cosmic/agent/agent.properties.orig
 
 # Add these settings (before adding the host)
@@ -52,14 +51,14 @@ echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties
 # Set the logging to DEBUG
 sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
 
-# Libvirtd parameters for Cloudstack
+# Libvirtd parameters
 echo 'listen_tls = 0' >> /etc/libvirt/libvirtd.conf
 echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf
 echo 'tcp_port = "16509"' >> /etc/libvirt/libvirtd.conf
 echo 'mdns_adv = 0' >> /etc/libvirt/libvirtd.conf
 echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
 
-# qemu.conf parameters for Cloudstack
+# qemu.conf parameters
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 ### OVS ###

@@ -34,6 +34,13 @@ Example:
  ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p 1348 -b 4.8 -t
 ```
 
+If you want to run your own tests, you can specify the `-f test_file_name.sh` flag.  
+If you don't specify a test file with the `-f` flag, it will automatically default to the following test scenario:
+```
+ ./check-pr.sh -m /data/shared/marvin/mct-zone1-kvm1-kvm2.cfg -p 1348 -b 4.8 -t -f run_marvin_router_tests.sh
+```
+This will run the tests defined in the `/data/share/helper_scripts/cloudstack/run_marvin_router_tests.sh` file.
+
 ### Results of a test:
 
 ![screen shot 2016-01-20 at 11 29 42](https://cloud.githubusercontent.com/assets/1630096/12446309/9433e286-bf69-11e5-8906-77bfeca86dea.png)

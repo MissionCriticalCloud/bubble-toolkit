@@ -423,13 +423,13 @@ if [ ${run_tests} -eq 1 ]; then
   echo "Running Marvin tests.."
   if [ -z ${test_file} ]; then
     # for backwards compatibility, default to 'run_marvin_router_tests.sh' if test file is not specified
-    test_file="run_marvin_router_tests.sh"
+    test_file="/data/shared/helper_scripts/cloudstack/run_marvin_router_tests.sh"
   fi
-  if [ -f "/data/shared/helper_scripts/cloudstack/${test_file}" ]; then
-    # found the specified test file, continue with test execution
-    bash -x /data/shared/helper_scripts/cloudstack/${test_file} ${marvinCfg}
+  if [ -f "${test_file}" ]; then
+    # the test file exists, so run the tests...
+    bash -x ${test_file} ${marvinCfg}
   else
-    echo "The specified test file does not exist!  Verify the file path: /data/shared/helper_scripts/cloudstack/${test_file}"
+    echo "The specified test file does not exist!  Verify the file path: ${test_file}"
   fi
 else
   echo "Not running tests (use the -t flag to run them, and optionally, -f to specify which file to run)"

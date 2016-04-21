@@ -5,14 +5,15 @@
 # When done, it runs the desired tests.
 
 function usage {
-  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -f <test file to run> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
 
 # Options
 skip=0
 run_tests=0
+test_file=
 compile_threads=
-while getopts 'm:T:st' OPTION
+while getopts 'm:T:f:st' OPTION
 do
   case $OPTION in
   m)    marvinCfg="$OPTARG"
@@ -20,6 +21,8 @@ do
   s)    skip=1
         ;;
   t)    run_tests=1
+        ;;
+  f)    test_file="$OPTARG"
         ;;
   T)    compile_threads="-T $OPTARG"
         ;;
@@ -29,6 +32,7 @@ done
 echo "Received arguments:"
 echo "skip = ${skip}"
 echo "run_tests = ${run_tests}"
+echo "test_file = ${test_file}"
 echo "marvinCfg = ${marvinCfg}"
 echo "compile_threads = ${compile_threads}"
 
@@ -417,9 +421,18 @@ date
 # Run the tests
 if [ ${run_tests} -eq 1 ]; then
   echo "Running Marvin tests.."
-  bash -x /data/shared/helper_scripts/cloudstack/run_marvin_router_tests.sh ${marvinCfg}
+  if [ -z ${test_file} ]; then
+    # for backwards compatibility, default to 'run_marvin_router_tests.sh' if test file is not specified
+    test_file="/data/shared/helper_scripts/cloudstack/run_marvin_router_tests.sh"
+  fi
+  if [ -f "${test_file}" ]; then
+    # the test file exists, so run the tests...
+    bash -x ${test_file} ${marvinCfg}
+  else
+    echo "The specified test file does not exist!  Verify the file path: ${test_file}"
+  fi
 else
-  echo "Not running tests (use -t flag to run them)"
+  echo "Not running tests (use the -t flag to run them, and optionally, -f to specify which file to run)"
 fi
 
 echo "Finished"

@@ -13,9 +13,9 @@ COSMIC_RUN_PATH=$COSMIC_BUILD_PATH/cosmic-core
 # Config nexus for maven
 config_maven
 
-# Compile ACS
+# Compile Cosmic
 cd $COSMIC_BUILD_PATH
-mvn clean install -P developer,systemvm
+mvn clean install -P developer,systemvm -T 4
 # Deploy DB
 cd $COSMIC_RUN_PATH
 mvn -P developer -pl developer -Ddeploydb

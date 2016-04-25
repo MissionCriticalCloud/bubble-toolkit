@@ -122,9 +122,6 @@ mkdir -p kvm1-agent-logs kvm2-agent-logs
 collect_files_from_vm ${hvip1} ${hvuser1} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm1-agent-logs/"
 collect_files_from_vm ${hvip2} ${hvuser2} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm2-agent-logs/"
 
-say "Cleaning MarvinLogs"
-rm -rf /tmp/MarvinLogs
-
 say "Destroying VMs"
 destroy_vm cs1
 destroy_vm ${hvip1}

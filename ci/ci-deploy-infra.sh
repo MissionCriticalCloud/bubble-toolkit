@@ -86,7 +86,7 @@ function deploy_cloudstack_db {
 function install_marvin {
   marvin_dist=$1
 
-  sudo pip install --upgrade ${marvin_dist} --allow-external mysql-connector-python
+  sudo pip install --upgrade ${marvin_dist}
   sudo pip install nose --upgrade --force
 
   say "Marvin installed"

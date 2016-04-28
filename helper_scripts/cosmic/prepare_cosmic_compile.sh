@@ -48,6 +48,7 @@ else
   echo "Git Cosmic repo already found"
 fi
 
+cd ${BASEDIR}
 if [ ! -d "packaging/.git" ]; then
   echo "No git repo found, cloning packaging"
   gitclone_packaging

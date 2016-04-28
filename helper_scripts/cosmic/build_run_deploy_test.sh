@@ -191,8 +191,10 @@ while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/
 
 # Start Cosmic Management Server
 cd $COSMIC_BUILD_PATH/cosmic-client
-echo "Starting Cosmic"
-mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
+echo "Starting Cosmic (debug mode)"
+#mvnDebug sets suspend=y and waits for connection
+#mvnDebug -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
+/usr/lib/jvm/java/bin/java -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000 -classpath /usr/share/maven/boot/plexus-classworlds.jar -Dclassworlds.conf=/usr/share/maven/bin/m2.conf -Dmaven.home=/usr/share/maven org.codehaus.plexus.classworlds.launcher.Launcher -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
 
 # Wait until it comes up
 echo "Waiting for Cosmic to start"

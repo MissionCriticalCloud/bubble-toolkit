@@ -79,10 +79,8 @@ systemctl enable openvswitch
 systemctl start openvswitch
 
 # Bridges
-systemctl start openvswitch
-echo "Creating bridges cloudbr0 and cloudbr1.."
+echo "Creating bridge cloudbr0.."
 ovs-vsctl add-br cloudbr0
-ovs-vsctl add-br cloudbr1
 ovs-vsctl add-br cloud0
 
 # Get interfaces
@@ -101,7 +99,6 @@ ovs-vsctl -- --may-exist add-br br-int\
 
 # Fake bridges
 echo "Create fake bridges"
-#ovs-vsctl -- add-br trans0 cloudbr0 $VLANTRANS
 ovs-vsctl -- add-br trans0 cloudbr0
 ovs-vsctl -- add-br pub0 cloudbr0 $VLANPUB
 

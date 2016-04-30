@@ -51,11 +51,32 @@ echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 ### OVS ###
-# Rename builtin openvswitch module, add custom OVS package with STT support and start it
-mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
-yum -y install "kernel-devel-$(uname -r)"
-yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
-yum -y install http://mctadm1/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
+# Test to see if we have the internal mctadm1 box available
+ping -c1 mctadm1 >/dev/null 2>&1
+MCTADM1_AVAILABLE=$?
+
+# If mctadm1 is available, get OVS packages from it
+if [ ${MCTADM1_AVAILABLE} -eq 0 ]
+  then
+  echo "Detected we have server mctadm1 to get OVS packages from."
+  # Custom 2.5.1
+  mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
+  yum -y install "kernel-devel-$(uname -r)"
+  yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
+  yum -y install http://mctadm1/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
+# If not, fall back to community sources
+else
+  echo "Installing OVS from community sources."
+  # Comunity 2.4.x
+  yum install -y yum-utils
+  yum-config-manager --enablerepo=extras
+  yum install -y centos-release-openstack-mitaka
+  yum install -y openvswitch
+fi
+
+# Start and enable OVS
+systemctl enable openvswitch
+systemctl start openvswitch
 
 # Bridges
 systemctl start openvswitch

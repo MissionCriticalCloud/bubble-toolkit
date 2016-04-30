@@ -97,9 +97,12 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} yum -y remove cosmic-common
   ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
   ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent* cosmic-common*
+  # Use OVS networking
   ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
+  # Enable debug logging
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
   # Enable remote debugging
   ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/systemd/system/cosmic-agent.service.d/
   ${ssh_base} ${hvuser}@${hvip} 'printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf'

@@ -40,17 +40,6 @@ echo "192.168.22.1:/data /data nfs rw,hard,intr,rsize=8192,wsize=8192,timeo=14 0
 # Enable nesting
 echo "options kvm_intel nested=1" >> /etc/modprobe.d/kvm-nested.conf
 
-# agent.properties settings
-cp -pr /etc/cosmic/agent/agent.properties /etc/cosmic/agent/agent.properties.orig
-
-# Add these settings (before adding the host)
-echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties
-echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties
-echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties
-
-# Set the logging to DEBUG
-sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
-
 # Libvirtd parameters
 echo 'listen_tls = 0' >> /etc/libvirt/libvirtd.conf
 echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf

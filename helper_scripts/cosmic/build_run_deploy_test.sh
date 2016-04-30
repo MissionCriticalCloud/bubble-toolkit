@@ -77,11 +77,6 @@ parse_marvin_config ${marvinCfg}
 mkdir -p ${primarystorage}
 mkdir -p ${secondarystorage}
 
-if [ "$hasNsxDevice" == "ERROR" ]; then
-  echo "Failed to detect NSX provider in Marvin config"
-  exit 10
-fi
-
 killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
@@ -126,13 +121,13 @@ if [ ${skip} -eq 0 ]; then
     fi
 
     # Push to hypervisor
-    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1} ${hasNsxDevice}
+    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
     date
 
     # Do we have a second hypervisor
     if [ ! -z  ${hvip2} ]; then
       # Push to hypervisor
-      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2} ${hasNsxDevice}
+      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
     fi
 
   else

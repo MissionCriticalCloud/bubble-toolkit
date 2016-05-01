@@ -38,21 +38,25 @@ function install_kvm_packages {
   scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm -f cloudstack-\*
-  ${scp_base} cloudstack-agent*.rpm cloudstack-common*.rpm ${hvuser}@${hvip}:./
-  ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cloudstack-common
-  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cloudstack/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cloudstack-agent\*.rpm cloudstack-common\*.rpm
+  ${ssh_base} ${hvuser}@${hvip} rm -f cosmic-\*
+  ${scp_base} cosmic-agent*.rpm cosmic-common*.rpm ${hvuser}@${hvip}:./
+  ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cosmic-common
+  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
+  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent\*.rpm cosmic-common\*.rpm
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-  ${ssh_base} ${hvuser}@${hvip} systemctl stop cloudstack-agent
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
-  ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
-  ${ssh_base} ${hvuser}@${hvip} "echo \"guest.cpu.mode=host-model\" >> /etc/cloudstack/agent/agent.properties"
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
 
   say "KVM packages installed in ${hvip}"
 }
 
-function deploy_cloudstack_db {
+function deploy_cosmic_db {
   csip=$1
   csuser=$2
   cspass=$3
@@ -80,7 +84,7 @@ function deploy_cloudstack_db {
   mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE service_offering SET ha_enabled = 1;"
   mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE vm_instance SET ha_enabled = 1;"
 
-  say "CloudStack DB deployed at ${csip}"
+  say "Cosmic DB deployed at ${csip}"
 }
 
 function install_marvin {
@@ -111,7 +115,7 @@ function install_systemvm_templates {
   say "SystemVM templates installed"
 }
 
-function deploy_cloudstack_war {
+function deploy_cosmic_war {
   csip=$1
   csuser=$2
   cspass=$3
@@ -242,8 +246,8 @@ say "Creating Management Server: cs1"
 
 cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 
-say "Deploying CloudStack DB"
-deploy_cloudstack_db ${cs1ip} "root" "password"
+say "Deploying Cosmic DB"
+deploy_cosmic_db ${cs1ip} "root" "password"
 
 say "Installing Marvin"
 install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
@@ -253,8 +257,8 @@ systemtemplate="/data/templates/cosmic-systemvm.qcow2"
 imagetype="qcow2"
 install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
-say "Deploying CloudStack WAR"
-deploy_cloudstack_war ${cs1ip} "root" "password" 'client/target/utilities/scripts/db/db/*' 'client/target/cloud-client-ui-*.war'
+say "Deploying Cosmic WAR"
+deploy_cosmic_war ${cs1ip} "root" "password" 'client/target/utilities/scripts/db/db/*' 'client/target/cloud-client-ui-*.war'
 
 say "Creating hosts"
 /data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force

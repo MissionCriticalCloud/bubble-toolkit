@@ -215,9 +215,6 @@ date
 bash -x $COSMIC_CORE_PATH/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
-echo "Deleting old Marvin logs, if any"
-rm -rf /tmp/MarvinLogs
-
 echo "Deploy data center.."
 python $COSMIC_CORE_PATH/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
 if [ $? -ne 0 ]; then

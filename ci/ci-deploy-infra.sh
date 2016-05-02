@@ -86,7 +86,7 @@ function deploy_cloudstack_db {
 function install_marvin {
   marvin_dist=$1
 
-  sudo pip install --upgrade ${marvin_dist} --allow-external mysql-connector-python
+  sudo pip install --upgrade ${marvin_dist}
   sudo pip install nose --upgrade --force
 
   say "Marvin installed"
@@ -109,30 +109,6 @@ function install_systemvm_templates {
   ${ssh_base} ${csuser}@${csip} ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 
   say "SystemVM templates installed"
-}
-
-function install_mysql_connector {
-  csip=$1
-  csuser=$2
-  cspass=$3
-
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-
-  ${ssh_base} ${csuser}@${csip} yum install -y -q mysql-connector-java
-
-  say "MySQL Connector Java installed"
-}
-
-function configure_tomcat_to_load_mysql_connector {
-  csip=$1
-  csuser=$2
-  cspass=$3
-
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-
-  ${ssh_base} ${csuser}@${csip} "echo \"CLASSPATH=\\\"/usr/share/java/mysql-connector-java.jar:\\\${CLASSPATH}\\\"\" >> /etc/sysconfig/tomcat"
 }
 
 function deploy_cloudstack_war {
@@ -265,12 +241,6 @@ say "Creating Management Server: cs1"
 /data/shared/deploy/kvm_local_deploy.py -r cloudstack-mgt-dev -d 1 --force
 
 cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
-
-say "Installing MySQL Connector Java"
-install_mysql_connector ${cs1ip} "root" "password"
-
-say "Configure Tomcat to load MySQL Connector"
-configure_tomcat_to_load_mysql_connector ${cs1ip} "root" "password"
 
 say "Deploying CloudStack DB"
 deploy_cloudstack_db ${cs1ip} "root" "password"

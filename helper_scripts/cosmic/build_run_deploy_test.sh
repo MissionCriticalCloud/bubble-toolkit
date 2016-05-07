@@ -216,7 +216,7 @@ bash -x $COSMIC_CORE_PATH/scripts/storage/secondary/cloud-install-sys-tmplt -m $
 date
 
 echo "Deploy data center.."
-python $COSMIC_CORE_PATH/tools/marvin/marvin/deployDataCenter.py -i ${marvinCfg}
+python -m marvin.deployDataCenter -i ${marvinCfg}
 if [ $? -ne 0 ]; then
   date
   echo "Deployment failed, please investigate!"

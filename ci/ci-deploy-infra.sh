@@ -246,7 +246,7 @@ say "Deploying CloudStack DB"
 deploy_cloudstack_db ${cs1ip} "root" "password"
 
 say "Installing Marvin"
-install_marvin "tools/marvin/dist/Marvin-*.tar.gz"
+install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
 
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"

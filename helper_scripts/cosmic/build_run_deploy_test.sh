@@ -164,7 +164,7 @@ cd "$COSMIC_CORE_PATH"
 
 # Install Marvin
 echo "Installing Marvin"
-pip install --upgrade tools/marvin/dist/Marvin-*.tar.gz --allow-external mysql-connector-python
+pip install --upgrade "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz" --allow-external mysql-connector-python
 
 # Deploy DB
 echo "Deploying Cosmic DB"

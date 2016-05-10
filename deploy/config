@@ -1,7 +1,8 @@
-[mct]
+[DEFAULT]
 # Needs trailing slash
 template_dir = /data/templates/
 image_dir = /data/images/
+override_dir =
 
 # Relative to basedir
 offering_dir = offering/
@@ -12,3 +13,13 @@ pre_deploy_dir = pre_deploy/
 post_deploy_dir = post_deploy/
 role_dir = role/
 cloud_dir = cloud/
+
+[mct]
+# Which config to use
+section_name = cosmic
+
+[cosmic]
+override_dir = cosmic/
+
+[cloudstack]
+override_dir = cloudstack/

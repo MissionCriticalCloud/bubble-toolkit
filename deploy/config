@@ -1,9 +1,11 @@
-[mct]
-# Needs trailing slash
+[DEFAULT]
 template_dir = /data/templates/
 image_dir = /data/images/
+override_dir =
 
-# Relative to basedir
+# Folders below are relative to basedir
+# First a file is looked up in the 'override_dir', finally in the 'default' dir
+# This way any file can be overridden
 offering_dir = offering/
 hardware_dir = hardware/
 firstboot_dir = firstboot/
@@ -12,3 +14,13 @@ pre_deploy_dir = pre_deploy/
 post_deploy_dir = post_deploy/
 role_dir = role/
 cloud_dir = cloud/
+
+[mct]
+# Which config section to use
+section_name = cosmic
+
+[cosmic]
+override_dir = cosmic/
+
+[cloudstack]
+override_dir = cloudstack/

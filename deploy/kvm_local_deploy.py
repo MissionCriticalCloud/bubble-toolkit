@@ -143,8 +143,9 @@ class kvm_local_deploy:
         self.config_data = {}
         try:
             self.conn = libvirt.open('qemu:///system')
-        except Exception, e:
+        except Exception as e:
             print "ERROR: Could not connect to Qemu!"
+            print e
             sys.exit(1)
 
         self.print_welcome()
@@ -161,11 +162,18 @@ class kvm_local_deploy:
         config = ConfigParser.RawConfigParser()
         config.read(self.configfile)
         try:
+            # Get basic MCT section
             self.config_data = self.get_config_section(self.configfile, 'mct')
-            self.config_data['base_dir'] = os.path.dirname(os.path.realpath(__file__))
+            # Get specified overrides
+            if 'section_name' in self.config_data:
+                self.config_data = self.get_config_section(self.configfile, self.config_data['section_name'])
+            # Fall back for base_dir should it be undefined
+            if not 'base_dir' in self.config_data:
+                self.config_data['base_dir'] = os.path.dirname(os.path.realpath(__file__))
+            if self.DEBUG == 1:
+                print self.config_data
         except:
-            print "Error: Cannot read or parse mctDeploy config file '" + self.configfile + "'"
-            print "Hint: Setup the local config file 'config', using 'config.sample' as a starting point. See documentation."
+            print "Error: Cannot read or parse config file '%s', section '%s'" % (self.configfile, self.config_section_name)
             sys.exit(1)
 
     # Read section from config file
@@ -194,52 +202,59 @@ class kvm_local_deploy:
         print "Note: We're connected to " + hostname
         print
 
+    # Get override or else the default
+    def get_file_name(self, dir_name, file_name):
+        path_ending = self.format_path(dir_name) + file_name
+
+        # Look for files that exist, in this order. Return the first one found.
+        test_file = {}
+        test_file['1 Absolute path override'] = self.format_path(self.config_data['override_dir']) + path_ending
+        test_file['2 Relative path override'] = self.format_path(self.config_data['base_dir']) + self.format_path(self.config_data['override_dir']) + path_ending
+        test_file['3 Default'] = self.format_path(self.config_data['base_dir']) + "default/" + path_ending
+
+        for test_type, found_file_name in sorted(test_file.iteritems()) :
+            result = self.test_file(found_file_name)
+            if result is not False:
+                return result
+
+        if self.DEBUG == 1:
+            print "Debug: Nothing found returning None" 
+        return None
+
+    # Make sure paths look the same and have a trailing slash
+    def format_path(self, path):
+        return "%s%s" % (path.rstrip("/"), "/")
+
+    # Test if file exists
+    def test_file(self, file_name):
+        if self.DEBUG == 1:
+            print "Debug: testing %s" % file_name
+        if os.path.isfile(file_name):
+            return file_name
+        return False
+
     # Get offering details
     def get_offering(self, offering_name):
-        if self.offering_exists(offering_name):
-            offering_config = self.config_data['base_dir'] + "/" + self.config_data['offering_dir'] + "/" + offering_name + '.conf'
-            return self.get_config_section(offering_config, 'offering')
+        file_name = self.get_file_name(self.config_data['offering_dir'], offering_name + '.conf')
+        if file_name is not None:
+            return self.get_config_section(file_name, 'offering')
         else:
             print "ERROR: Offering with name " + offering_name + " does not exist!"
             sys.exit(1)
 
     # Get role details
     def get_role(self, role_name):
-        if self.role_exists(role_name):
-            role_config = self.config_data['base_dir'] + "/" + self.config_data['role_dir'] + "/" + role_name + '.conf'
-            return self.get_config_section(role_config, 'role')
-        else:
-            return False
-
-    # Check if offering definition exists
-    def offering_exists(self, offering_name):
-        offering_config = self.config_data['base_dir'] + "/" + self.config_data['offering_dir'] + "/" + offering_name + '.conf'
-        if os.path.isfile(offering_config):
-            return True
-        else:
-            return False
-
-    # Check if role definition exists
-    def role_exists(self, role_name):
-        role_config = self.config_data['base_dir'] + "/" + self.config_data['role_dir'] + "/" + role_name + '.conf'
-        if os.path.isfile(role_config):
-            return True
+        file_name = self.get_file_name(self.config_data['role_dir'], role_name + '.conf')
+        if file_name is not None:
+            return self.get_config_section(file_name, 'role')
         else:
             return False
 
     # Get cloud details
     def get_cloud(self, cloud_name):
-        if self.cloud_exists(cloud_name):
-            cloud_config = self.config_data['base_dir'] + "/" + self.config_data['cloud_dir'] + "/" + cloud_name + '.conf'
-            return self.get_config_section(cloud_config, 'cloud')
-        else:
-            return False
-
-    # Check if cloud definition exists
-    def cloud_exists(self, cloud_name):
-        cloud_config = self.config_data['base_dir'] + "/" + self.config_data['cloud_dir'] + "/" + cloud_name + '.conf'
-        if os.path.isfile(cloud_config):
-            return True
+        file_name = self.get_file_name(self.config_data['cloud_dir'], cloud_name + '.conf')
+        if file_name is not None:
+            return self.get_config_section(file_name, 'cloud')
         else:
             return False
 
@@ -318,7 +333,7 @@ class kvm_local_deploy:
 
     # Read hardware xml
     def get_hardware_xml(self, hardware):
-       xml = self.config_data['base_dir'] + "/" + self.config_data['hardware_dir'] + "/" + hardware + ".xml"
+       xml = self.get_file_name(self.config_data['hardware_dir'], hardware + ".xml")
        return xml
 
     # Generate the XML for the new VM
@@ -353,14 +368,16 @@ class kvm_local_deploy:
     def firstboot_action(self, role_name, vm_name):
         role_dict = self.get_role(role_name)
         try:
-            command = "virt-customize -d " + vm_name + " --firstboot " + self.config_data['base_dir'] + "/" + self.config_data['firstboot_dir'] + role_dict['firstboot']
-            if len(role_dict['firstboot']) > 0:
+            file_name = self.get_file_name(self.config_data['firstboot_dir'], role_dict['firstboot'])
+            if file_name is not None:
+                command = "virt-customize -d " + vm_name + " --firstboot " + file_name
                 print "Note: " + vm_name + ": Running pre_boot script: " + command
                 return_code = subprocess.call(command, shell=True)
             else:
                 return_code = 0
                 print "WARNING: " + vm_name  + ": No firstboot script defined."
-        except:
+        except Exception as e:
+            print e
             print "ERROR: " + vm_name  + ": Firstboot script failed."
             return False
         return return_code
@@ -378,14 +395,16 @@ class kvm_local_deploy:
     def postboot_action(self, role_name, vm_name):
         role_dict = self.get_role(role_name)
         try:
-            command = self.config_data['base_dir'] + "/" + self.config_data['postboot_dir'] + role_dict['postboot'] + " " + vm_name
-            if len(role_dict['postboot']) > 0:
+            file_name = self.get_file_name(self.config_data['postboot_dir'], role_dict['postboot'])
+            if file_name is not None:
+                command = file_name + " " + vm_name
                 print "Note: " + vm_name + ": Running postboot script: " + command
                 return_code = subprocess.call(command, shell=True)
             else:
                 return_code = 0
                 print "WARNING: " + vm_name  + ": No postboot script defined."
-        except:
+        except Exception as e:
+            print e
             print "ERROR: " + vm_name  + ": Postboot script failed."
             return False
         return return_code
@@ -396,7 +415,7 @@ class kvm_local_deploy:
         script_for_action = cloud_dict[action]
         if self.is_defined(script_for_action):
             try:
-                command = self.config_data['base_dir'] + "/" + self.config_data[action + '_dir'] + script_for_action
+                command = self.get_file_name(self.config_data[action + '_dir'], script_for_action)
                 if extra_arguments is not None:
                     command += " " + (" ".join(extra_arguments))
                 print "Note: " + cloud_name + ": Running " + action + " script: " + command
@@ -620,7 +639,7 @@ if display_state == True:
 # Deploy a cloud
 if len(deploy_cloud) > 0:
     print "Note: You want to deploy a cloud based on config file '" + deploy_cloud + "'.."
-    if not d.cloud_exists(deploy_cloud):
+    if not d.get_cloud(deploy_cloud):
         print "Error: the cloud does not exist."
         sys.exit(1)
     # Deploy it
@@ -655,7 +674,7 @@ if len(deploy_role) > 0:
 
     # Create
     print "Note: You want to deploy a VM with role '" + deploy_role + "'.."
-    if not d.role_exists(deploy_role):
+    if not d.get_role(deploy_role):
         print "Error: the role does not exist."
         sys.exit(1)
     if d.deploy_role(deploy_role, digit) is None:

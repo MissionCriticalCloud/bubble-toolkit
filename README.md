@@ -1,7 +1,17 @@
 # Bubble Toolkit
-Shared toolkit repository to be used with Bubbles.
+This repository contains all tools used with so-called Bubbles. [To setup a Bubble, follow the instructions here](https://github.com/MissionCriticalCloud/bubble-blueprint). This repo is available om the `/data/shared` folder on your Bubble. 
 
-This repo is available in /data/shared on your Bubble. Feel free to add handy scripts or alter where needed.
+Bubbles are used for [Cosmic](https://github.com/MissionCriticalCloud) development and testing. [You can see them in action in Jenkins](https://beta-jenkins.mcc.schubergphilis.com/). They were originally developed for CloudStack at the time we did Release Management of versions `4.6`, `4.7` and `4.8`. It is still compatible with CloudStack today and being used by multiple people to test Pull Requests.
+
+## Tweak deploy config file
+
+After cloning the repository (that may be done automatic when you setup a Bubble), you may want to [tweak the deploy config file](https://github.com/MissionCriticalCloud/bubble-toolkit/blob/master/deploy/config).
+
+The [deploy script](https://github.com/MissionCriticalCloud/bubble-toolkit/blob/master/deploy/kvm_local_deploy.py) spins all neccessary VMs inside The Bubble, such as a management server and KVM hypervisor. The VMs have roles defined in config files. Groups of `roles` are defined in so-called `clouds`. The config is read from a folder named `default` in the `deploy` folder.
+
+The `mct` section has an option `section_name` that allows you to choose between `cosmic` and `cloudstack` (and any other you might want to add). It will read a section with the same name that you find in the same config file. Most interesting is the `override_dir`.
+
+The `override_dir` allows you to override all files that are found in the `default` folder, and also allows for new files to be added. This was done to make it flexible and share one tool between multiple projects that are incompatible in some areas. An example is the Java version: CloudStack uses Java 7, Cosmic uses Java 8. Using overrides both can use the same deploy command and get a working setup.
 
 ## Testing CloudStack or Cosmic Pull Requests:
 

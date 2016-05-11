@@ -204,10 +204,13 @@ class kvm_local_deploy:
 
     # Get override or else the default
     def get_file_name(self, dir_name, file_name):
+        path_ending = self.format_path(dir_name) + file_name
+
+        # Look for files that exist, in this order. Return the first one found.
         test_file = {}
-        test_file['1 Absolute path override'] = self.config_data['override_dir'] + dir_name + "/" + file_name
-        test_file['2 Relative path override'] = self.config_data['base_dir'] + "/" + self.config_data['override_dir'] + dir_name + file_name
-        test_file['3 Default'] = self.config_data['base_dir'] + "/default/" + dir_name + "/" + file_name
+        test_file['1 Absolute path override'] = self.format_path(self.config_data['override_dir']) + path_ending
+        test_file['2 Relative path override'] = self.format_path(self.config_data['base_dir']) + self.format_path(self.config_data['override_dir']) + path_ending
+        test_file['3 Default'] = self.format_path(self.config_data['base_dir']) + "default/" + path_ending
 
         for test_type, found_file_name in sorted(test_file.iteritems()) :
             result = self.test_file(found_file_name)
@@ -217,6 +220,10 @@ class kvm_local_deploy:
         if self.DEBUG == 1:
             print "Debug: Nothing found returning None" 
         return None
+
+    # Make sure paths look the same and have a trailing slash
+    def format_path(self, path):
+        return "%s%s" % (path.rstrip("/"), "/")
 
     # Test if file exists
     def test_file(self, file_name):

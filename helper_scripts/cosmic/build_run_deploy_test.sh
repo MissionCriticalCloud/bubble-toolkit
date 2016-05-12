@@ -109,7 +109,7 @@ if [ ${skip} -eq 0 ]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
     cd $PACKAGING_BUILD_PATH
-
+  
     # Clean up better
     rm -rf dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
@@ -119,22 +119,25 @@ if [ ${skip} -eq 0 ]; then
       echo "RPM build failed, please investigate!"
       exit 1
     fi
+  fi
+fi
 
+# Install RPM (also after skipping compile/creating packages)
+if [[ "$hypervisor" == "kvm" ]]; then
+  # Push to hypervisor
+  install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
+  date
+
+  # Do we have a second hypervisor
+  if [ ! -z  ${hvip2} ]; then
     # Push to hypervisor
-    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
-    date
-
-    # Do we have a second hypervisor
-    if [ ! -z  ${hvip2} ]; then
-      # Push to hypervisor
-      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
-    fi
-
-  else
-    echo "No RPM packages needed for ${hypervisor}"
+    install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
   fi
 
+else
+  echo "No RPM packages needed for ${hypervisor}"
 fi
+
 
 # Cleaning Hypervisor
 echo "Cleaning hypervisor"

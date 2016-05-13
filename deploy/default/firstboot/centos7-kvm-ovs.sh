@@ -182,4 +182,7 @@ ifup cloudbr0
 timedatectl set-timezone CET
 
 # Reboot
-reboot
+echo "Syncing filesystems, will reboot soon.."
+sync
+sleep 2
+echo "b" > /proc/sysrq-trigger

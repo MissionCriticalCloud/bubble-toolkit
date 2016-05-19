@@ -92,7 +92,7 @@ find /data/git/$HOSTNAME/cosmic/cosmic-client -name \*.gz | xargs rm -f
 config_maven
 
 # Short pre-compile may be needed to solve dependency
-mvn clean install -N -o
+mvn clean install -N
 
 # Compile Cosmic
 if [ ${skip} -eq 0 ]; then
@@ -100,7 +100,7 @@ if [ ${skip} -eq 0 ]; then
   cd "$COSMIC_BUILD_PATH"
   echo "Compiling Cosmic"
   date
-  mvn clean install -P developer,systemvm ${compile_threads} -o
+  mvn clean install -P developer,systemvm ${compile_threads}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"
@@ -168,7 +168,7 @@ pip install --upgrade "https://beta-nexus.mcc.schubergphilis.com/service/local/a
 
 # Deploy DB
 echo "Deploying Cosmic DB"
-mvn -P developer -pl developer -Ddeploydb -T 4 -o
+mvn -P developer -pl developer -Ddeploydb -T 4
 if [ $? -ne 0 ]; then
   date
   echo "Build failed, please investigate!"

@@ -4,7 +4,7 @@
 # Next, you can run Marvin to setup whatever you need to verify the PR.
 
 function usage {
-  printf "Usage: %s: -m marvinCfg -p <pr id> [ -b <branch: default to master> -s <skip compile> -t <run tests> -f <test file to run> -T <mvn -T flag> ]\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvinCfg -p <pr id> [ -b <branch: default to master> -s <skip compile> -t <run tests> -f test-file-to-run -T mvn-T-flag -S <use simulator> ]\n" $(basename $0) >&2
 }
 
 # Options
@@ -12,9 +12,11 @@ skip=
 run_tests=
 test_file=
 compile_threads=
-while getopts 'm:p:T:b:f:st' OPTION
+while getopts 'm:p:T:b:f:Sst' OPTION
 do
   case $OPTION in
+  S)    simulator="-S"
+        ;;
   m)    marvinCfg="$OPTARG"
         ;;
   p)    prId="$OPTARG"
@@ -34,6 +36,7 @@ done
 
 echo "Received arguments:"
 echo "skip = ${skip}"
+echo "use simulator = ${simulator}"
 echo "run_tests = ${run_tests}"
 echo "test_file = ${test_file}"
 echo "marvinCfg = ${marvinCfg}"
@@ -100,4 +103,4 @@ if [ $? -gt 0  ]; then
 fi
 
 # Build, run and test it
-/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${test_file} ${skip} ${compile_threads}
+/data/shared/helper_scripts/cloudstack/build_run_deploy_test.sh -m ${marvinCfg} ${run_tests} ${test_file} ${skip} ${compile_threads} ${simulator}

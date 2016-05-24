@@ -5,18 +5,22 @@
 # When done, it runs the desired tests.
 
 function usage {
-  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -f <test file to run> -T <mvn -T flag> ]\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -f test-file-to-run -T mvn-T-flag -S <use simulator> ]\n" $(basename $0) >&2
 }
 
 # Options
 skip=0
+simulator=0
 run_tests=0
 test_file=
 compile_threads=
-while getopts 'm:T:f:st' OPTION
+while getopts 'm:T:f:Sst' OPTION
 do
   case $OPTION in
   m)    marvinCfg="$OPTARG"
+        ;;
+  S)    simulator=1
+        use_simulator="-Dsimulator"
         ;;
   s)    skip=1
         ;;
@@ -31,6 +35,7 @@ done
 
 echo "Received arguments:"
 echo "skip = ${skip}"
+echo "simulator = ${simulator}"
 echo "run_tests = ${run_tests}"
 echo "test_file = ${test_file}"
 echo "marvinCfg = ${marvinCfg}"
@@ -308,7 +313,7 @@ if [ ${skip} -eq 0 ]; then
   cd /data/git/$HOSTNAME/cloudstack
   echo "Compiling CloudStack"
   date
-  mvn ${clean} install -P developer,systemvm ${compile_threads}
+  mvn ${clean} install -P developer,systemvm ${compile_threads} ${use_simulator}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"
@@ -339,9 +344,18 @@ fi
 # Deploy DB
 echo "Deploying CloudStack DB"
 mvn -P developer -pl developer -Ddeploydb -T 4
+if [ $simulator == 1 ]; then
+  mvn -Pdeveloper -pl developer -Ddeploydb-simulator -T 4
+  if [ $? -ne 0 ]; then
+    date
+    echo "Simulator database deployment failed, please investigate!"
+    exit 1
+  fi
+  echo "simulator data installed"
+fi
 if [ $? -ne 0 ]; then
   date
-  echo "Build failed, please investigate!"
+  echo "Database deployment failed, please investigate!"
   exit 1
 fi
 date
@@ -384,7 +398,7 @@ killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
 echo "Starting CloudStack"
-mvn -pl :cloud-client-ui jetty:run > jetty.log 2>&1 &
+mvn -pl :cloud-client-ui jetty:run ${use_simulator} > jetty.log 2>&1 &
 
 # Wait until it comes up
 echo "Waiting for CloudStack to start"

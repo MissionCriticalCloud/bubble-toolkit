@@ -3,6 +3,65 @@ HELPERLIB_SH_SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
 
+function cosmic_sources_retrieve {
+  BASEDIR=$1
+  GITSSH=$2
+  gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic.git' "${BASEDIR}/cosmic"  ${GITSSH}
+  gitclone 'git@github.com:MissionCriticalCloud/packaging.git' "${BASEDIR}/packaging" ${GITSSH}
+  # Check VHD-UTIL
+  wget_fetch 'http://download.cloud.com.s3.amazonaws.com/tools/vhd-util' "${BASEDIR}/cosmic/cosmic-core/scripts/vm/hypervisor/xenserver/vhd-util"
+}
+
+function gitclone_recursive {
+  REPO_URL=$1
+  CHECKOUT_PATH=$2
+  GIT_SSH=$3
+
+  mkdir -p "${CHECKOUT_PATH}"
+  if [ ! -d "${CHECKOUT_PATH}/.git" ]; then
+    echo "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
+  if [ -z ${GIT_SSH} ] || [ "${GIT_SSH}" -eq "1" ]; then
+    git clone --recursive "${REPO_URL}" "${CHECKOUT_PATH}"
+    else
+      git clone `echo ${REPO_URL} | sed 's@git\@github.com:@https://github.com/@'` "${CHECKOUT_PATH}"
+      cwd=$(pwd)
+      cd "${CHECKOUT_PATH}"
+      git submodule init
+      sed -i 's@git\@github.com:@https://github.com/@' .git/config
+      git submodule update
+      cd "${cwd}"
+    fi
+    echo "Please use 'git checkout' to checkout the branch you need."
+  else
+    echo "Git repo already found at ${CHECKOUT_PATH}"
+  fi
+}
+
+function gitclone {
+  REPO_URL=$1
+  CHECKOUT_PATH=$2
+  GIT_SSH=$3
+  mkdir -p "${CHECKOUT_PATH}"
+  if [ ! -d "${CHECKOUT_PATH}/.git" ]; then
+    echo "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
+    if [ -z ${GIT_SSH} ] || [ "${GIT_SSH}" -eq "1" ]; then
+      git clone "${REPO_URL}" "${CHECKOUT_PATH}"
+    else
+      git clone `echo ${REPO_URL} | sed 's@git\@github.com:@https://github.com/@'` "${CHECKOUT_PATH}"
+    fi
+    echo "Please use 'git checkout' to checkout the branch you need."
+  else
+    echo "Git repo already found at ${CHECKOUT_PATH}"
+  fi
+}
+
+function wget_fetch {
+  if [ ! -f "$2" ]; then
+    echo "Fetching $1"
+    wget "$1" -O "$2"
+  fi
+}
+
 function config_maven {
   if [ ! -f ~/.m2/settings.xml ]; then
     if [ ! -d ~/.m2 ]; then

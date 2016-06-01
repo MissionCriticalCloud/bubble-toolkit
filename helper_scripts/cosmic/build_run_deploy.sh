@@ -2,15 +2,23 @@
 
 # This script builds and runs Cosmic and deploys a data center using the supplied Marvin config.
 # When KVM is used, RPMs are built and installed on the hypervisor.
-# When done, it runs the desired tests.
 
-# Source the helper functions and
+# As building is now done locally, packages which were installed in CS1
+# now need to be installed "locally":
+#
+# yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen setroubleshoot openssh-askpass java-1.8.0-openjdk-devel.x86_64 rpm-build rubygems nc libffi-devel openssl-devel
+# yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
+# yum --enablerepo=epel -y install sshpass mariadb mysql-connector-python
+# yum -y install nmap
+#
+# If agreed, this needs to be moved to the bubble-cookbook
+
+# Source the helper functions
 . `dirname $0`/helperlib.sh
 
 
 function usage {
   printf "\nUsage: %s: -e workspace -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
-  printf "\t-e:\tA (folder) name for the workspace\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-u:\tSkip RPM packaging\n" >&2
@@ -18,6 +26,8 @@ function usage {
   printf "\t-w:\tSkip setup infra (rpm installs)\n" >&2
   printf "\t-x:\tSkip deployDC\n" >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
+  printf "\n\nScenario\'s (will override skip flags):\n" >&2
+  printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
   printf "\n" >&2
 }
 function maven_build {
@@ -57,6 +67,38 @@ function rpm_package {
   cd "${pwd}"
 }
 
+# deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
+# so should be moved to a "library" sh script which can be sourced
+function deploy_cloudstack_war {
+  csip=$1
+  csuser=$2
+  cspass=$3
+  dbscripts_dir="$4"
+  war_file="$5"
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+
+  ${ssh_base} ${csuser}@${csip} mkdir -p ~tomcat/db
+  ${scp_base} ${dbscripts_dir} ${csuser}@${csip}:~tomcat/db/
+  ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
+  ${ssh_base} ${csuser}@${csip} service tomcat start
+}
+# If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
+function undeploy_cloudstack_war {
+  csip=$1
+  csuser=$2
+  cspass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  ${ssh_base} ${csuser}@${csip} service tomcat stop
+  ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
+  ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
+}
+
+
 # Options
 skip=0
 skip_maven_build=0
@@ -66,9 +108,12 @@ skip_setup_infra=0
 skip_deploy_dc=0
 run_tests=0
 compile_threads=
-while getopts 'e:m:T:stuvwx' OPTION
+scenario_build_deploy_new_war=0
+while getopts 'ae:m:T:stuvwx' OPTION
 do
   case $OPTION in
+  a)    scenario_build_deploy_new_war=1
+        ;;
   m)    marvinCfg="$OPTARG"
         ;;
   s)    skip=1
@@ -100,6 +145,8 @@ echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
 echo "run_tests          = ${run_tests}"
 echo "marvinCfg          (-m) = ${marvinCfg}"
 echo "compile_threads    (-T) = ${compile_threads}"
+echo ""
+echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
 
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
@@ -117,6 +164,14 @@ fi
 
 echo "Started!"
 date
+if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
+  skip=0
+  skip_maven_build=0
+  skip_rpm_package=1
+  skip_prepare_infra=1
+  skip_setup_infra=1
+  skip_deploy_dc=1
+fi
 
 # 00080 Parse marvin config
 parse_marvin_config ${marvinCfg}
@@ -185,6 +240,12 @@ if [ ${skip_setup_infra} -eq 0 ]; then
 
 else
   echo "Skipped setup infra"
+fi
+# 00510 Setup only war deploy
+if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
+  cd "${COSMIC_BUILD_PATH}"
+  undeploy_cloudstack_war cs1 "root" "password"
+  deploy_cloudstack_war cs1 "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 fi
 
 # 00600 Deploy DC

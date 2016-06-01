@@ -12,6 +12,7 @@
 # yum -y install nmap
 #
 # If agreed, this needs to be moved to the bubble-cookbook
+#
 
 # Source the helper functions
 . `dirname $0`/helperlib.sh
@@ -19,14 +20,17 @@
 
 function usage {
   printf "\nUsage: %s: -e workspace -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
+  printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
+  printf "\nFeature flags:\n" >&2
+  printf "\t-D:\tEnable remote debugging on tomcat (port 1043)\n" >&2
+  printf "\nSkip flags:\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-u:\tSkip RPM packaging\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
   printf "\t-w:\tSkip setup infra (rpm installs)\n" >&2
   printf "\t-x:\tSkip deployDC\n" >&2
-  printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
-  printf "\n\nScenario\'s (will override skip flags):\n" >&2
+  printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
   printf "\n" >&2
 }
@@ -98,6 +102,20 @@ function undeploy_cloudstack_war {
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
 }
 
+function enable_remote_debug_war {
+  csip=$1
+  csuser=$2
+  cspass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  echo "Waiting 10 seconds as a deploy may just have happened; giving time to unpack jar"
+  sleep 10
+  ${ssh_base} ${csuser}@${csip} service tomcat stop
+  ${ssh_base} ${csuser}@${csip} 'echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=1043,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf'
+  ${ssh_base} ${csuser}@${csip} service tomcat start
+}
+
 
 # Options
 skip=0
@@ -109,7 +127,8 @@ skip_deploy_dc=0
 run_tests=0
 compile_threads=
 scenario_build_deploy_new_war=0
-while getopts 'ae:m:T:stuvwx' OPTION
+enable_remote_debugging=0
+while getopts 'aDe:m:T:stuvwx' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -130,12 +149,15 @@ do
         ;;
   t)    run_tests=1
         ;;
+  D)    enable_remote_debugging=1
+        ;;
   T)    compile_threads="-T $OPTARG"
         ;;
   esac
 done
 
 echo "Received arguments:"
+echo "enable_remote_debugging (-D) = ${enable_remote_debugging}"
 echo "skip               (-s) = ${skip}"
 echo "skip_maven_build   (-t) = ${skip_maven_build}"
 echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
@@ -247,6 +269,11 @@ if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
   undeploy_cloudstack_war cs1 "root" "password"
   deploy_cloudstack_war cs1 "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 fi
+
+if [ ${enable_remote_debugging} -eq 1 ]; then
+  enable_remote_debug_war cs1 "root" "password"
+fi
+
 
 # 00600 Deploy DC
 if [ ${skip_deploy_dc} -eq 0 ]; then

@@ -23,7 +23,7 @@ function usage {
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
-  printf "\t-D:\tEnable remote debugging on tomcat (port 1043)\n" >&2
+  printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
   printf "\nSkip flags:\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
@@ -110,13 +110,18 @@ function enable_remote_debug_war {
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  echo "Waiting 10 seconds as a deploy may just have happened; giving time to unpack jar"
-  sleep 10
-  ${ssh_base} ${csuser}@${csip} service tomcat stop
-  ${ssh_base} ${csuser}@${csip} 'echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=1043,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf'
-  ${ssh_base} ${csuser}@${csip} service tomcat start
+  ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; sleep 10; service tomcat stop; service tomcat start; fi'
 }
+function enable_remote_debug_kvm
+ {
+  csip=$1
+  csuser=$2
+  cspass=$3
 
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  ${ssh_base} ${csuser}@${csip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; systemctl restart cosmic-agent; fi'
+}
 
 # Options
 skip=0
@@ -273,6 +278,8 @@ fi
 
 if [ ${enable_remote_debugging} -eq 1 ]; then
   enable_remote_debug_war cs1 "root" "password"
+  enable_remote_debug_kvm ${hvip1} ${hvuser1} ${hvpass1}
+  enable_remote_debug_kvm ${hvip2} ${hvuser2} ${hvpass2}
 fi
 
 

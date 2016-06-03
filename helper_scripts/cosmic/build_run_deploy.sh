@@ -24,6 +24,8 @@ function usage {
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
   printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
+  printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
+  printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\nSkip flags:\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
@@ -38,12 +40,23 @@ function usage {
 function maven_build {
   build_dir=$1
   compile_threads=$2
+  disable_maven_clean=$3
   # Compile Cosmic
   cwd=$(pwd)
   cd "${build_dir}"
   echo "Compiling Cosmic"
   date
-  mvn clean install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir}
+  maven_unit_tests=""
+  if [ "${disable_maven_unit_tests}" = "1" ]; then
+    maven_unit_tests=" -DskipTests "
+  fi
+  maven_clean="clean"
+  if [ "${disable_maven_clean}" = "1" ]; then
+    maven_clean=""
+  fi
+
+  echo mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
+  mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"
@@ -134,10 +147,16 @@ run_tests=0
 compile_threads=
 scenario_build_deploy_new_war=0
 enable_remote_debugging=0
-while getopts 'aDIm:T:stuvwx' OPTION
+disable_maven_clean=0
+disable_maven_unit_tests=0
+while getopts 'aCDEIm:T:stuvwx' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
+        ;;
+  C)    disable_maven_clean=1
+        ;;
+  E)    disable_maven_unit_tests=1
         ;;
   m)    marvinCfg="$OPTARG"
         ;;
@@ -163,7 +182,10 @@ do
 done
 
 echo "Received arguments:"
-echo "enable_remote_debugging (-D) = ${enable_remote_debugging}"
+echo "enable_remote_debugging  (-D) = ${enable_remote_debugging}"
+echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
+echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
+echo ""
 echo "skip               (-s) = ${skip}"
 echo "skip_maven_build   (-t) = ${skip_maven_build}"
 echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
@@ -228,7 +250,7 @@ config_maven
 if [ ${skip} -eq 0 ] && [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
 
-  maven_build "$COSMIC_BUILD_PATH" "${compile_threads}"
+  maven_build "$COSMIC_BUILD_PATH" "${compile_threads}" ${disable_maven_clean} ${disable_maven_unit_tests}
 
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else

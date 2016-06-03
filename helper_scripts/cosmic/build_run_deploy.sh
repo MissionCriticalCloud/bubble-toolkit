@@ -19,9 +19,10 @@
 
 
 function usage {
-  printf "\nUsage: %s: -e workspace -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
+  printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
   printf "\nFeature flags:\n" >&2
+  printf "\t-I:\tRun integration tests\n" >&2
   printf "\t-D:\tEnable remote debugging on tomcat (port 1043)\n" >&2
   printf "\nSkip flags:\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
@@ -128,7 +129,7 @@ run_tests=0
 compile_threads=
 scenario_build_deploy_new_war=0
 enable_remote_debugging=0
-while getopts 'aDe:m:T:stuvwx' OPTION
+while getopts 'aDIm:T:stuvwx' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -147,7 +148,7 @@ do
         ;;
   x)    skip_deploy_dc=1
         ;;
-  t)    run_tests=1
+  I)    run_tests=1
         ;;
   D)    enable_remote_debugging=1
         ;;
@@ -164,7 +165,7 @@ echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
 echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
 echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
 echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
-echo "run_tests          = ${run_tests}"
+echo "run_tests               = ${run_tests}"
 echo "marvinCfg          (-m) = ${marvinCfg}"
 echo "compile_threads    (-T) = ${compile_threads}"
 echo ""
@@ -285,6 +286,15 @@ if [ ${skip_deploy_dc} -eq 0 ]; then
 else
   echo "Skipped deployDC"
 fi
-echo "Finished"
 
+# 00700 Run tests
+if [ ${run_tests} -eq 1 ]; then
+  cd "${COSMIC_BUILD_PATH}"
+  "${CI_SCRIPTS}/ci-run-marvin-tests.sh" -m "${marvinCfg}" -h true smoke/test_network.py smoke/test_routers_iptables_default_policy.py smoke/test_password_server.py smoke/test_vpc_redundant.py smoke/test_routers_network_ops.py smoke/test_vpc_router_nics.py smoke/test_router_dhcphosts.py smoke/test_loadbalance.py smoke/test_privategw_acl.py smoke/test_ssvm.py smoke/test_vpc_vpn.py
+else
+  echo "Skipped tests"
+fi
+
+echo "Finished"
 date
+

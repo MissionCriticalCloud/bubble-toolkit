@@ -249,7 +249,7 @@ say "Installing Marvin"
 install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
 
 say "Installing SystemVM templates"
-systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"
+systemtemplate="/data/templates/cosmic-systemvm.qcow2"
 imagetype="qcow2"
 install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 

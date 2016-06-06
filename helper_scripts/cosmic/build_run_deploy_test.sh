@@ -202,10 +202,10 @@ while ! timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /de
 
 # Systemvm template for hypervisor type
 if [[ "${hypervisor}" == "kvm" ]]; then
-  systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"
+  systemtemplate="/data/templates/cosmic-systemvm.qcow2"
   imagetype="qcow2"
  elif [[ "${hypervisor}" == "xenserver" ]]; then
-  systemtemplate="/data/templates/systemvm64template-master-4.6.0-xen.vhd"
+  systemtemplate="/data/templates/cosmic-systemvm.vhd"
   imagetype="vhd"
 fi
 

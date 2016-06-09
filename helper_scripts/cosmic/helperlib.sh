@@ -76,7 +76,6 @@ function install_kvm_packages {
   hvip=$1
   hvuser=$2
   hvpass=$3
-  hasNsxDevice=$4
 
   if [  -d /data/git/$HOSTNAME/packaging/dist/rpmbuild/RPMS/x86_64 ]; then
     distdir=/data/git/$HOSTNAME/packaging/dist/rpmbuild/RPMS/x86_64
@@ -98,11 +97,15 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} yum -y remove cosmic-common
   ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
   ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent* cosmic-common*
-  if [ "$hasNsxDevice" == "True" ]; then
-    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
-  fi
+  # Use OVS networking
+  ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+  # Enable debug logging
+  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
   # Enable remote debugging
   ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/systemd/system/cosmic-agent.service.d/
   ${ssh_base} ${hvuser}@${hvip} 'printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf'
@@ -226,19 +229,6 @@ try:
 except:
  print ''
   " | cut -d/ -f3)
-
-  hasNsxDevice=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  jsonObject = json.load(sys.stdin)
-  niciraProviders = filter(lambda provider: provider['name'] == 'NiciraNvp', reduce(lambda a, b: a+b, map(lambda physical_net: physical_net['providers'], jsonObject['zones'][0]['physical_networks'])))
-  if niciraProviders:
-    print True
-  else:
-    print False
-except:
- print ERROR
-  ")
 }
 
 function cloud_conf_cosmic {
@@ -258,8 +248,11 @@ function cloud_conf_cosmic {
 function cloud_conf_generic {
   # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
-  # Insert OVS bridge
+  # Insert OVS bridges
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
+  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.private.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
+  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.public.network.device', 'pub0') ON DUPLICATE KEY UPDATE value = 'pub0';"
+  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.guest.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
   # Garbage collector
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '10') ON DUPLICATE KEY UPDATE value = '10';"
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '10') ON DUPLICATE KEY UPDATE value = '10';"

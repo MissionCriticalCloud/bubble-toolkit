@@ -77,11 +77,6 @@ parse_marvin_config ${marvinCfg}
 mkdir -p ${primarystorage}
 mkdir -p ${secondarystorage}
 
-if [ "$hasNsxDevice" == "ERROR" ]; then
-  echo "Failed to detect NSX provider in Marvin config"
-  exit 10
-fi
-
 killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
@@ -114,7 +109,7 @@ if [ ${skip} -eq 0 ]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
     cd $PACKAGING_BUILD_PATH
-
+  
     # Clean up better
     rm -rf dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
@@ -124,22 +119,25 @@ if [ ${skip} -eq 0 ]; then
       echo "RPM build failed, please investigate!"
       exit 1
     fi
+  fi
+fi
 
+# Install RPM (also after skipping compile/creating packages)
+if [[ "$hypervisor" == "kvm" ]]; then
+  # Push to hypervisor
+  install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
+  date
+
+  # Do we have a second hypervisor
+  if [ ! -z  ${hvip2} ]; then
     # Push to hypervisor
-    install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1} ${hasNsxDevice}
-    date
-
-    # Do we have a second hypervisor
-    if [ ! -z  ${hvip2} ]; then
-      # Push to hypervisor
-      install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2} ${hasNsxDevice}
-    fi
-
-  else
-    echo "No RPM packages needed for ${hypervisor}"
+    install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
   fi
 
+else
+  echo "No RPM packages needed for ${hypervisor}"
 fi
+
 
 # Cleaning Hypervisor
 echo "Cleaning hypervisor"

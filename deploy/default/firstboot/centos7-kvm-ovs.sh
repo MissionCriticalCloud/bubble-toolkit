@@ -40,17 +40,6 @@ echo "192.168.22.1:/data /data nfs rw,hard,intr,rsize=8192,wsize=8192,timeo=14 0
 # Enable nesting
 echo "options kvm_intel nested=1" >> /etc/modprobe.d/kvm-nested.conf
 
-# agent.properties settings
-cp -pr /etc/cosmic/agent/agent.properties /etc/cosmic/agent/agent.properties.orig
-
-# Add these settings (before adding the host)
-echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties
-echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties
-echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties
-
-# Set the logging to DEBUG
-sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
-
 # Libvirtd parameters
 echo 'listen_tls = 0' >> /etc/libvirt/libvirtd.conf
 echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf
@@ -62,17 +51,36 @@ echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 ### OVS ###
-# Rename builtin openvswitch module, add custom OVS package with STT support and start it
-mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
-yum -y install "kernel-devel-$(uname -r)"
-yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
-yum -y install http://mctadm1/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
+# Test to see if we have the internal mctadm1 box available
+ping -c1 mctadm1 >/dev/null 2>&1
+MCTADM1_AVAILABLE=$?
+
+# If mctadm1 is available, get OVS packages from it
+if [ ${MCTADM1_AVAILABLE} -eq 0 ]
+  then
+  echo "Detected we have server mctadm1 to get OVS packages from."
+  # Custom 2.5.1
+  mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
+  yum -y install "kernel-devel-$(uname -r)"
+  yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
+  yum -y install http://mctadm1/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
+# If not, fall back to community sources
+else
+  echo "Installing OVS from community sources."
+  # Comunity 2.4.x
+  yum install -y yum-utils
+  yum-config-manager --enablerepo=extras
+  yum install -y centos-release-openstack-mitaka
+  yum install -y openvswitch
+fi
+
+# Start and enable OVS
+systemctl enable openvswitch
+systemctl start openvswitch
 
 # Bridges
-systemctl start openvswitch
-echo "Creating bridges cloudbr0 and cloudbr1.."
+echo "Creating bridge cloudbr0.."
 ovs-vsctl add-br cloudbr0
-ovs-vsctl add-br cloudbr1
 ovs-vsctl add-br cloud0
 
 # Get interfaces
@@ -91,7 +99,6 @@ ovs-vsctl -- --may-exist add-br br-int\
 
 # Fake bridges
 echo "Create fake bridges"
-#ovs-vsctl -- add-br trans0 cloudbr0 $VLANTRANS
 ovs-vsctl -- add-br trans0 cloudbr0
 ovs-vsctl -- add-br pub0 cloudbr0 $VLANPUB
 
@@ -175,4 +182,7 @@ ifup cloudbr0
 timedatectl set-timezone CET
 
 # Reboot
-reboot
+echo "Syncing filesystems, will reboot soon.."
+sync
+sleep 2
+echo "b" > /proc/sysrq-trigger

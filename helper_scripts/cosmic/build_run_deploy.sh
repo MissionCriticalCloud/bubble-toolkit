@@ -18,25 +18,6 @@
 . `dirname $0`/helperlib.sh
 
 
-function usage {
-  printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
-  printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
-  printf "\nFeature flags:\n" >&2
-  printf "\t-I:\tRun integration tests\n" >&2
-  printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
-  printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
-  printf "\t-E:\tDon't use unit tests on maven build\n" >&2
-  printf "\nSkip flags:\n" >&2
-  printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
-  printf "\t-t:\tSkip maven build\n" >&2
-  printf "\t-u:\tSkip RPM packaging\n" >&2
-  printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
-  printf "\t-w:\tSkip setup infra (rpm installs)\n" >&2
-  printf "\t-x:\tSkip deployDC\n" >&2
-  printf "\nScenario\'s (will combine/override skip flags):\n" >&2
-  printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
-  printf "\n" >&2
-}
 function maven_build {
   build_dir=$1
   compile_threads=$2
@@ -56,6 +37,8 @@ function maven_build {
   fi
 
   echo mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
+  # JENKINS: mavenBuild: maven job with goals: clean install deploy -U -Pdeveloper -Psystemvm -Psonar-ci-cosmic -Dcosmic.dir=\"${injectJobVariable(CUSTOM_WORKSPACE_PARAM)}\"
+  # Leaving out deploy and -U (Forces a check for updated releases and snapshots on remote repositories)
   mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
   if [ $? -ne 0 ]; then
     date
@@ -74,8 +57,13 @@ function rpm_package {
   cd "$1"
 
   # Clean up better
-  rm -rf dist/rpmbuild/RPMS/
+  rm -rf dist
+  # remove possible leftover from build script
+  [ -h ../cosmic/cosmic ] && rm ../cosmic/cosmic
+  [ -h ../cosmic-*-SNAPSHOT ] && rm ../cosmic-*-SNAPSHOT
+
   # CentOS7 is hardcoded for now
+  # JENKINS: packageCosmicJob: same
   ./package_cosmic.sh -d centos7 -f ${COSMIC_BUILD_PATH}
   if [ $? -ne 0 ]; then
     date
@@ -125,17 +113,60 @@ function enable_remote_debug_war {
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; sleep 10; service tomcat stop; service tomcat start; fi'
 }
-function enable_remote_debug_kvm
- {
+function enable_remote_debug_kvm {
   csip=$1
   csuser=$2
   cspass=$3
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  ${ssh_base} ${csuser}@${csip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; systemctl restart cosmic-agent; fi'
+  ${ssh_base} ${csuser}@${csip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi'
 }
+function cleanup_cs {
+  csip=$1
+  csuser=$2
+  cspass=$3
 
+  undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+  # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" >/dev/null
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" >/dev/null
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" >/dev/null
+}
+function cleanup_kvm {
+  hvip=$1
+  hvuser=$2
+  hvpass=$3
+
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  # Remove Cosmic agent
+  ${ssh_base} ${hvuser}@${hvip} 'yum -y -q remove cosmic-agent'
+  # Remove running (System) VMs
+  ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
+  ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'
+  # Remove disk images from primary storage
+  ${ssh_base} ${hvuser}@${hvip}  'rm -f `mount | grep primary | cut -d" " -f3`/*'
+}
+function usage {
+  printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
+  printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
+  printf "\nFeature flags:\n" >&2
+  printf "\t-I:\tRun integration tests\n" >&2
+  printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
+  printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
+  printf "\t-E:\tDon't use unit tests on maven build\n" >&2
+  printf "\nSkip flags:\n" >&2
+  printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
+  printf "\t-t:\tSkip maven build\n" >&2
+  printf "\t-u:\tSkip RPM packaging\n" >&2
+  printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
+  printf "\t-w:\tSkip setup infra (DB creation, war deploy, agent-rpm installs)\n" >&2
+  printf "\t-x:\tSkip deployDC\n" >&2
+  printf "\nScenario\'s (will combine/override skip flags):\n" >&2
+  printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
+  printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven/rpm, (= -s -v)\n" >&2
+  printf "\n" >&2
+}
 # Options
 skip=0
 skip_maven_build=0
@@ -146,13 +177,17 @@ skip_deploy_dc=0
 run_tests=0
 compile_threads=
 scenario_build_deploy_new_war=0
-enable_remote_debugging=0
+scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
-while getopts 'aCDEIm:T:stuvwx' OPTION
+# Former options
+enable_remote_debugging=1
+while getopts 'abCEIm:T:stuvwx' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
+        ;;
+  b)    scenario_redeploy_cosmic=1
         ;;
   C)    disable_maven_clean=1
         ;;
@@ -174,15 +209,12 @@ do
         ;;
   I)    run_tests=1
         ;;
-  D)    enable_remote_debugging=1
-        ;;
   T)    compile_threads="-T $OPTARG"
         ;;
   esac
 done
 
 echo "Received arguments:"
-echo "enable_remote_debugging  (-D) = ${enable_remote_debugging}"
 echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
 echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
 echo ""
@@ -192,11 +224,13 @@ echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
 echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
 echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
 echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
-echo "run_tests               = ${run_tests}"
+echo "run_tests          (-I) = ${run_tests}"
 echo "marvinCfg          (-m) = ${marvinCfg}"
 echo "compile_threads    (-T) = ${compile_threads}"
 echo ""
 echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
+echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
+echo ""
 
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
@@ -222,9 +256,18 @@ if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
   skip_setup_infra=1
   skip_deploy_dc=1
 fi
+if [ ${scenario_redeploy_cosmic} -eq 1 ]; then
+  skip=1
+  skip_maven_build=1
+  skip_rpm_package=1
+  skip_prepare_infra=1
+  skip_setup_infra=0
+  skip_deploy_dc=0
+fi
 
 # 00080 Parse marvin config
 parse_marvin_config ${marvinCfg}
+csip=$(getent hosts cs1 | awk '{ print $1 }')
 
 # 000090 Set workspace
 WORKSPACE=/data/git/${zone}
@@ -275,33 +318,46 @@ fi
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
 
+  # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
   "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"
 
 else
   echo "Skipped prepare infra"
 fi
 
+if [ ${enable_remote_debugging} -eq 1 ]; then
+  enable_remote_debug_kvm ${hvip1} ${hvuser1} ${hvpass1}
+  enable_remote_debug_kvm ${hvip2} ${hvuser2} ${hvpass2}
+fi
+
 # 00500 Setup Infra
 if [ ${skip_setup_infra} -eq 0 ]; then
   cd "${COSMIC_BUILD_PATH}"
   rm -rf "$secondarystorage/*"
+  # Cleanup CS in case of re-deploy
+  cleanup_cs ${csip} "root" "password"
 
+  # Clean KVMs in case of re-deploy
+  cleanup_kvm ${hvip1} ${hvuser1} ${hvpass1}
+  cleanup_kvm ${hvip2} ${hvuser2} ${hvpass2}
+
+  # JENKINS: setupInfraForIntegrationTests: no change
   "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
 
 else
   echo "Skipped setup infra"
 fi
+
 # 00510 Setup only war deploy
+# Jenkins: war deploy is part of setupInfraForIntegrationTests
 if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
   cd "${COSMIC_BUILD_PATH}"
-  undeploy_cloudstack_war cs1 "root" "password"
-  deploy_cloudstack_war cs1 "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+  undeploy_cloudstack_war ${csip} "root" "password"
+  deploy_cloudstack_war ${csip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 fi
 
 if [ ${enable_remote_debugging} -eq 1 ]; then
-  enable_remote_debug_war cs1 "root" "password"
-  enable_remote_debug_kvm ${hvip1} ${hvuser1} ${hvpass1}
-  enable_remote_debug_kvm ${hvip2} ${hvuser2} ${hvpass2}
+  enable_remote_debug_war ${csip} "root" "password"
 fi
 
 
@@ -310,6 +366,7 @@ if [ ${skip_deploy_dc} -eq 0 ]; then
   cd ${WORKSPACE}
   rm -rf "$primarystorage/*"
 
+  # JENKINS: deployDatacenterForIntegrationTests: no change other then moving log files around for archiveArtifacts
   "${CI_SCRIPTS}/ci-deploy-data-center.sh" -m "${marvinCfg}"
 
 else
@@ -319,6 +376,8 @@ fi
 # 00700 Run tests
 if [ ${run_tests} -eq 1 ]; then
   cd "${COSMIC_BUILD_PATH}"
+
+  # JENKINS: runIntegrationTests: no change, tests inserted from injectJobVariable(flattenLines(TESTS_PARAM))
   "${CI_SCRIPTS}/ci-run-marvin-tests.sh" -m "${marvinCfg}" -h true smoke/test_network.py smoke/test_routers_iptables_default_policy.py smoke/test_password_server.py smoke/test_vpc_redundant.py smoke/test_routers_network_ops.py smoke/test_vpc_router_nics.py smoke/test_router_dhcphosts.py smoke/test_loadbalance.py smoke/test_privategw_acl.py smoke/test_ssvm.py smoke/test_vpc_vpn.py
 else
   echo "Skipped tests"

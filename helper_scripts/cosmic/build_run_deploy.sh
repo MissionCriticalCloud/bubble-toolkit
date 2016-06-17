@@ -76,11 +76,11 @@ function rpm_package {
 # deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
 # so should be moved to a "library" sh script which can be sourced
 function deploy_cloudstack_war {
-  csip=$1
-  csuser=$2
-  cspass=$3
-  dbscripts_dir="$4"
-  war_file="$5"
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+  local dbscripts_dir="$4"
+  local war_file="$5"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
@@ -93,9 +93,9 @@ function deploy_cloudstack_war {
 }
 # If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
 function undeploy_cloudstack_war {
-  csip=$1
-  csuser=$2
-  cspass=$3
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
@@ -105,27 +105,27 @@ function undeploy_cloudstack_war {
 }
 
 function enable_remote_debug_war {
-  csip=$1
-  csuser=$2
-  cspass=$3
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; sleep 10; service tomcat stop; service tomcat start; fi'
 }
 function enable_remote_debug_kvm {
-  csip=$1
-  csuser=$2
-  cspass=$3
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   ${ssh_base} ${csuser}@${csip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi'
 }
 function cleanup_cs {
-  csip=$1
-  csuser=$2
-  cspass=$3
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
 
   undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
   # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
@@ -134,9 +134,9 @@ function cleanup_cs {
   mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" >/dev/null
 }
 function cleanup_kvm {
-  hvip=$1
-  hvuser=$2
-  hvpass=$3
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
 
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   # Remove Cosmic agent
@@ -145,7 +145,7 @@ function cleanup_kvm {
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'
   # Remove disk images from primary storage
-  ${ssh_base} ${hvuser}@${hvip}  'rm -f `mount | grep primary | cut -d" " -f3`/*'
+  ${ssh_base} ${hvuser}@${hvip}  'rm -f `mount | grep primary | cut -d" " -f3`/*' >/dev/null
 }
 function usage {
   printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
@@ -314,7 +314,6 @@ if [ ${skip} -eq 0 ] && [ ${skip_rpm_package} -eq 0 ]; then
 else
   echo "Skipped RPM packaging"
 fi
-
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
 

@@ -18,7 +18,7 @@ cd $COSMIC_BUILD_PATH
 mvn clean install -P developer,systemvm -T 4
 # Deploy DB
 cd $COSMIC_RUN_PATH
-mvn -P developer -pl developer -Ddeploydb
+mvn -Pdeploydb -pl :cloud-engine-schema
 # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
 mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
 # Insert OVS bridge

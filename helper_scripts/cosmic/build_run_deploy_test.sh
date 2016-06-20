@@ -109,7 +109,7 @@ if [ ${skip} -eq 0 ]; then
     echo "Creating rpm packages for ${hypervisor}"
     date
     cd $PACKAGING_BUILD_PATH
-  
+
     # Clean up better
     rm -rf dist/rpmbuild/RPMS/
     # CentOS7 is hardcoded for now
@@ -166,7 +166,7 @@ pip install --upgrade "https://beta-nexus.mcc.schubergphilis.com/service/local/a
 
 # Deploy DB
 echo "Deploying Cosmic DB"
-mvn -P developer -pl developer -Ddeploydb -T 4
+mvn -Pdeploydb -pl :cloud-engine-schema
 if [ $? -ne 0 ]; then
   date
   echo "Build failed, please investigate!"

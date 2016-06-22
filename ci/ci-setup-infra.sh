@@ -74,7 +74,7 @@ function deploy_cosmic_db {
   mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema.sql
   mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema-premium.sql
   mysql -h ${csip} -u cloud -pcloud < cosmic-core/setup/db/templates.sql
-  mysql -h ${csip} -u cloud -pcloud < cosmic-core/developer/developer-prefill.sql
+  mysql -h ${csip} -u cloud -pcloud < cosmic-core/engine/schema/src/test/resources/developer-prefill.sql
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"

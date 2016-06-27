@@ -111,7 +111,7 @@ function enable_remote_debug_war {
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; sleep 10; service tomcat stop; service tomcat start; fi'
+  ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; fi'
 }
 function enable_remote_debug_kvm {
   local csip=$1
@@ -144,8 +144,6 @@ function cleanup_kvm {
   # Remove running (System) VMs
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'
-  # Remove disk images from primary storage
-  ${ssh_base} ${hvuser}@${hvip}  'rm -f `mount | grep primary | cut -d" " -f3`/*' >/dev/null
 }
 function usage {
   printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
@@ -340,6 +338,9 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   cleanup_kvm ${hvip1} ${hvuser1} ${hvpass1}
   cleanup_kvm ${hvip2} ${hvuser2} ${hvpass2}
 
+  # Remove images from primary storage
+  [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -f ${primarystorage}/*
+
   # JENKINS: setupInfraForIntegrationTests: no change
   "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
 
@@ -347,16 +348,15 @@ else
   echo "Skipped setup infra"
 fi
 
+if [ ${enable_remote_debugging} -eq 1 ]; then
+  enable_remote_debug_war ${csip} "root" "password"
+fi
 # 00510 Setup only war deploy
 # Jenkins: war deploy is part of setupInfraForIntegrationTests
 if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
   cd "${COSMIC_BUILD_PATH}"
   undeploy_cloudstack_war ${csip} "root" "password"
   deploy_cloudstack_war ${csip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
-fi
-
-if [ ${enable_remote_debugging} -eq 1 ]; then
-  enable_remote_debug_war ${csip} "root" "password"
 fi
 
 

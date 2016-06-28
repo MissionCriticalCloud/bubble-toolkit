@@ -605,12 +605,22 @@ class kvm_local_deploy:
             hosts.append(url_split[2].split('.')[0])
         return hosts
 
+    # Get hypervisors from Marvin
+    def get_management_hosts(self):
+        hosts = []
+        if not self.marvin_data:
+            self.load_marvin_json()
+        for h in self.marvin_data['mgtSvr']:
+            if 'mgtSvrName' in h:
+                hosts.append(h['mgtSvrName'])
+        return hosts
+
     # Deploy Marvin infra
     def deploy_marvin(self):
         if not self.get_marvin_json():
             return False
         print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
-        hosts = self.get_hosts()
+        hosts = self.get_management_hosts() + self.get_hosts()
         pool = ThreadPool(4)
         results = pool.map(self.deploy_host, hosts)
         pool.close()

@@ -7,7 +7,7 @@ cd ${BASEDIR}
 
 # Setup and clone
 if [ ! -d "cloudstackOps/.git" ]; then
-  git clone https://github.com/remibergsma/cloudstackOps.git
+  git clone https://github.com/schubergphilis/cloudstackOps.git
   cd cloudstackOps
   cp -pr config.sample config
 else
@@ -18,8 +18,8 @@ if [ ! -d "${BASEDIR}/python_cloud" ]; then
   sudo yum -y install python-virtualenv
   virtualenv ${BASEDIR}/python_cloud
   source ${BASEDIR}/python_cloud/bin/activate
-  pip install mysql-connector-python --allow-external mysql-connector-python requests
-  pip install -Iv ${BASEDIR}/cloudstackOps/marvin/Marvin-0.1.0.tar.gz
+  pip install --extra-index-url https://pypi.python.org/pypi/mysql-connector-python/2.0.4 mysql-connector-python
+  pip install ${BASEDIR}/cloudstackOps/marvin/Marvin-0.1.0.tar.gz
   pip install prettytable clint
 fi
 

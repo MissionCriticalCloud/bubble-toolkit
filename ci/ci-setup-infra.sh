@@ -1,4 +1,5 @@
-#! /bin/bash
+#!/bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 
 set -e
 
@@ -187,71 +188,9 @@ if [ ! -f "${marvin_config}" ]; then
     exit 1
 fi
 
-# Hypervisor type
-hypervisor=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
-")
+parse_marvin_config ${marvin_config}
 
-secondarystorage=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
-)
 mkdir -p ${secondarystorage}
-
-# username hypervisor 1
-hvuser1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
-except:
- print ''
-")
-
-# password hypervisor 1
-hvpass1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
-except:
- print ''
-")
-
-# ip adress hypervisor 1
-hvip1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
-except:
- print ''
-" | cut -d/ -f3)
-
-# username hypervisor 2
-hvuser2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
-except:
- print ''
-")
-
-# password hypervisor 2
-hvpass2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
-except:
- print ''
-")
-
-# ip adress hypervisor 2
-hvip2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
-except:
- print ''
-" | cut -d/ -f3)
 
 cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 

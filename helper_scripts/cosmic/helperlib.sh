@@ -174,59 +174,35 @@ import sys, json
 print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
   )
 
+  for i in 1 2 3 4 5 6 7 8 9
+  do
   # username hypervisor 1
-  hvuser1=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hvuser${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][${i}-1]['username']
 except:
   print ''
   ")
 
   # password hypervisor 1
-  hvpass1=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hvpass${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][${i}-1]['password']
 except:
  print ''
   ")
 
   # ip adress hypervisor 1
-  hvip1=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hvip${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][${i}-1]['url']
 except:
  print ''
   " | cut -d/ -f3)
-
-  # username hypervisor 2
-  hvuser2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
-except:
- print ''
-  ")
-
-  # password hypervisor 2
-  hvpass2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
-except:
- print ''
-  ")
-
-  # ip adress hypervisor 2
-  hvip2=$(cat ${marvinCfg} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
-except:
- print ''
-  " | cut -d/ -f3)
+  done
 }
 
 function cloud_conf_cosmic {

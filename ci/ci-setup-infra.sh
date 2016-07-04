@@ -119,7 +119,13 @@ function install_systemvm_templates {
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  ${scp_base} -r ./cosmic-core/scripts ${csuser}@${csip}:./
+
+  if [ -d ./cosmic-core/scripts/src/main/resources/scripts ]; then
+    ${scp_base} -r ./cosmic-core/scripts/src/main/resources/scripts ${csuser}@${csip}:./
+  else
+    ${scp_base} -r ./cosmic-core/scripts ${csuser}@${csip}:./
+  fi
+
   ${ssh_base} ${csuser}@${csip} ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 
   say "SystemVM templates installed"

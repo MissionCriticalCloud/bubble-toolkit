@@ -212,5 +212,14 @@ say "Deploying CloudStack WAR"
 deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
 
 say "Installing KVM packages on hosts"
-install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
-install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+    hvuser=
+    hvip=
+    hvpass=
+    eval hvuser="\${hvuser${i}}"
+    eval hvip="\${hvip${i}}"
+    eval hvpass="\${hvpass${i}}"
+    install_kvm_packages ${hvip} ${hvuser} ${hvpass}
+  fi
+done

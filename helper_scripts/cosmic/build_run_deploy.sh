@@ -323,8 +323,17 @@ else
 fi
 
 if [ ${enable_remote_debugging} -eq 1 ]; then
-  enable_remote_debug_kvm ${hvip1} ${hvuser1} ${hvpass1}
-  enable_remote_debug_kvm ${hvip2} ${hvuser2} ${hvpass2}
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
+      enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass}
+    fi
+  done
 fi
 
 # 00500 Setup Infra
@@ -335,8 +344,17 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   cleanup_cs ${csip} "root" "password"
 
   # Clean KVMs in case of re-deploy
-  cleanup_kvm ${hvip1} ${hvuser1} ${hvpass1}
-  cleanup_kvm ${hvip2} ${hvuser2} ${hvpass2}
+    for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
+      cleanup_kvm ${hvip} ${hvuser} ${hvpass}
+    fi
+  done
 
   # Remove images from primary storage
   [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -f ${primarystorage}/*

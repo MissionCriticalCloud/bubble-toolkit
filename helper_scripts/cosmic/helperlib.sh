@@ -203,6 +203,36 @@ except:
  print ''
   " | cut -d/ -f3)
   done
+
+  for i in 1 2 3 4 5 6 7 8 9
+  do
+    # username cs 1
+    export cs${i}user=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['user']
+except:
+  print ''
+")
+
+    # password cs 1
+    export cs${i}pass=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['passwd']
+except:
+ print ''
+")
+
+    # ip adress cs 1
+    export cs${i}ip=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['mgtSvrIp']
+except:
+ print ''
+" | cut -d/ -f3)
+  done
 }
 
 function cloud_conf_cosmic {

@@ -205,13 +205,22 @@ systemtemplate="/data/templates/cosmic-systemvm.qcow2"
 imagetype="qcow2"
 install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
-say "Configuring tomcat to load JaCoCo Agent"
-configure_tomcat_to_load_jacoco_agent ${cs1ip} "root" "password"
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}ip}"
+    say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
+    configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 
-say "Deploying CloudStack WAR"
-deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+    say "Deploying CloudStack WAR on host ${csip}"
+    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+  fi
+done
 
-say "Installing KVM packages on hosts"
 for i in 1 2 3 4 5 6 7 8 9; do
   if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
     hvuser=
@@ -220,6 +229,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval hvuser="\${hvuser${i}}"
     eval hvip="\${hvip${i}}"
     eval hvpass="\${hvpass${i}}"
+    say "Installing KVM packages on host ${hvip}"
     install_kvm_packages ${hvip} ${hvuser} ${hvpass}
   fi
 done

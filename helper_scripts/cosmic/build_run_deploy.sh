@@ -340,11 +340,21 @@ fi
 if [ ${skip_setup_infra} -eq 0 ]; then
   cd "${COSMIC_BUILD_PATH}"
   rm -rf "$secondarystorage/*"
-  # Cleanup CS in case of re-deploy
-  cleanup_cs ${csip} "root" "password"
 
-  # Clean KVMs in case of re-deploy
-    for i in 1 2 3 4 5 6 7 8 9; do
+  for i in 1 2 3 4 5 6 7 8 9; do
+    # Cleanup CS in case of re-deploy
+    if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+      csuser=
+      csip=
+      cspass=
+      eval csuser="\${cs${i}user}"
+      eval csip="\${cs${i}ip}"
+      eval cspass="\${cs${i}ip}"
+      # Cleanup CS in case of re-deploy
+      cleanup_cs ${csip} ${csuser} ${cspass}
+    fi
+
+    # Clean KVMs in case of re-deploy
     if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
       hvuser=
       hvip=
@@ -366,16 +376,30 @@ else
   echo "Skipped setup infra"
 fi
 
-if [ ${enable_remote_debugging} -eq 1 ]; then
-  enable_remote_debug_war ${csip} "root" "password"
-fi
-# 00510 Setup only war deploy
-# Jenkins: war deploy is part of setupInfraForIntegrationTests
-if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
-  cd "${COSMIC_BUILD_PATH}"
-  undeploy_cloudstack_war ${csip} "root" "password"
-  deploy_cloudstack_war ${csip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
-fi
+cd "${COSMIC_BUILD_PATH}"
+for i in 1 2 3 4 5 6 7 8 9; do
+  if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}ip}"
+
+    if [ ${enable_remote_debugging} -eq 1 ]; then
+      enable_remote_debug_war ${csip} "root" "password"
+    fi
+
+    if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
+      # 00510 Setup only war deploy
+      # Jenkins: war deploy is part of setupInfraForIntegrationTests
+
+      # Cleanup CS in case of re-deploy
+      undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+    fi
+  fi
+done
 
 
 # 00600 Deploy DC

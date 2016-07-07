@@ -8,8 +8,6 @@ function cosmic_sources_retrieve {
   GITSSH=$2
   gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic.git' "${BASEDIR}/cosmic"  ${GITSSH}
   gitclone 'git@github.com:MissionCriticalCloud/packaging.git' "${BASEDIR}/packaging" ${GITSSH}
-  # Check VHD-UTIL
-  wget_fetch 'http://download.cloud.com.s3.amazonaws.com/tools/vhd-util' "${BASEDIR}/cosmic/cosmic-core/scripts/vm/hypervisor/xenserver/vhd-util"
 }
 
 function gitclone_recursive {

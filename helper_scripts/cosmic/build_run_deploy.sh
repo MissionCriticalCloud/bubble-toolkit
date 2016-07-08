@@ -343,7 +343,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
 
   for i in 1 2 3 4 5 6 7 8 9; do
     # Cleanup CS in case of re-deploy
-    if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
       csuser=
       csip=
       cspass=
@@ -355,7 +355,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
     fi
 
     # Clean KVMs in case of re-deploy
-    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+    if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
       hvuser=
       hvip=
       hvpass=

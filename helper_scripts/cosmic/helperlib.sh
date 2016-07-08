@@ -231,7 +231,22 @@ try:
   print json.load(sys.stdin)['mgtSvr'][${i}-1]['mgtSvrIp']
 except:
  print ''
-" | cut -d/ -f3)
+")
+
+    # hostname cs 1
+    export cs${i}hostname=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['mgtSvrName']
+except:
+ print ''
+")
+  if [ -v $( eval "echo \${cs${i}ip}" ) ]; then
+    if [ ! -v $( eval "echo \${cs${i}hostname}" ) ]; then
+      eval cshostname="\$cs${i}hostname"
+      export cs${i}ip=$(getent hosts ${cshostname} | awk '{ print $1 }')
+    fi
+  fi
   done
 }
 

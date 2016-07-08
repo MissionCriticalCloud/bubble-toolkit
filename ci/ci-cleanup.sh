@@ -115,7 +115,6 @@ cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 say "Collecting Management Server Logs and Code Coverage Report"
 mkdir -p cs1-management-logs
 collect_files_from_vm ${cs1ip} "root" "password" "/var/log/cosmic/management/*.log*" "cs1-management-logs/"
-collect_files_from_vm ${cs1ip} "root" "password" "~tomcat/api.log*" "cs1-management-logs/"
 
 say "Collecting Hypervisor Agent Logs"
 mkdir -p kvm1-agent-logs kvm2-agent-logs

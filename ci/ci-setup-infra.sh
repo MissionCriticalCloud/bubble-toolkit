@@ -45,7 +45,6 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent\*.rpm cosmic-common\*.rpm
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
   ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
   ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cosmic/agent/agent.properties /etc/cosmic/agent/agent.properties.orig
   ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'

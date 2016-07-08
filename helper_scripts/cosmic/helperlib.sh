@@ -241,9 +241,13 @@ try:
 except:
  print ''
 ")
-  if [ ! -v $( eval "echo \${cs${i}hostname}" ) ]; then
-    eval cshostname="\$cs${i}hostname"
-    export cs${i}ip=$(getent hosts ${cshostname} | awk '{ print $1 }')
+  csip=
+  eval csip="\$cs${i}ip"
+  if [ -v $( eval "echo \${cs${i}ip}" ) ]  || [ "${csip}" == "localhost" ]; then
+    if [ ! -v $( eval "echo \${cs${i}hostname}" ) ]; then
+      eval cshostname="\$cs${i}hostname"
+      export cs${i}ip=$(getent hosts ${cshostname} | awk '{ print $1 }')
+    fi
   fi
   done
 }

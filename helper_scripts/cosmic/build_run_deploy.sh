@@ -294,6 +294,17 @@ cosmic_sources_retrieve ${WORKSPACE}
 # 00110 Config nexus for maven
 config_maven
 
+# 00400 Prepare Infra, create VMs
+if [ ${skip_prepare_infra} -eq 0 ]; then
+  PREP_INFRA_LOG=/tmp/prep_infra_${$}.log
+  echo "Executing prepare-infra in background, logging: ${PREP_INFRA_LOG}"
+  # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
+  "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"  2>&1 > ${PREP_INFRA_LOG}    &
+  PREP_INFRA_PID=$!
+else
+  echo "Skipped prepare infra"
+fi
+
 # 00200 Build, unless told to skip
 if [ ${skip} -eq 0 ] && [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
@@ -321,12 +332,14 @@ else
 fi
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
-
-  # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
-  "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"
-
-else
-  echo "Skipped prepare infra"
+  echo "Waiting for prepare-infra to be ready, logging: ${PREP_INFRA_LOG}"
+  wait ${PREP_INFRA_PID}
+  PREP_INFRA_RETURN=$?
+  echo "Prepare-infra returned ${PREP_INFRA_RETURN}"
+  echo "Prepare-infra console output:"
+  cat  ${PREP_INFRA_LOG}
+  rm ${PREP_INFRA_LOG}
+  if [ PREP_INFRA_RETURN -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
 fi
 
 if [ ${enable_remote_debugging} -eq 1 ]; then

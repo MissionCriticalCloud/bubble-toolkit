@@ -45,4 +45,4 @@ parse_marvin_config ${marvin_config}
 mkdir -p ${primarystorage}
 
 say "Creating hosts"
-/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force
+/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force 2>&1

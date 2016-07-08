@@ -192,10 +192,8 @@ parse_marvin_config ${marvin_config}
 
 mkdir -p ${secondarystorage}
 
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
-
 say "Deploying CloudStack DB"
-deploy_cosmic_db ${cs1ip} "root" "password"
+deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Installing Marvin"
 install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
@@ -203,7 +201,7 @@ install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/cosmic-systemvm.qcow2"
 imagetype="qcow2"
-install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
+install_systemvm_templates ${cs1ip} ${cs1user} ${cs1pass} ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
 for i in 1 2 3 4 5 6 7 8 9; do
   if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then

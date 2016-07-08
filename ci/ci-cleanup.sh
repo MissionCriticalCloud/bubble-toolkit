@@ -1,4 +1,5 @@
 #! /bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 
 set -e
 
@@ -56,76 +57,40 @@ if [ ! -f "${marvin_config}" ]; then
     exit 1
 fi
 
-# username hypervisor 1
-hvuser1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
-except:
- print ''
-")
+parse_marvin_config ${marvin_config}
 
-# password hypervisor 1
-hvpass1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
-except:
- print ''
-")
+for i in 1 2 3 4 5 6 7 8 9; do
+  if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}ip}"
 
-# ip adress hypervisor 1
-hvip1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
-except:
- print ''
-" | cut -d/ -f3)
+    say "Collecting Management Server Logs and Code Coverage Report from ${csip}"
+    mkdir -p cs${i}-management-logs
+    collect_files_from_vm ${csip} ${csuser} ${cspass} "/var/log/cosmic/management/*.log*" "cs${i}-management-logs/"
+    say "Destroying VM ${csip}"
+    destroy_vm ${csip}
+  fi
 
-# username hypervisor 2
-hvuser2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
-except:
- print ''
-")
+  if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
 
-# password hypervisor 2
-hvpass2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
-except:
- print ''
-")
+    say "Collecting Hypervisor Agent Logs"
+    mkdir -p kvm{i}-agent-logs
+    collect_files_from_vm ${hvip} ${hvuser} ${hvpass} "/var/log/cosmic/agent/agent.log*" "kvm${i}-agent-logs/"
 
-# ip adress hypervisor 2
-hvip2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
-except:
- print ''
-" | cut -d/ -f3)
-
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
-
-say "Collecting Management Server Logs and Code Coverage Report"
-mkdir -p cs1-management-logs
-collect_files_from_vm ${cs1ip} "root" "password" "/var/log/cosmic/management/*.log*" "cs1-management-logs/"
-
-say "Collecting Hypervisor Agent Logs"
-mkdir -p kvm1-agent-logs kvm2-agent-logs
-collect_files_from_vm ${hvip1} ${hvuser1} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm1-agent-logs/"
-collect_files_from_vm ${hvip2} ${hvuser2} ${hvpass2} "/var/log/cosmic/agent/agent.log*" "kvm2-agent-logs/"
-
-say "Destroying VMs"
-destroy_vm cs1
-destroy_vm ${hvip1}
-destroy_vm ${hvip2}
-
+    say "Destroying VM ${hvip}"
+    destroy_vm ${hvip}
+  fi
+done
 say "Cleaning primary and secondary NFS storage"
 sudo rm -rf /data/storage/secondary/*/*
 sudo rm -rf /data/storage/primary/*/*

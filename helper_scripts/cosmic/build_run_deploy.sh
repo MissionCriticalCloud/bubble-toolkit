@@ -265,7 +265,6 @@ fi
 
 # 00080 Parse marvin config
 parse_marvin_config ${marvinCfg}
-csip=$(getent hosts cs1 | awk '{ print $1 }')
 
 # 000090 Set workspace
 WORKSPACE=/data/git/${zone}
@@ -387,7 +386,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval cspass="\${cs${i}ip}"
 
     if [ ${enable_remote_debugging} -eq 1 ]; then
-      enable_remote_debug_war ${csip} "root" "password"
+      enable_remote_debug_war ${csip} ${csuser} ${cspass}
     fi
 
     if [ ${scenario_build_deploy_new_war} -eq 1 ]; then

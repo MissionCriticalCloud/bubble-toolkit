@@ -1,5 +1,5 @@
-#! /bin/bash
-
+#!/bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 set -e
 
 function usage {
@@ -35,8 +35,10 @@ function wait_for_management_server {
 }
 
 function wait_for_systemvm_templates {
-  say "Waiting for SystemVM templates to be ready"
-  /data/shared/helper_scripts/cloudstack/wait_template_ready.py -t cs1
+  hostname=$1
+
+  say "Waiting for SystemVM templates to be ready on ${hostname}"
+  /data/shared/helper_scripts/cloudstack/wait_template_ready.py -t ${hostname}
 }
 
 function deploy_data_center {
@@ -73,18 +75,21 @@ if [ ! -f "${marvin_config}" ]; then
     exit 1
 fi
 
-wait_for_management_server cs1
+parse_marvin_config ${marvin_config}
+
+wait_for_management_server ${cs1ip}
 
 say "Making local copy of Marvin Config file"
 cp ${marvin_config} .
 
 marvin_configCopy=$(basename ${marvin_config})
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 
 say "Updating Marvin Config with Management Server IP"
 update_management_server_in_marvin_config ${marvin_configCopy} ${cs1ip}
 
+parse_marvin_config ${marvin_configCopy}
+
 say "Deploying Data Center"
 deploy_data_center ${marvin_configCopy}
 
-wait_for_systemvm_templates
+wait_for_systemvm_templates ${cs1ip}

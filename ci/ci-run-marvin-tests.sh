@@ -1,4 +1,5 @@
-#! /bin/bash
+#!/bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 
 set -e
 
@@ -69,13 +70,12 @@ if [ -z "${marvin_tests}" ]; then
   exit 2
 fi
 
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
+parse_marvin_config ${marvin_config}
 
 say "Making local copy of Marvin Config file"
 cp ${marvin_config} .
 
 marvin_config_copy=$(basename ${marvin_config})
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
 
 say "Updating Marvin Config with Management Server IP"
 update_management_server_in_marvin_config ${marvin_config_copy} ${cs1ip}

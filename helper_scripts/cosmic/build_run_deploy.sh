@@ -148,6 +148,7 @@ function cleanup_kvm {
 function usage {
   printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
+  printf "\t-W:\tOverride workspace folder\n" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
   printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
@@ -178,9 +179,9 @@ scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
-# Former options
 enable_remote_debugging=1
-while getopts 'abCEIm:T:stuvwx' OPTION
+WORKSPACE_OVERRIDE=
+while getopts 'abCEIm:T:stuvwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -190,6 +191,8 @@ do
   C)    disable_maven_clean=1
         ;;
   E)    disable_maven_unit_tests=1
+        ;;
+  W)    WORKSPACE_OVERRIDE="$OPTARG"
         ;;
   m)    marvinCfg="$OPTARG"
         ;;
@@ -215,6 +218,7 @@ done
 echo "Received arguments:"
 echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
 echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
+echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
 echo ""
 echo "skip               (-s) = ${skip}"
 echo "skip_maven_build   (-t) = ${skip_maven_build}"
@@ -267,7 +271,11 @@ fi
 parse_marvin_config ${marvinCfg}
 
 # 000090 Set workspace
-WORKSPACE=/data/git/${zone}
+if [ -n "${WORKSPACE_OVERRIDE}" ]; then
+  WORKSPACE=${WORKSPACE_OVERRIDE}
+else
+  WORKSPACE=/data/git/${zone}
+fi
 mkdir -p "${WORKSPACE}"
 echo "Using workspace '${WORKSPACE}'."
 

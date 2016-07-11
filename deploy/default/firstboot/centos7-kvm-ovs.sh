@@ -25,7 +25,7 @@ systemctl disable firewalld
 
 # Install dependencies for KVM
 sleep 5
-yum -y install epel-release qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim socat
+yum -y install epel-release python qemu-kvm qemu-img libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass openssh-clients wget vim socat java ebtables iptables ethtool iproute ipset perl
 yum --enablerepo=epel -y install sshpass
 
 # Enable rpbind for NFS

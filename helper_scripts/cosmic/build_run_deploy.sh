@@ -149,11 +149,13 @@ function usage {
   printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
   printf "\t-W:\tOverride workspace folder\n" >&2
+  printf "\t-V:\tVerbose logging" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
   printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
+  printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
   printf "\nSkip flags:\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
@@ -180,8 +182,11 @@ scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
 enable_remote_debugging=1
+gitssh=1
+verbose=0
 WORKSPACE_OVERRIDE=
-while getopts 'abCEIm:T:stuvwW:x' OPTION
+
+while getopts 'abCEHIm:T:stuvVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -191,6 +196,10 @@ do
   C)    disable_maven_clean=1
         ;;
   E)    disable_maven_unit_tests=1
+        ;;
+  H)    gitssh=0
+        ;;
+  V)    verbose=1
         ;;
   W)    WORKSPACE_OVERRIDE="$OPTARG"
         ;;
@@ -215,25 +224,27 @@ do
   esac
 done
 
-echo "Received arguments:"
-echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
-echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
-echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
-echo ""
-echo "skip               (-s) = ${skip}"
-echo "skip_maven_build   (-t) = ${skip_maven_build}"
-echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
-echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
-echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
-echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
-echo "run_tests          (-I) = ${run_tests}"
-echo "marvinCfg          (-m) = ${marvinCfg}"
-echo "compile_threads    (-T) = ${compile_threads}"
-echo ""
-echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
-echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
-echo ""
-
+if [ ${verbose} -eq 1 ]; then
+  echo "Received arguments:"
+  echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
+  echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
+  echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
+  echo "gitssh                   (-H) = ${gitssh}"
+  echo ""
+  echo "skip               (-s) = ${skip}"
+  echo "skip_maven_build   (-t) = ${skip_maven_build}"
+  echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
+  echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
+  echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
+  echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
+  echo "run_tests          (-I) = ${run_tests}"
+  echo "marvinCfg          (-m) = ${marvinCfg}"
+  echo "compile_threads    (-T) = ${compile_threads}"
+  echo ""
+  echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
+  echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
+  echo ""
+fi
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
   echo "No Marvin config specified. Quiting."
@@ -289,7 +300,7 @@ CI_SCRIPTS=/data/shared/ci
 cd ${WORKSPACE}
 
 # 00100 Checkout the code
-cosmic_sources_retrieve ${WORKSPACE}
+cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
 
 # 00110 Config nexus for maven
 config_maven

@@ -52,12 +52,12 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib64/python2.7/site-packages/cloud_utils.py
 
   # Copy Agent files to hypervisor
-  ${ssh_base} ${hvuser}@${hvip} mkdir -p /opt/cosmic/agent/systemvm/
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /opt/cosmic/agent/vms/
   ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/cosmic/agent/
   ${scp_base} cosmic-agent/target/cloud-agent-*.jar ${hvuser}@${hvip}:/opt/cosmic/agent/
   ${scp_base} cosmic-agent/conf/agent.properties ${hvuser}@${hvip}:/etc/cosmic/agent/
   ${scp_base} -r cosmic-core/scripts/src/main/resources/scripts ${hvuser}@${hvip}:/opt/cosmic/agent/
-  ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/systemvm/
+  ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
   ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
   ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
   ${scp_base} cosmic-core/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/

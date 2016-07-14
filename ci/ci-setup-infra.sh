@@ -1,4 +1,5 @@
-#! /bin/bash
+#!/bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 
 set -e
 
@@ -187,76 +188,12 @@ if [ ! -f "${marvin_config}" ]; then
     exit 1
 fi
 
-# Hypervisor type
-hypervisor=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
-")
+parse_marvin_config ${marvin_config}
 
-secondarystorage=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
-)
 mkdir -p ${secondarystorage}
 
-# username hypervisor 1
-hvuser1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
-except:
- print ''
-")
-
-# password hypervisor 1
-hvpass1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
-except:
- print ''
-")
-
-# ip adress hypervisor 1
-hvip1=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
-except:
- print ''
-" | cut -d/ -f3)
-
-# username hypervisor 2
-hvuser2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
-except:
- print ''
-")
-
-# password hypervisor 2
-hvpass2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
-except:
- print ''
-")
-
-# ip adress hypervisor 2
-hvip2=$(cat ${marvin_config} | grep -v "#" | python -c "
-try:
-  import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
-except:
- print ''
-" | cut -d/ -f3)
-
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
-
 say "Deploying CloudStack DB"
-deploy_cosmic_db ${cs1ip} "root" "password"
+deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Installing Marvin"
 install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
@@ -264,14 +201,33 @@ install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/cosmic-systemvm.qcow2"
 imagetype="qcow2"
-install_systemvm_templates ${cs1ip} "root" "password" ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
+install_systemvm_templates ${cs1ip} ${cs1user} ${cs1pass} ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
-say "Configuring tomcat to load JaCoCo Agent"
-configure_tomcat_to_load_jacoco_agent ${cs1ip} "root" "password"
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}ip}"
+    say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
+    configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 
-say "Deploying CloudStack WAR"
-deploy_cosmic_war ${cs1ip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+    say "Deploying CloudStack WAR on host ${csip}"
+    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+  fi
+done
 
-say "Installing KVM packages on hosts"
-install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
-install_kvm_packages ${hvip2} ${hvuser2} ${hvpass2}
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+    hvuser=
+    hvip=
+    hvpass=
+    eval hvuser="\${hvuser${i}}"
+    eval hvip="\${hvip${i}}"
+    eval hvpass="\${hvpass${i}}"
+    say "Installing KVM packages on host ${hvip}"
+    install_kvm_packages ${hvip} ${hvuser} ${hvpass}
+  fi
+done

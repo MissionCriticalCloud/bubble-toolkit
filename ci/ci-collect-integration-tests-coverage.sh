@@ -1,4 +1,5 @@
 #! /bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 
 set -e
 
@@ -33,10 +34,27 @@ function stop_tomcat {
   ${ssh_base} ${vmuser}@${vmip} systemctl stop tomcat
 }
 
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
+say "Received arguments:"
+say "marvin_config = ${marvin_config}"
+
+# Check if a marvin dc file was specified
+if [ -z ${marvin_config} ]; then
+  say "No Marvin config specified. Quiting."
+  usage
+  exit 1
+else
+  say "Using Marvin config '${marvin_config}'."
+fi
+
+if [ ! -f "${marvin_config}" ]; then
+    say "Supplied Marvin config not found!"
+    exit 1
+fi
+
+parse_marvin_config ${marvin_config}
 
 say "Stopping Tomcat"
-stop_tomcat ${cs1ip} "root" "password" 
+stop_tomcat ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Collecting Integration Tests Coverage Data"
-collect_files_from_vm ${cs1ip} "root" "password" "/tmp/jacoco-it.exec" "target/coverage-reports"
+collect_files_from_vm ${cs1ip} ${cs1user} ${cs1pass} "/tmp/jacoco-it.exec" "target/coverage-reports"

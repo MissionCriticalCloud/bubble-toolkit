@@ -148,11 +148,14 @@ function cleanup_kvm {
 function usage {
   printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
+  printf "\t-W:\tOverride workspace folder\n" >&2
+  printf "\t-V:\tVerbose logging" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
   printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
+  printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
   printf "\nSkip flags:\n" >&2
   printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
@@ -178,9 +181,12 @@ scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
-# Former options
 enable_remote_debugging=1
-while getopts 'abCEIm:T:stuvwx' OPTION
+gitssh=1
+verbose=0
+WORKSPACE_OVERRIDE=
+
+while getopts 'abCEHIm:T:stuvVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -190,6 +196,12 @@ do
   C)    disable_maven_clean=1
         ;;
   E)    disable_maven_unit_tests=1
+        ;;
+  H)    gitssh=0
+        ;;
+  V)    verbose=1
+        ;;
+  W)    WORKSPACE_OVERRIDE="$OPTARG"
         ;;
   m)    marvinCfg="$OPTARG"
         ;;
@@ -212,24 +224,27 @@ do
   esac
 done
 
-echo "Received arguments:"
-echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
-echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
-echo ""
-echo "skip               (-s) = ${skip}"
-echo "skip_maven_build   (-t) = ${skip_maven_build}"
-echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
-echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
-echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
-echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
-echo "run_tests          (-I) = ${run_tests}"
-echo "marvinCfg          (-m) = ${marvinCfg}"
-echo "compile_threads    (-T) = ${compile_threads}"
-echo ""
-echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
-echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
-echo ""
-
+if [ ${verbose} -eq 1 ]; then
+  echo "Received arguments:"
+  echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
+  echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
+  echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
+  echo "gitssh                   (-H) = ${gitssh}"
+  echo ""
+  echo "skip               (-s) = ${skip}"
+  echo "skip_maven_build   (-t) = ${skip_maven_build}"
+  echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
+  echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
+  echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
+  echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
+  echo "run_tests          (-I) = ${run_tests}"
+  echo "marvinCfg          (-m) = ${marvinCfg}"
+  echo "compile_threads    (-T) = ${compile_threads}"
+  echo ""
+  echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
+  echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
+  echo ""
+fi
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
   echo "No Marvin config specified. Quiting."
@@ -265,10 +280,13 @@ fi
 
 # 00080 Parse marvin config
 parse_marvin_config ${marvinCfg}
-csip=$(getent hosts cs1 | awk '{ print $1 }')
 
 # 000090 Set workspace
-WORKSPACE=/data/git/${zone}
+if [ -n "${WORKSPACE_OVERRIDE}" ]; then
+  WORKSPACE=${WORKSPACE_OVERRIDE}
+else
+  WORKSPACE=/data/git/${zone}
+fi
 mkdir -p "${WORKSPACE}"
 echo "Using workspace '${WORKSPACE}'."
 
@@ -282,10 +300,21 @@ CI_SCRIPTS=/data/shared/ci
 cd ${WORKSPACE}
 
 # 00100 Checkout the code
-cosmic_sources_retrieve ${WORKSPACE}
+cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
 
 # 00110 Config nexus for maven
 config_maven
+
+# 00400 Prepare Infra, create VMs
+if [ ${skip_prepare_infra} -eq 0 ]; then
+  PREP_INFRA_LOG=/tmp/prep_infra_${$}.log
+  echo "Executing prepare-infra in background, logging: ${PREP_INFRA_LOG}"
+  # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
+  "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"  2>&1 > ${PREP_INFRA_LOG}    &
+  PREP_INFRA_PID=$!
+else
+  echo "Skipped prepare infra"
+fi
 
 # 00200 Build, unless told to skip
 if [ ${skip} -eq 0 ] && [ ${skip_maven_build} -eq 0 ]; then
@@ -314,29 +343,59 @@ else
 fi
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
-
-  # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
-  "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"
-
-else
-  echo "Skipped prepare infra"
+  echo "Waiting for prepare-infra to be ready, logging: ${PREP_INFRA_LOG}"
+  wait ${PREP_INFRA_PID}
+  PREP_INFRA_RETURN=$?
+  echo "Prepare-infra returned ${PREP_INFRA_RETURN}"
+  echo "Prepare-infra console output:"
+  cat  ${PREP_INFRA_LOG}
+  rm ${PREP_INFRA_LOG}
+  if [ PREP_INFRA_RETURN -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
 fi
 
 if [ ${enable_remote_debugging} -eq 1 ]; then
-  enable_remote_debug_kvm ${hvip1} ${hvuser1} ${hvpass1}
-  enable_remote_debug_kvm ${hvip2} ${hvuser2} ${hvpass2}
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
+      enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass}
+    fi
+  done
 fi
 
 # 00500 Setup Infra
 if [ ${skip_setup_infra} -eq 0 ]; then
   cd "${COSMIC_BUILD_PATH}"
   rm -rf "$secondarystorage/*"
-  # Cleanup CS in case of re-deploy
-  cleanup_cs ${csip} "root" "password"
 
-  # Clean KVMs in case of re-deploy
-  cleanup_kvm ${hvip1} ${hvuser1} ${hvpass1}
-  cleanup_kvm ${hvip2} ${hvuser2} ${hvpass2}
+  for i in 1 2 3 4 5 6 7 8 9; do
+    # Cleanup CS in case of re-deploy
+    if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+      csuser=
+      csip=
+      cspass=
+      eval csuser="\${cs${i}user}"
+      eval csip="\${cs${i}ip}"
+      eval cspass="\${cs${i}ip}"
+      # Cleanup CS in case of re-deploy
+      cleanup_cs ${csip} ${csuser} ${cspass}
+    fi
+
+    # Clean KVMs in case of re-deploy
+    if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
+      cleanup_kvm ${hvip} ${hvuser} ${hvpass}
+    fi
+  done
 
   # Remove images from primary storage
   [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -f ${primarystorage}/*
@@ -348,16 +407,30 @@ else
   echo "Skipped setup infra"
 fi
 
-if [ ${enable_remote_debugging} -eq 1 ]; then
-  enable_remote_debug_war ${csip} "root" "password"
-fi
-# 00510 Setup only war deploy
-# Jenkins: war deploy is part of setupInfraForIntegrationTests
-if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
-  cd "${COSMIC_BUILD_PATH}"
-  undeploy_cloudstack_war ${csip} "root" "password"
-  deploy_cloudstack_war ${csip} "root" "password" 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
-fi
+cd "${COSMIC_BUILD_PATH}"
+for i in 1 2 3 4 5 6 7 8 9; do
+  if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}ip}"
+
+    if [ ${enable_remote_debugging} -eq 1 ]; then
+      enable_remote_debug_war ${csip} ${csuser} ${cspass}
+    fi
+
+    if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
+      # 00510 Setup only war deploy
+      # Jenkins: war deploy is part of setupInfraForIntegrationTests
+
+      # Cleanup CS in case of re-deploy
+      undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+    fi
+  fi
+done
 
 
 # 00600 Deploy DC

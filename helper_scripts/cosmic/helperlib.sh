@@ -174,59 +174,82 @@ import sys, json
 print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d: -f3
   )
 
+  for i in 1 2 3 4 5 6 7 8 9
+  do
   # username hypervisor 1
-  hvuser1=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hvuser${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['username']
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][${i}-1]['username']
 except:
   print ''
   ")
 
   # password hypervisor 1
-  hvpass1=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hvpass${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['password']
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][${i}-1]['password']
 except:
  print ''
   ")
 
   # ip adress hypervisor 1
-  hvip1=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hvip${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][0]['url']
+  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][${i}-1]['url']
 except:
  print ''
   " | cut -d/ -f3)
+  done
 
-  # username hypervisor 2
-  hvuser2=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  for i in 1 2 3 4 5 6 7 8 9
+  do
+    # username cs 1
+    export cs${i}user=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['username']
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['user']
 except:
- print ''
-  ")
+  print ''
+")
 
-  # password hypervisor 2
-  hvpass2=$(cat ${marvinCfg} | grep -v "#" | python -c "
+    # password cs 1
+    export cs${i}pass=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['password']
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['passwd']
 except:
  print ''
-  ")
+")
 
-  # ip adress hypervisor 2
-  hvip2=$(cat ${marvinCfg} | grep -v "#" | python -c "
+    # ip adress cs 1
+    export cs${i}ip=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
-  print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hosts'][1]['url']
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['mgtSvrIp']
 except:
  print ''
-  " | cut -d/ -f3)
+")
+
+    # hostname cs 1
+    export cs${i}hostname=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['mgtSvr'][${i}-1]['mgtSvrName']
+except:
+ print ''
+")
+  csip=
+  eval csip="\$cs${i}ip"
+  if [ -v $( eval "echo \${cs${i}ip}" ) ]  || [ "${csip}" == "localhost" ]; then
+    if [ ! -v $( eval "echo \${cs${i}hostname}" ) ]; then
+      eval cshostname="\$cs${i}hostname"
+      export cs${i}ip=$(getent hosts ${cshostname} | awk '{ print $1 }')
+    fi
+  fi
+  done
 }
 
 function cloud_conf_cosmic {

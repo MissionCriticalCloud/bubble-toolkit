@@ -1,4 +1,5 @@
-#! /bin/bash
+#!/bin/bash
+. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
 
 set -e
 
@@ -39,17 +40,9 @@ if [ ! -f "${marvin_config}" ]; then
     exit 1
 fi
 
-# Primary storage location
-primarystorage=$(cat ${marvin_config} | grep -v "#" | python -c "
-import sys, json
-print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['primaryStorages'][0]['url']" | cut -d: -f3
-)
+parse_marvin_config ${marvin_config}
+
 mkdir -p ${primarystorage}
 
-say "Creating Management Server: cs1"
-/data/shared/deploy/kvm_local_deploy.py -r cloudstack-mgt-dev -d 1 --force
-
-cs1ip=$(getent hosts cs1 | awk '{ print $1 }')
-
 say "Creating hosts"
-/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force
+/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force 2>&1

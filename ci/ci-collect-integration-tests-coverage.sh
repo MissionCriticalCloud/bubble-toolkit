@@ -34,6 +34,15 @@ function stop_tomcat {
   ${ssh_base} ${vmuser}@${vmip} systemctl stop tomcat
 }
 
+# Options
+while getopts ':m:' OPTION
+do
+  case $OPTION in
+  m)    marvin_config="$OPTARG"
+        ;;
+  esac
+done
+
 say "Received arguments:"
 say "marvin_config = ${marvin_config}"
 

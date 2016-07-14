@@ -84,7 +84,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
       eval hvpass="\${hvpass${i}}"
 
     say "Collecting Hypervisor Agent Logs"
-    mkdir -p kvm{i}-agent-logs
+    mkdir -p kvm${i}-agent-logs
     collect_files_from_vm ${hvip} ${hvuser} ${hvpass} "/var/log/cosmic/agent/agent.log*" "kvm${i}-agent-logs/"
 
     say "Destroying VM ${hvip}"

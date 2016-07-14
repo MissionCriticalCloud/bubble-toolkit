@@ -102,6 +102,7 @@ function undeploy_cloudstack_war {
   ${ssh_base} ${csuser}@${csip} service tomcat stop
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
+  ${ssh_base} ${csuser}@${csip} rm -rf /var/log/cosmic/
 }
 
 function enable_remote_debug_war {
@@ -139,8 +140,7 @@ function cleanup_kvm {
   local hvpass=$3
 
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  # Remove Cosmic agent
-  ${ssh_base} ${hvuser}@${hvip} 'yum -y -q remove cosmic-agent'
+
   # Remove running (System) VMs
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'

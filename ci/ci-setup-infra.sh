@@ -38,15 +38,39 @@ function install_kvm_packages {
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm -f cosmic-\*
-  ${scp_base} dist/rpmbuild/RPMS/x86_64/cosmic-*.rpm ${hvuser}@${hvip}:./
-  ${ssh_base} ${hvuser}@${hvip} yum -y -q remove cosmic-common
-  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent\*.rpm cosmic-common\*.rpm
+  # Cleanup
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent
-  ${ssh_base} ${hvuser}@${hvip} cp -pr /etc/cosmic/agent/agent.properties /etc/cosmic/agent/agent.properties.orig
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent 2>&1 >/dev/null || true
+  ${ssh_base} ${hvuser}@${hvip} systemctl disable cosmic-agent 2>&1 >/dev/null || true
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /opt/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /etc/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /var/log/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib/systemd/system/cosmic-agent.service
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/bin/cosmic-setup-agent
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/bin/cosmic-ssh
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /usr/lib64/python2.7/site-packages/cloudutils
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib64/python2.7/site-packages/cloud_utils.py
+
+  # Copy Agent files to hypervisor
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /opt/cosmic/agent/systemvm/
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/cosmic/agent/
+  ${scp_base} cosmic-agent/target/cloud-agent-*.jar ${hvuser}@${hvip}:/opt/cosmic/agent/
+  ${scp_base} cosmic-agent/conf/agent.properties ${hvuser}@${hvip}:/etc/cosmic/agent/
+  ${scp_base} -r cosmic-core/scripts/src/main/resources/scripts ${hvuser}@${hvip}:/opt/cosmic/agent/
+  ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/systemvm/
+  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-core/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+  ${scp_base} -r cosmic-core/python/lib/cloudutils ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+  ${scp_base} cosmic-agent/conf/cosmic-agent.service ${hvuser}@${hvip}:/usr/lib/systemd/system/
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+
+  # Set permissions on scripts
+  ${ssh_base} ${hvuser}@${hvip} chmod -R 0755 /opt/cosmic/agent/scripts/
+  ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-setup-agent
+  ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-ssh
+
+  # Configure properties
   ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
@@ -54,7 +78,7 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
 
-  say "KVM packages installed in ${hvip}"
+  say "Cosmic KVM Agent installed in ${hvip}"
 }
 
 function deploy_cosmic_db {
@@ -227,7 +251,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval hvuser="\${hvuser${i}}"
     eval hvip="\${hvip${i}}"
     eval hvpass="\${hvpass${i}}"
-    say "Installing KVM packages on host ${hvip}"
+    say "Installing Cosmic KVM Agent on host ${hvip}"
     install_kvm_packages ${hvip} ${hvuser} ${hvpass}
   fi
 done

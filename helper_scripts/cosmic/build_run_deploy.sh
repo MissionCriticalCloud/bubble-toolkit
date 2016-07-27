@@ -350,7 +350,7 @@ if [ ${skip_prepare_infra} -eq 0 ]; then
   echo "Prepare-infra console output:"
   cat  ${PREP_INFRA_LOG}
   rm ${PREP_INFRA_LOG}
-  if [ PREP_INFRA_RETURN -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
+  if [ "${PREP_INFRA_RETURN}" -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
 fi
 
 if [ ${enable_remote_debugging} -eq 1 ]; then
@@ -457,4 +457,3 @@ fi
 
 echo "Finished"
 date
-

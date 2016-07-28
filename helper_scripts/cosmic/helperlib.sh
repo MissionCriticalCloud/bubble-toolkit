@@ -7,7 +7,6 @@ function cosmic_sources_retrieve {
   BASEDIR=$1
   GITSSH=$2
   gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic.git' "${BASEDIR}/cosmic"  ${GITSSH}
-  gitclone 'git@github.com:MissionCriticalCloud/packaging.git' "${BASEDIR}/packaging" ${GITSSH}
 }
 
 function gitclone_recursive {

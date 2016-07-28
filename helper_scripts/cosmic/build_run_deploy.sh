@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script builds and runs Cosmic and deploys a data center using the supplied Marvin config.
-# When KVM is used, RPMs are built and installed on the hypervisor.
+# When KVM is used Cosmic Agent is installed on the hypervisor.
 
 # As building is now done locally, packages which were installed in CS1
 # now need to be installed "locally":
@@ -49,30 +49,6 @@ function maven_build {
   date
 }
 
-function rpm_package {
-  PACKAGING_BUILD_PATH=$1
-  COSMIC_BUILD_PATH=$2
-  cwd=$(pwd)
-  date
-  cd "$1"
-
-  # Clean up better
-  rm -rf dist
-  # remove possible leftover from build script
-  [ -h ../cosmic/cosmic ] && rm ../cosmic/cosmic
-  [ -h ../cosmic-*-SNAPSHOT ] && rm ../cosmic-*-SNAPSHOT
-
-  # CentOS7 is hardcoded for now
-  # JENKINS: packageCosmicJob: same
-  ./package_cosmic.sh -d centos7 -f ${COSMIC_BUILD_PATH}
-  if [ $? -ne 0 ]; then
-    date
-    echo "RPM build failed, please investigate!"
-    exit 1
-  fi
-  cd "${pwd}"
-}
-
 # deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
 # so should be moved to a "library" sh script which can be sourced
 function deploy_cloudstack_war {
@@ -102,6 +78,7 @@ function undeploy_cloudstack_war {
   ${ssh_base} ${csuser}@${csip} service tomcat stop
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
+  ${ssh_base} ${csuser}@${csip} rm -rf /var/log/cosmic/
 }
 
 function enable_remote_debug_war {
@@ -139,8 +116,7 @@ function cleanup_kvm {
   local hvpass=$3
 
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  # Remove Cosmic agent
-  ${ssh_base} ${hvuser}@${hvip} 'yum -y -q remove cosmic-agent'
+
   # Remove running (System) VMs
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'
@@ -157,21 +133,17 @@ function usage {
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
   printf "\nSkip flags:\n" >&2
-  printf "\t-s:\tSkip maven build and RPM packaging\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
-  printf "\t-u:\tSkip RPM packaging\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
   printf "\t-w:\tSkip setup infra (DB creation, war deploy, agent-rpm installs)\n" >&2
   printf "\t-x:\tSkip deployDC\n" >&2
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
-  printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven/rpm, (= -s -v)\n" >&2
+  printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -s -v)\n" >&2
   printf "\n" >&2
 }
 # Options
-skip=0
 skip_maven_build=0
-skip_rpm_package=0
 skip_prepare_infra=0
 skip_setup_infra=0
 skip_deploy_dc=0
@@ -186,7 +158,7 @@ gitssh=1
 verbose=0
 WORKSPACE_OVERRIDE=
 
-while getopts 'abCEHIm:T:stuvVwW:x' OPTION
+while getopts 'abCEHIm:T:tvVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -205,11 +177,7 @@ do
         ;;
   m)    marvinCfg="$OPTARG"
         ;;
-  s)    skip=1
-        ;;
   t)    skip_maven_build=1
-        ;;
-  u)    skip_rpm_package=1
         ;;
   v)    skip_prepare_infra=1
         ;;
@@ -231,9 +199,7 @@ if [ ${verbose} -eq 1 ]; then
   echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
   echo "gitssh                   (-H) = ${gitssh}"
   echo ""
-  echo "skip               (-s) = ${skip}"
   echo "skip_maven_build   (-t) = ${skip_maven_build}"
-  echo "skip_rpm_package   (-u) = ${skip_rpm_package}"
   echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
   echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
   echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
@@ -262,17 +228,13 @@ fi
 echo "Started!"
 date
 if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
-  skip=0
   skip_maven_build=0
-  skip_rpm_package=1
   skip_prepare_infra=1
   skip_setup_infra=1
   skip_deploy_dc=1
 fi
 if [ ${scenario_redeploy_cosmic} -eq 1 ]; then
-  skip=1
   skip_maven_build=1
-  skip_rpm_package=1
   skip_prepare_infra=1
   skip_setup_infra=0
   skip_deploy_dc=0
@@ -317,7 +279,7 @@ else
 fi
 
 # 00200 Build, unless told to skip
-if [ ${skip} -eq 0 ] && [ ${skip_maven_build} -eq 0 ]; then
+if [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
 
   maven_build "$COSMIC_BUILD_PATH" "${compile_threads}" ${disable_maven_clean} ${disable_maven_unit_tests}
@@ -327,20 +289,6 @@ else
   echo "Skipped maven build"
 fi
 
-# 00300 Package RPMs
-if [ ${skip} -eq 0 ] && [ ${skip_rpm_package} -eq 0 ]; then
-  if [[ "${hypervisor}" == "kvm" ]]; then
-
-    rpm_package "${PACKAGING_BUILD_PATH}" "${COSMIC_BUILD_PATH}"
-
-    if [ $? -ne 0 ]; then echo "RPM package failed!"; exit;  fi
-    [ -h "${COSMIC_BUILD_PATH}/dist" ] || ln -s "${PACKAGING_BUILD_PATH}/dist" "${COSMIC_BUILD_PATH}/dist"
-  else
-    echo "No RPM packages needed for ${hypervisor}"
-  fi
-else
-  echo "Skipped RPM packaging"
-fi
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
   echo "Waiting for prepare-infra to be ready, logging: ${PREP_INFRA_LOG}"

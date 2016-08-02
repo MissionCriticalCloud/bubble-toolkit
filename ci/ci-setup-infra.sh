@@ -167,6 +167,22 @@ function configure_tomcat_to_load_jacoco_agent {
   ${ssh_base} ${csuser}@${csip} "echo \"JAVA_OPTS=\\\"-javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec\\\"\" >> /etc/sysconfig/tomcat"
 }
 
+function configure_agent_to_load_jacococ_agent {
+  # Parameters
+  hvip=$1
+  hvuser=$2
+  hvpass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+
+  # Enable Java Code Coverage
+  ${scp_base} target/jacoco-agent.jar ${hvuser}@${hvip}:/tmp
+  ${ssh_base} ${hvuser}@${hvip} "sed -i -e 's/\/bin\/java -Xms/\/bin\/java -javaagent:\/tmp\/jacoco-agent.jar=destfile=\/tmp\/jacoco-it.exec -Xms/' /usr/lib/systemd/system/cosmic-agent.service"
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+}
+
 function deploy_cosmic_war {
   csip=$1
   csuser=$2
@@ -253,5 +269,8 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval hvpass="\${hvpass${i}}"
     say "Installing Cosmic KVM Agent on host ${hvip}"
     install_kvm_packages ${hvip} ${hvuser} ${hvpass}
+
+    say "Configuring agent to load JaCoCo Agent on host ${hvip}"
+    configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
   fi
 done

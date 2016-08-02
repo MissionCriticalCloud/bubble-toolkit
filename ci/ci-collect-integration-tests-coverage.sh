@@ -34,6 +34,16 @@ function stop_tomcat {
   ${ssh_base} ${vmuser}@${vmip} systemctl stop tomcat
 }
 
+function stop_agent {
+  vmip=$1
+  vmuser=$2
+  vmpass=$3
+
+  ssh_base="sshpass -p ${vmpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+
+  ${ssh_base} ${vmuser}@${vmip} systemctl stop cosmic-agent
+}
+
 # Options
 while getopts ':m:' OPTION
 do
@@ -62,8 +72,33 @@ fi
 
 parse_marvin_config ${marvin_config}
 
-say "Stopping Tomcat"
-stop_tomcat ${cs1ip} ${cs1user} ${cs1pass}
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}ip}"
+    say "Stopping Tomcat"
+    stop_tomcat ${csip} ${csuser} ${cspass}
 
-say "Collecting Integration Tests Coverage Data"
-collect_files_from_vm ${cs1ip} ${cs1user} ${cs1pass} "/tmp/jacoco-it.exec" "target/coverage-reports"
+    say "Collecting Integration Tests Coverage Data"
+    collect_files_from_vm ${csip} ${csuser} ${cspass} "/tmp/jacoco-it.exec" "target/coverage-reports/jacoco-it-cs${i}.exec"
+  fi
+done
+
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+    hvuser=
+    hvip=
+    hvpass=
+    eval hvuser="\${hvuser${i}}"
+    eval hvip="\${hvip${i}}"
+    eval hvpass="\${hvpass${i}}"
+    say "Stopping Cosmic KVM Agent on host ${hvip}"
+    collect_files_from_vm ${hvip} ${hvuser} ${hvpass} "/tmp/jacoco-it.exec" "target/coverage-reports/jacoco-it-kvm${i}.exec"
+  fi
+done
+
+

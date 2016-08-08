@@ -36,10 +36,16 @@ function maven_build {
     maven_clean=""
   fi
 
-  echo mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
+  management_server_log_file="/var/log/cosmic/management/management.log"
+  management_server_log_rotation="/var/log/cosmic/management/management-%d{yyyy-MM-dd}.log.gz"
+  mvn_cmd="mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} "
+  mvn_cmd="${mvn_cmd} -Dcosmic.dir=${build_dir} -Dlog.file.management.server=${management_server_log_file} -Dlog.rotation.management.server=${management_server_log_rotation} "
+  mvn_cmd="${mvn_cmd} ${maven_unit_tests}"
+
+  echo ${mvn_cmd}
   # JENKINS: mavenBuild: maven job with goals: clean install deploy -U -Pdeveloper -Psystemvm -Psonar-ci-cosmic -Dcosmic.dir=\"${injectJobVariable(CUSTOM_WORKSPACE_PARAM)}\"
   # Leaving out deploy and -U (Forces a check for updated releases and snapshots on remote repositories)
-  mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
+  eval "${mvn_cmd}"
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"

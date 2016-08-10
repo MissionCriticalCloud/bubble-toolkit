@@ -249,7 +249,8 @@ fi
 echo "Install systemvm template.."
 # Consider using -f and point to local cached file
 date
-bash -x $COSMIC_CORE_PATH/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
+chmod a+x $COSMIC_CORE_PATH/scripts/target/classes/scripts/storage/secondary/*
+bash -x $COSMIC_CORE_PATH/scripts/target/classes/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
 echo "Deploy data center.."

@@ -94,13 +94,13 @@ function enable_remote_debug_war {
   ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; fi'
 }
 function enable_remote_debug_kvm {
-  local csip=$1
-  local csuser=$2
-  local cspass=$3
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  ${ssh_base} ${csuser}@${csip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi'
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  ${ssh_base} ${hvuser}@${hvip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi'
 }
 function cleanup_cs {
   local csip=$1

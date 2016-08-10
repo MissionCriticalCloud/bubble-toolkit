@@ -349,7 +349,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   done
 
   # Remove images from primary storage
-  [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -f ${primarystorage}/*
+  [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -rf ${primarystorage}/*
 
   # JENKINS: setupInfraForIntegrationTests: no change
   "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"

@@ -167,6 +167,8 @@ function configure_tomcat_to_load_jacoco_agent {
 
   ${scp_base} target/jacoco-agent.jar ${csuser}@${csip}:/tmp
   ${ssh_base} ${csuser}@${csip} "echo \"JAVA_OPTS=\\\"-javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec\\\"\" >> /etc/sysconfig/tomcat"
+
+  say "Tomcat configured"
 }
 
 function configure_agent_to_load_jacococ_agent {
@@ -183,6 +185,8 @@ function configure_agent_to_load_jacococ_agent {
   ${scp_base} target/jacoco-agent.jar ${hvuser}@${hvip}:/tmp
   ${ssh_base} ${hvuser}@${hvip} "sed -i -e 's/\/bin\/java -Xms/\/bin\/java -javaagent:\/tmp\/jacoco-agent.jar=destfile=\/tmp\/jacoco-it.exec -Xms/' /usr/lib/systemd/system/cosmic-agent.service"
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+
+  say "Agent configured"
 }
 
 function deploy_cosmic_war {
@@ -199,6 +203,8 @@ function deploy_cosmic_war {
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
   ${ssh_base} ${csuser}@${csip} service tomcat start
+
+  say "WAR deployed"
 }
 
 # Options

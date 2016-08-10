@@ -187,15 +187,12 @@ function deploy_cosmic_war {
   csip=$1
   csuser=$2
   cspass=$3
-  dbscripts_dir="$4"
-  war_file="$5"
+  war_file="$4"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  ${ssh_base} ${csuser}@${csip} mkdir -p ~tomcat/db
-  ${scp_base} ${dbscripts_dir} ${csuser}@${csip}:~tomcat/db/
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
@@ -255,7 +252,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 
     say "Deploying CloudStack WAR on host ${csip}"
-    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
   fi
 done
 

@@ -61,15 +61,12 @@ function deploy_cloudstack_war {
   local csip=$1
   local csuser=$2
   local cspass=$3
-  local dbscripts_dir="$4"
-  local war_file="$5"
+  local war_file="$4"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  ${ssh_base} ${csuser}@${csip} mkdir -p ~tomcat/db
-  ${scp_base} ${dbscripts_dir} ${csuser}@${csip}:~tomcat/db/
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
   ${ssh_base} ${csuser}@${csip} service tomcat start
 }
@@ -381,7 +378,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
 
       # Cleanup CS in case of re-deploy
       undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
-      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
     fi
   fi
 done

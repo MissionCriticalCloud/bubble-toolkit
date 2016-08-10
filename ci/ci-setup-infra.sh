@@ -3,8 +3,6 @@
 
 set -e
 
-sudo yum install -y -q sshpass
-
 function usage {
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
 }
@@ -12,6 +10,10 @@ function usage {
 function say {
   echo "==> $@"
 }
+
+say "Running script: $0"
+
+sudo yum install -y -q sshpass
 
 function wait_for_port {
   hostname=$1

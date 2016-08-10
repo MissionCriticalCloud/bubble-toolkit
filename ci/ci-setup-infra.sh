@@ -93,11 +93,11 @@ function deploy_cosmic_db {
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   ${ssh_base} ${csuser}@${csip} "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-database.sql
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-database-premium.sql
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema.sql
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema-premium.sql
-  mysql -h ${csip} -u cloud -pcloud < cosmic-core/setup/db/templates.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database-premium.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-schema.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-schema-premium.sql
+  mysql -h ${csip} -u cloud -pcloud < cosmic-core/db-scripts/src/main/resources/templates.sql
   mysql -h ${csip} -u cloud -pcloud < cosmic-core/engine/schema/src/test/resources/developer-prefill.sql
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"

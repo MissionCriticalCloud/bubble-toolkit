@@ -163,6 +163,7 @@ function configure_tomcat_to_load_jacoco_agent {
   cspass=$3
 
   # SSH/SCP helpers
+  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
 
   ${scp_base} target/jacoco-agent.jar ${csuser}@${csip}:/tmp
@@ -255,7 +256,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     cspass=
     eval csuser="\${cs${i}user}"
     eval csip="\${cs${i}ip}"
-    eval cspass="\${cs${i}ip}"
+    eval cspass="\${cs${i}pass}"
     say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
     configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 

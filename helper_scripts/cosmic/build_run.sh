@@ -15,7 +15,7 @@ config_maven
 
 # Compile Cosmic
 cd $COSMIC_BUILD_PATH
-mvn clean install -P developer,systemvm -T 4
+mvn clean install -P systemvm -T 4
 # Deploy DB
 cd $COSMIC_RUN_PATH
 mvn -Pdeploydb -pl :cloud-engine-schema

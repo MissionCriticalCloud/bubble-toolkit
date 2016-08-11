@@ -11,6 +11,8 @@ function say {
   echo "==> $@"
 }
 
+say "Running script: $0"
+
 function collect_files_from_vm {
   vmip=$1
   vmuser=$2

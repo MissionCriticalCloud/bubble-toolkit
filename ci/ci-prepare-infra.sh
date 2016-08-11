@@ -3,8 +3,6 @@
 
 set -e
 
-sudo yum install -y -q sshpass
-
 function usage {
   echo "This script prepares the required infrastructure for integration tests, based on a marvin configuration file"
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
@@ -13,6 +11,10 @@ function usage {
 function say {
   echo "==> $@"
 }
+
+say "Running script: $0"
+
+sudo yum install -y -q sshpass
 
 # Options
 while getopts ':m:' OPTION

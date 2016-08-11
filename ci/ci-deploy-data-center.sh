@@ -10,6 +10,8 @@ function say {
   echo "==> $@"
 }
 
+say "Running script: $0"
+
 function update_management_server_in_marvin_config {
   marvin_config=$1
   csip=$2

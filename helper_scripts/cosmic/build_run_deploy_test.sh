@@ -152,7 +152,7 @@ if [ ${skip} -eq 0 ]; then
   cd "$COSMIC_BUILD_PATH"
   echo "Compiling Cosmic"
   date
-  mvn clean install -P developer,systemvm ${compile_threads}
+  mvn clean install -P systemvm ${compile_threads}
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"

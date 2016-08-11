@@ -36,10 +36,16 @@ function maven_build {
     maven_clean=""
   fi
 
-  echo mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
-  # JENKINS: mavenBuild: maven job with goals: clean install deploy -U -Pdeveloper -Psystemvm -Psonar-ci-cosmic -Dcosmic.dir=\"${injectJobVariable(CUSTOM_WORKSPACE_PARAM)}\"
+  management_server_log_file="/var/log/cosmic/management/management.log"
+  management_server_log_rotation="/var/log/cosmic/management/management-%d{yyyy-MM-dd}.log.gz"
+  mvn_cmd="mvn ${maven_clean} install -P systemvm,sonar-ci-cosmic ${compile_threads} "
+  mvn_cmd="${mvn_cmd} -Dcosmic.dir=${build_dir} -Dlog.file.management.server=${management_server_log_file} -Dlog.rotation.management.server=${management_server_log_rotation} "
+  mvn_cmd="${mvn_cmd} ${maven_unit_tests}"
+
+  echo ${mvn_cmd}
+  # JENKINS: mavenBuild: maven job with goals: clean install deploy -U -Psystemvm -Psonar-ci-cosmic -Dcosmic.dir=\"${injectJobVariable(CUSTOM_WORKSPACE_PARAM)}\"
   # Leaving out deploy and -U (Forces a check for updated releases and snapshots on remote repositories)
-  mvn ${maven_clean} install -P developer,systemvm,sonar-ci-cosmic ${compile_threads} -Dcosmic.dir=${build_dir} ${maven_unit_tests}
+  eval "${mvn_cmd}"
   if [ $? -ne 0 ]; then
     date
     echo "Build failed, please investigate!"
@@ -55,15 +61,12 @@ function deploy_cloudstack_war {
   local csip=$1
   local csuser=$2
   local cspass=$3
-  local dbscripts_dir="$4"
-  local war_file="$5"
+  local war_file="$4"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  ${ssh_base} ${csuser}@${csip} mkdir -p ~tomcat/db
-  ${scp_base} ${dbscripts_dir} ${csuser}@${csip}:~tomcat/db/
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
   ${ssh_base} ${csuser}@${csip} service tomcat start
 }
@@ -91,13 +94,13 @@ function enable_remote_debug_war {
   ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\''CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n"'\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; fi'
 }
 function enable_remote_debug_kvm {
-  local csip=$1
-  local csuser=$2
-  local cspass=$3
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  ${ssh_base} ${csuser}@${csip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi'
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  ${ssh_base} ${hvuser}@${hvip}  'if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi'
 }
 function cleanup_cs {
   local csip=$1
@@ -346,7 +349,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   done
 
   # Remove images from primary storage
-  [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -f ${primarystorage}/*
+  [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -rf ${primarystorage}/*
 
   # JENKINS: setupInfraForIntegrationTests: no change
   "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
@@ -375,7 +378,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
 
       # Cleanup CS in case of re-deploy
       undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
-      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
     fi
   fi
 done

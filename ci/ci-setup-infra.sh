@@ -1,9 +1,9 @@
 #!/bin/bash
-. `dirname $0`/../helper_scripts/cosmic/helperlib.sh
+
+scripts_dir=$(dirname $0)
+. ${scripts_dir}/../helper_scripts/cosmic/helperlib.sh
 
 set -e
-
-sudo yum install -y -q sshpass
 
 function usage {
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
@@ -12,6 +12,10 @@ function usage {
 function say {
   echo "==> $@"
 }
+
+say "Running script: $0"
+
+sudo yum install -y -q sshpass
 
 function wait_for_port {
   hostname=$1
@@ -93,11 +97,11 @@ function deploy_cosmic_db {
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   ${ssh_base} ${csuser}@${csip} "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-database.sql
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-database-premium.sql
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema.sql
-  mysql -h ${csip} -u root < cosmic-core/setup/db/create-schema-premium.sql
-  mysql -h ${csip} -u cloud -pcloud < cosmic-core/setup/db/templates.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database-premium.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-schema.sql
+  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-schema-premium.sql
+  mysql -h ${csip} -u cloud -pcloud < cosmic-core/db-scripts/src/main/resources/templates.sql
   mysql -h ${csip} -u cloud -pcloud < cosmic-core/engine/schema/src/test/resources/developer-prefill.sql
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"
@@ -161,10 +165,13 @@ function configure_tomcat_to_load_jacoco_agent {
   cspass=$3
 
   # SSH/SCP helpers
+  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
 
   ${scp_base} target/jacoco-agent.jar ${csuser}@${csip}:/tmp
   ${ssh_base} ${csuser}@${csip} "echo \"JAVA_OPTS=\\\"-javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec\\\"\" >> /etc/sysconfig/tomcat"
+
+  say "Tomcat configured"
 }
 
 function configure_agent_to_load_jacococ_agent {
@@ -181,25 +188,34 @@ function configure_agent_to_load_jacococ_agent {
   ${scp_base} target/jacoco-agent.jar ${hvuser}@${hvip}:/tmp
   ${ssh_base} ${hvuser}@${hvip} "sed -i -e 's/\/bin\/java -Xms/\/bin\/java -javaagent:\/tmp\/jacoco-agent.jar=destfile=\/tmp\/jacoco-it.exec -Xms/' /usr/lib/systemd/system/cosmic-agent.service"
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+
+  say "Agent configured"
 }
 
 function deploy_cosmic_war {
   csip=$1
   csuser=$2
   cspass=$3
-  dbscripts_dir="$4"
-  war_file="$5"
+  war_file="$4"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
-  ${ssh_base} ${csuser}@${csip} mkdir -p ~tomcat/db
-  ${scp_base} ${dbscripts_dir} ${csuser}@${csip}:~tomcat/db/
+  # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
+  ${scp_base} ${scripts_dir}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
+
+  # Extra configuration for Cosmic application
+  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
+  ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
+
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
   ${ssh_base} ${csuser}@${csip} service tomcat start
+
+  say "WAR deployed"
 }
 
 # Options
@@ -250,12 +266,12 @@ for i in 1 2 3 4 5 6 7 8 9; do
     cspass=
     eval csuser="\${cs${i}user}"
     eval csip="\${cs${i}ip}"
-    eval cspass="\${cs${i}ip}"
+    eval cspass="\${cs${i}pass}"
     say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
     configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 
     say "Deploying CloudStack WAR on host ${csip}"
-    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/setup/db/db/*' 'cosmic-client/target/cloud-client-ui-*.war'
+    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
   fi
 done
 

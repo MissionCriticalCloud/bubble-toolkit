@@ -1,0 +1,5 @@
+<Context path="/client" reloadable="true">
+    <!-- http://tomcat.apache.org/tomcat-7.0-doc/config/context.html -->
+    <Loader className="org.apache.catalina.loader.VirtualWebappLoader" virtualClasspath="/etc/cosmic/management" />
+    <JarScanner scanAllDirectories="true" />
+</Context>

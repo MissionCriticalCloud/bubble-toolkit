@@ -12,6 +12,63 @@ function usage {
   printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
 
+function say {
+  echo "==> $@"
+}
+
+function install_kvm_packages {
+  # Parameters
+  hvip=$1
+  hvuser=$2
+  hvpass=$3
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+
+  # Cleanup
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent 2>&1 >/dev/null || true
+  ${ssh_base} ${hvuser}@${hvip} systemctl disable cosmic-agent 2>&1 >/dev/null || true
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /opt/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /etc/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /var/log/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib/systemd/system/cosmic-agent.service
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/bin/cosmic-setup-agent
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/bin/cosmic-ssh
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /usr/lib64/python2.7/site-packages/cloudutils
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib64/python2.7/site-packages/cloud_utils.py
+
+  # Copy Agent files to hypervisor
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /opt/cosmic/agent/vms/
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/cosmic/agent/
+  ${scp_base} cosmic-agent/target/cloud-agent-*.jar ${hvuser}@${hvip}:/opt/cosmic/agent/
+  ${scp_base} cosmic-agent/conf/agent.properties ${hvuser}@${hvip}:/etc/cosmic/agent/
+  ${scp_base} -r cosmic-core/scripts/src/main/resources/scripts ${hvuser}@${hvip}:/opt/cosmic/agent/
+  ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
+  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-core/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+  ${scp_base} -r cosmic-core/python/lib/cloudutils ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+  ${scp_base} cosmic-agent/conf/cosmic-agent.service ${hvuser}@${hvip}:/usr/lib/systemd/system/
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+
+  # Set permissions on scripts
+  ${ssh_base} ${hvuser}@${hvip} chmod -R 0755 /opt/cosmic/agent/scripts/
+  ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-setup-agent
+  ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-ssh
+
+  # Configure properties
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-model" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+
+  say "Cosmic KVM Agent installed in ${hvip}"
+}
+
 # Options
 skip=0
 run_tests=0
@@ -102,27 +159,9 @@ if [ ${skip} -eq 0 ]; then
     exit 1
   fi
   date
-
-  # Compile RPM packages for KVM hypervisor
-  # When something VR related is changed, one must use the RPMs from the branch we're testing
-  if [[ "$hypervisor" == "kvm" ]]; then
-    echo "Creating rpm packages for ${hypervisor}"
-    date
-    cd $PACKAGING_BUILD_PATH
-
-    # Clean up better
-    rm -rf dist/rpmbuild/RPMS/
-    # CentOS7 is hardcoded for now
-    ./package_cosmic.sh -d centos7 -f ${COSMIC_BUILD_PATH}
-    if [ $? -ne 0 ]; then
-      date
-      echo "RPM build failed, please investigate!"
-      exit 1
-    fi
-  fi
 fi
 
-# Install RPM (also after skipping compile/creating packages)
+# Install Agent (also after skipping compile/creating packages)
 if [[ "$hypervisor" == "kvm" ]]; then
   # Push to hypervisor
   install_kvm_packages ${hvip1} ${hvuser1} ${hvpass1}
@@ -135,7 +174,7 @@ if [[ "$hypervisor" == "kvm" ]]; then
   fi
 
 else
-  echo "No RPM packages needed for ${hypervisor}"
+  echo "No agent packages needed for ${hypervisor}"
 fi
 
 
@@ -210,7 +249,8 @@ fi
 echo "Install systemvm template.."
 # Consider using -f and point to local cached file
 date
-bash -x $COSMIC_CORE_PATH/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
+chmod a+x $COSMIC_CORE_PATH/scripts/target/classes/scripts/storage/secondary/*
+bash -x $COSMIC_CORE_PATH/scripts/target/classes/scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
 date
 
 echo "Deploy data center.."

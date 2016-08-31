@@ -66,7 +66,16 @@ function deploy_cloudstack_war {
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
   scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
+  ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
 
+  # Extra configuration for Cosmic application
+  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
+  ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
+
+  ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
+  ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
   ${ssh_base} ${csuser}@${csip} service tomcat start
 }

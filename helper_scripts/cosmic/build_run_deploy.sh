@@ -72,7 +72,7 @@ function deploy_cloudstack_war {
   # Extra configuration for Cosmic application
   ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
   ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
-  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
+  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=.*\$/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
 
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
@@ -135,6 +135,7 @@ function cleanup_kvm {
 }
 function usage {
   printf "\nUsage: %s: -m marvinCfg [ -s -v -t -T <mvn -T flag> ]\n\n" $(basename $0) >&2
+  printf "\t-m:\tMarvin config\n" >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
   printf "\t-W:\tOverride workspace folder\n" >&2
   printf "\t-V:\tVerbose logging" >&2
@@ -151,7 +152,7 @@ function usage {
   printf "\t-x:\tSkip deployDC\n" >&2
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
-  printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -s -v)\n" >&2
+  printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -t -v)\n" >&2
   printf "\n" >&2
 }
 # Options

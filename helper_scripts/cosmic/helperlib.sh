@@ -1,8 +1,6 @@
 #!/bin/sh
 HELPERLIB_SH_SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-host_ip=`ip addr | grep 'inet 192' | cut -d: -f2 | awk '{ print $2 }' | awk -F\/24 '{ print $1 }'`
-
 function cosmic_sources_retrieve {
   BASEDIR=$1
   GITSSH=$2
@@ -251,6 +249,8 @@ except:
   done
 }
 
+# Depricated:
+# Following functions only used from build_run_deploy_test.sh
 function cloud_conf_cosmic {
   # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
   # Insert OVS bridge
@@ -266,6 +266,7 @@ function cloud_conf_cosmic {
 }
 
 function cloud_conf_generic {
+  # $host_ip defined in build_run_deploy_test.sh
   # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
   mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
   # Insert OVS bridges

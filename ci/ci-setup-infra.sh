@@ -65,9 +65,9 @@ function install_kvm_packages {
   ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
   ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
 
-  if [ -d cosmic-core/python/src/main/resources ]; then # Prepare for moving/converting to artifact (structure)
-    ${scp_base} cosmic-core/python/src/main/resources/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
-    ${scp_base} -r cosmic-core/python/src/main/resources/lib/cloudutils ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+  if [ -d cosmic-core/scripts/src/main/resources/python ]; then # Prepare for moving/converting to artifact (structure)
+    ${scp_base} cosmic-core/scripts/src/main/resources/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+    ${scp_base} -r cosmic-core/scripts/src/main/resources/python/lib/cloudutils ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
   else # Following can be removed if python folder is moved to artifact
     ${scp_base} cosmic-core/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
     ${scp_base} -r cosmic-core/python/lib/cloudutils ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/

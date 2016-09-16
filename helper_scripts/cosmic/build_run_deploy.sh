@@ -91,6 +91,7 @@ function undeploy_cloudstack_war {
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
   ${ssh_base} ${csuser}@${csip} rm -rf /var/log/cosmic/
+  ${ssh_base} ${csuser}@${csip} rm -rf /etc/cosmic/management
 }
 
 function enable_remote_debug_war {

@@ -638,7 +638,7 @@ class kvm_local_deploy:
             return False
         print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
         hosts = self.get_management_hosts() + self.get_hosts() + self.get_nsx_nodes()
-        pool = ThreadPool(4)
+        pool = ThreadPool(10)
         results = pool.map(self.deploy_host, hosts)
         pool.close()
         pool.join()

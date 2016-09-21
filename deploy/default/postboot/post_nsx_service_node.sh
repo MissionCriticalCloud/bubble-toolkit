@@ -14,6 +14,7 @@ echo "Cleaning service node."
 echo 'yes' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_SERVICE_NODE} clear everything
 echo 'y' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_SERVICE_NODE} restart system
 
+while ping -c5 ${NSX_SERVICE_NODE} &>/dev/null; do :; done
 echo "Note: VM rebooting, waiting for it to come online."
 while ! ping -c1 ${NSX_SERVICE_NODE} &>/dev/null; do :; done
 

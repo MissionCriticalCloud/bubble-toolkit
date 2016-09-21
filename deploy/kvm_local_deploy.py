@@ -448,7 +448,9 @@ class kvm_local_deploy:
         role = hostname[:-1]
         digit = hostname[-1:]
         print "Note: Found role '" + role + "' and digit '" + digit + "'"
-        return self.deploy_role(role, digit)
+        result = self.deploy_role(role, digit)
+        print "Note: Deployed role '" + role + "' and digit '" + digit + "'"
+        return result
 
     # Delete
     def delete_host(self, hostname):

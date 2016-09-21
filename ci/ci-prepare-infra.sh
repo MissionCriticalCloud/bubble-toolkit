@@ -14,8 +14,6 @@ function say {
 
 say "Running script: $0"
 
-sudo yum install -y -q sshpass
-
 # Options
 while getopts ':m:' OPTION
 do

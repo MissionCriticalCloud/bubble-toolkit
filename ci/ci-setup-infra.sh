@@ -320,7 +320,7 @@ function authenticate_nsx {
 
   if [ ! -v "${nsx_master_controller_node_ip_new}" ]; then
     curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip_new}/ws.v1/login
-    nsx_master_controller_node_ip=nsx_master_controller_node_ip_new
+    export nsx_master_controller_node_ip=nsx_master_controller_node_ip_new
   fi
 }
 

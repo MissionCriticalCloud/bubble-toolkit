@@ -314,6 +314,14 @@ function authenticate_nsx {
 
   say "Authenticating against NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
+
+  nsx_master_controller_node_ip_new=
+  nsx_master_controller_node_ip_new=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 301|Location' | grep 'Location' | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}')
+
+  if [ ! -v "${nsx_master_controller_node_ip_new}" ]; then
+    curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip_new}/ws.v1/login
+    nsx_master_controller_node_ip=nsx_master_controller_node_ip_new
+  fi
 }
 
 function check_nsx_cluster_health {

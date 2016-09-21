@@ -227,6 +227,148 @@ function deploy_cosmic_war {
   say "WAR deployed"
 }
 
+function create_nsx_cluster {
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+
+  nsx_user='admin'
+  nsx_pass='admin'
+
+  nsx_cookie=/tmp/nsx_cookie_${$}.txt
+
+  nsx_zone_name='mct-zone'
+
+  nsx_master_controller_node_ip=$( eval "echo \${nsx_controller_node_ip1}" )
+
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${nsx_controller_node_ip${i}}" ) ]; then
+    nsx_controller_node_ip=
+    eval nsx_controller_node_ip="\${nsx_controller_node_ip${i}}"
+
+    say "Joining ${nsx_controller_node_ip} to cluster."
+    configure_nsx_controller_node ${nsx_master_controller_node_ip} ${nsx_controller_node_ip} ${nsx_user} ${nsx_pass}
+    fi
+  done
+
+  authenticate_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${nsx_user} ${nsx_pass}
+
+  check_nsx_cluster_health ${nsx_master_controller_node_ip} ${nsx_cookie}
+
+  create_nsx_transport_zone ${nsx_master_controller_node_ip} ${nsx_cookie} ${nsx_zone_name}
+
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${nsx_service_node_ip${i}}" ) ]; then
+    nsx_service_node_ip=
+    eval nsx_service_node_ip="\${nsx_service_node_ip${i}}"
+
+    say "Setting cluster-manager for ${nsx_service_node_ip}."
+    configure_nsx_service_node ${nsx_master_controller_node_ip} ${nsx_service_node_ip} ${nsx_user} ${nsx_pass} ${nsx_cookie}
+    fi
+  done
+}
+
+function configure_nsx_controller_node {
+  nsx_master_controller_node_ip=$(getent hosts $1 | awk '{ print $1 }')
+  nsx_controller_node_ip=$(getent hosts $2 | awk '{ print $1 }')
+  nsx_user=$3
+  nsx_pass=$4
+
+  ssh_base="sshpass -p ${nsx_pass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+
+  ${ssh_base} ${nsx_user}@${nsx_controller_node_ip} join control-cluster ${nsx_master_controller_node_ip}
+}
+
+function configure_nsx_service_node {
+  nsx_master_controller_node_ip=$(getent hosts $1 | awk '{ print $1 }')
+  nsx_service_node_ip=$(getent hosts $2 | awk '{ print $1 }')
+  nsx_user=$3
+  nsx_pass=$4
+  nsx_cookie=$5
+
+  ssh_base="sshpass -p ${nsx_pass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+
+  ${ssh_base} ${nsx_user}@${nsx_service_node_ip} set switch manager-cluster ${nsx_master_controller_node_ip}
+
+  say "Note: Creating Service Node ${nsx_service_node_ip} in Zone with UUID = ${nsx_transport_zone_uuid}"
+  curl -L -k -b ${nsx_cookie} -X POST -d '{
+    "credential": {
+        "mgmt_address": "'"${nsx_service_node_ip}"'",
+        "type": "MgmtAddrCredential"
+    },
+    "display_name": "mct-service-node",
+    "transport_connectors": [
+        {
+            "ip_address": "'"${nsx_service_node_ip}"'",
+            "type": "STTConnector",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'"
+        }
+    ],
+    "zone_forwarding": true
+}' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+}
+
+function authenticate_nsx {
+  nsx_master_controller_node_ip=$1
+  nsx_cookie=$2
+  nsx_user=$3
+  nsx_pass=$4
+
+  say "Authenticating against NSX controller"
+  curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
+}
+
+function check_nsx_cluster_health {
+  nsx_master_controller_node_ip=$1
+  nsx_cookie=$2
+
+  say "Waiting for cluster to be healthy"
+  while ! curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster  | grep "HTTP/1.1 200"; do
+    sleep 5
+  done
+  say "Cluster is healthy"
+}
+
+function create_nsx_transport_zone {
+  nsx_master_controller_node_ip=$1
+  nsx_cookie=$2
+  nsx_zone_name=$3
+
+  export nsx_transport_zone_uuid=$(curl -L -k -b ${nsx_cookie} -X POST -d "{ \"display_name\": \"${nsx_zone_name}\" }" https://${nsx_master_controller_node_ip}/ws.v1/transport-zone | sed -e 's/^.*"uuid": "//' -e 's/", .*$//')
+}
+
+function configure_kvm_host_in_nsx {
+  nsx_master_controller_node_ip=$1
+  nsx_cookie=$2
+  kvm_host=$3
+  kvm_host_ip=$(getent hosts $3 | awk '{ print $1 }')
+  kvm_user=$4
+  kvm_pass=$5
+
+  SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
+
+  say "Note: Getting KVM host certificate from ${kvm_host}"
+  kvm_ovs_certificate=$(sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} cat /etc/openvswitch/ovsclient-cert.pem | sed -z "s/\n/\\\\n/g")
+
+  echo "Note: Creating KVM host (${kvm_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
+  curl -L -k -b ${nsx_cookie} -X POST -d '{
+    "credential": {
+        "client_certificate": {
+            "pem_encoded": "'"${kvm_ovs_certificate}"'"
+        },
+        "type": "SecurityCertificateCredential"
+    },
+    "display_name": "'"${kvm_host}"'",
+    "integration_bridge_id": "br-int",
+    "transport_connectors": [
+        {
+            "ip_address": "'"${kvm_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "STTConnector"
+        }
+    ]
+}' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+}
+
+
 # Options
 while getopts ':m:' OPTION
 do
@@ -268,6 +410,10 @@ systemtemplate="/data/templates/cosmic-systemvm.qcow2"
 imagetype="qcow2"
 install_systemvm_templates ${cs1ip} ${cs1user} ${cs1pass} ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
+if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+  create_nsx_cluster
+fi
+
 for i in 1 2 3 4 5 6 7 8 9; do
   if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
     csuser=
@@ -297,5 +443,9 @@ for i in 1 2 3 4 5 6 7 8 9; do
 
     say "Configuring agent to load JaCoCo Agent on host ${hvip}"
     configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
+
+    if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+      configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
+    fi
   fi
 done

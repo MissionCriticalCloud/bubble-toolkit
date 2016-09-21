@@ -11,4 +11,4 @@ ping -c1 ${NSX_SERVICE_NODE}
 SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 echo "Cleaning service node."
-yes | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_SERVICE_NODE} clear everything
+echo 'yes' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_SERVICE_NODE} clear everything

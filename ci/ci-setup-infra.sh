@@ -281,7 +281,8 @@ function configure_nsx_controller_node {
 
 function configure_nsx_service_node {
   nsx_master_controller_node_ip=$(getent hosts $1 | awk '{ print $1 }')
-  nsx_service_node_ip=$(getent hosts $2 | awk '{ print $1 }')
+  nsx_service_node=$2
+  nsx_service_node_ip=$(getent hosts ${nsx_service_node} | awk '{ print $1 }')
   nsx_user=$3
   nsx_pass=$4
   nsx_cookie=$5
@@ -296,7 +297,7 @@ function configure_nsx_service_node {
         "mgmt_address": "'"${nsx_service_node_ip}"'",
         "type": "MgmtAddrCredential"
     },
-    "display_name": "mct-service-node",
+    "display_name": "'"${nsx_service_node}"'",
     "transport_connectors": [
         {
             "ip_address": "'"${nsx_service_node_ip}"'",

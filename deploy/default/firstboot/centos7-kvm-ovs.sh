@@ -173,14 +173,6 @@ BOND_IFACES=\"$IFACES\"
 HOTPLUG=no
 " > /etc/sysconfig/network-scripts/ifcfg-bond0
 
-echo "Generate OVS certificates"
-cd /etc/openvswitch
-ovs-pki req ovsclient
-ovs-pki self-sign ovsclient
-ovs-vsctl -- --bootstrap set-ssl \
-            "/etc/openvswitch/ovsclient-privkey.pem" "/etc/openvswitch/ovsclient-cert.pem"  \
-            /etc/openvswitch/vswitchd.cacert
-
 # NSX
 echo "Point manager to NSX controller"
 ovs-vsctl set-manager ssl:$NSXMANAGER:6632

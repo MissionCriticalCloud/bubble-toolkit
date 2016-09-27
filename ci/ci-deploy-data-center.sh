@@ -51,6 +51,13 @@ function deploy_data_center {
   say "Data center deployed"
 }
 
+function add_nsx_connectivy_to_offerings {
+  csip=$1
+
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.ntwk_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.network_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.ntwk_offering_service_map X);"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.vpc_offering_service_map (vpc_offering_id, service, provider, created) (SELECT DISTINCT X.vpc_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.vpc_offering_service_map X);"
+}
+
 # Options
 while getopts ':m:' OPTION
 do
@@ -93,5 +100,9 @@ parse_marvin_config ${marvin_configCopy}
 
 say "Deploying Data Center"
 deploy_data_center ${marvin_configCopy}
+
+if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+  add_nsx_connectivy_to_offerings ${cs1ip}
+fi
 
 wait_for_systemvm_templates ${cs1ip}

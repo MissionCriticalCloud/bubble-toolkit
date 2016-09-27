@@ -23,20 +23,18 @@
 #      Written by Remi Bergsma, Schuberg Philis
 #      remi@remi.nl
 
-import libvirt
-import xml.etree.ElementTree as ET
-import sys
-import getopt
-import os.path
 import ConfigParser
-import shutil
-from jinja2 import Template
-import subprocess
+import getopt
 import json
-import socket
-import re
-from multiprocessing.dummy import Pool as ThreadPool
+import libvirt
 import os
+import os.path
+import shutil
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+from jinja2 import Template
+from multiprocessing.dummy import Pool as ThreadPool
 
 # Colored terminals
 try:
@@ -45,6 +43,7 @@ except:
     print "Error: Please install clint library to support color in the terminal:"
     print "       pip install clint"
     sys.exit(1)
+
 
 # Handle the arguments
 def handleArguments(argv):
@@ -73,16 +72,16 @@ def handleArguments(argv):
 
     # Usage message
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
-        '\n  --deploy-role -r \t\tDeploy VM with this role' + \
-        '\n  --deploy-vm -n \t\tDeploy VM with this name' + \
-        '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
-        '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
-        '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
-        '\n  --status -s \t\t\tDisplay status of your VMs' + \
-        '\n  --destroy -x \t\t\tDestroys a VM' + \
-        '\n  --delete \t\t\tOnly delete the specified VM (needs --digit) or Marvin config' + \
-        '\n  --force \t\t\tDelete VMs when they already exist' + \
-        '\n  --debug \t\t\tEnable debug mode'
+           '\n  --deploy-role -r \t\tDeploy VM with this role' + \
+           '\n  --deploy-vm -n \t\tDeploy VM with this name' + \
+           '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
+           '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
+           '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
+           '\n  --status -s \t\t\tDisplay status of your VMs' + \
+           '\n  --destroy -x \t\t\tDestroys a VM' + \
+           '\n  --delete \t\t\tOnly delete the specified VM (needs --digit) or Marvin config' + \
+           '\n  --force \t\t\tDelete VMs when they already exist' + \
+           '\n  --debug \t\t\tEnable debug mode'
 
     try:
         opts, args = getopt.getopt(
@@ -123,13 +122,14 @@ def handleArguments(argv):
         elif opt in ("--delete"):
             delete = 1
 
+
 # Parse arguments
 if __name__ == "__main__":
     handleArguments(sys.argv[1:])
 
+
 # Deploy local KVM class
 class kvm_local_deploy:
-
     # Init function
     def __init__(self, debug=0, dryrun=0, force=0, marvin_config=''):
         self.DEBUG = debug
@@ -138,9 +138,9 @@ class kvm_local_deploy:
         self.marvin_config = marvin_config
         self.marvin_data = False
         # we can run as a user in the libvirt group
-        #self.check_root()
+        # self.check_root()
         self.configfile = os.path.dirname(os.path.realpath(__file__)) + '/config'
-        self.config_data = {}
+        self.config_data = { }
         try:
             self.conn = libvirt.open('qemu:///system')
         except Exception as e:
@@ -181,7 +181,7 @@ class kvm_local_deploy:
         config = ConfigParser.RawConfigParser()
         try:
             config.read(configfile)
-            confdict = {}
+            confdict = { }
             options = config.options(section)
         except:
             return False
@@ -207,18 +207,18 @@ class kvm_local_deploy:
         path_ending = self.format_path(dir_name) + file_name
 
         # Look for files that exist, in this order. Return the first one found.
-        test_file = {}
+        test_file = { }
         test_file['1 Absolute path override'] = self.format_path(self.config_data['override_dir']) + path_ending
         test_file['2 Relative path override'] = self.format_path(self.config_data['base_dir']) + self.format_path(self.config_data['override_dir']) + path_ending
         test_file['3 Default'] = self.format_path(self.config_data['base_dir']) + "default/" + path_ending
 
-        for test_type, found_file_name in sorted(test_file.iteritems()) :
+        for test_type, found_file_name in sorted(test_file.iteritems()):
             result = self.test_file(found_file_name)
             if result is not False:
                 return result
 
         if self.DEBUG == 1:
-            print "Debug: Nothing found returning None" 
+            print "Debug: Nothing found returning None"
         return None
 
     # Make sure paths look the same and have a trailing slash
@@ -275,14 +275,14 @@ class kvm_local_deploy:
     def get_active_hosts(self):
         active_hosts = self.conn.listDomainsID()
         for id in active_hosts:
-          dom = self.conn.lookupByID(id)
-          print "VM " + dom.name() + " is ON."
+            dom = self.conn.lookupByID(id)
+            print "VM " + dom.name() + " is ON."
 
     # List inactive Hosts
     def get_inactive_hosts(self):
         for name in self.conn.listDefinedDomains():
-          dom = self.conn.lookupByName(name)
-          print "VM " + dom.name() + " is SHUTDOWN."
+            dom = self.conn.lookupByName(name)
+            print "VM " + dom.name() + " is SHUTDOWN."
         print
 
     # Get MAC and IP from Qemu
@@ -290,29 +290,29 @@ class kvm_local_deploy:
         net = self.conn.networkLookupByName('NAT')
         root = ET.fromstring(net.XMLDesc())
         dhcp = root.findall("./ip/dhcp/host")
-        result = {}
+        result = { }
         for d in dhcp:
             if d.get('name') == hostname:
                 result['mac'] = d.get('mac')
                 result['name'] = d.get('name')
                 result['ip'] = d.get('ip')
-        if len(result)==0:
+        if len(result) == 0:
             print "ERROR: host not defined in NAT DHCP config."
             return False
         return result
 
     # Get all VMs
     def get_all_vms(self):
-        result = {}
+        result = { }
         for vm in self.conn.listAllDomains():
             id = vm.ID()
-            result[id] = {}
+            result[id] = { }
             result[id]['name'] = vm.name()
             result[id]['state'] = vm.state()
         return result
 
     # Check exists
-    def check_exists(self,name):
+    def check_exists(self, name):
         try:
             dom = self.conn.lookupByName(name)
             return True
@@ -333,8 +333,8 @@ class kvm_local_deploy:
 
     # Read hardware xml
     def get_hardware_xml(self, hardware):
-       xml = self.get_file_name(self.config_data['hardware_dir'], hardware + ".xml")
-       return xml
+        xml = self.get_file_name(self.config_data['hardware_dir'], hardware + ".xml")
+        return xml
 
     # Generate the XML for the new VM
     def generate_xml(self, role_name, vm_name):
@@ -375,10 +375,10 @@ class kvm_local_deploy:
                 return_code = subprocess.call(command, shell=True)
             else:
                 return_code = 0
-                print "WARNING: " + vm_name  + ": No firstboot script defined."
+                print "WARNING: " + vm_name + ": No firstboot script defined."
         except Exception as e:
             print e
-            print "ERROR: " + vm_name  + ": Firstboot script failed."
+            print "ERROR: " + vm_name + ": Firstboot script failed."
             return False
         return return_code
 
@@ -402,15 +402,15 @@ class kvm_local_deploy:
                 return_code = subprocess.call(command, shell=True)
             else:
                 return_code = 0
-                print "WARNING: " + vm_name  + ": No postboot script defined."
+                print "WARNING: " + vm_name + ": No postboot script defined."
         except Exception as e:
             print e
-            print "ERROR: " + vm_name  + ": Postboot script failed."
+            print "ERROR: " + vm_name + ": Postboot script failed."
             return False
         return return_code
 
     # Exectute actions before/after deploying cloud roles
-    def cloud_deploy_action(self, cloud_name, cloud_dict, phase, extra_arguments = None):
+    def cloud_deploy_action(self, cloud_name, cloud_dict, phase, extra_arguments=None):
         action = phase + '_deploy'
         script_for_action = cloud_dict[action]
         if self.is_defined(script_for_action):
@@ -421,11 +421,11 @@ class kvm_local_deploy:
                 print "Note: " + cloud_name + ": Running " + action + " script: " + command
                 return_code = subprocess.call(command, shell=True)
             except:
-                print "ERROR: " + cloud_name  + ": " + action + " script failed."
+                print "ERROR: " + cloud_name + ": " + action + " script failed."
                 return False
         else:
             return_code = 0
-            print "WARNING: " + cloud_name  + ": No " + action + " script defined."
+            print "WARNING: " + cloud_name + ": No " + action + " script defined."
         return return_code
 
     def is_defined(self, string):
@@ -448,7 +448,9 @@ class kvm_local_deploy:
         role = hostname[:-1]
         digit = hostname[-1:]
         print "Note: Found role '" + role + "' and digit '" + digit + "'"
-        return self.deploy_role(role, digit)
+        result = self.deploy_role(role, digit)
+        print "Note: Deployed role '" + role + "' and digit '" + digit + "'"
+        return result
 
     # Delete
     def delete_host(self, hostname):
@@ -510,7 +512,7 @@ class kvm_local_deploy:
             print "Error: role '" + role_name + "' unknown."
             return False
         if digit == '':
-            for n in range (1, 9):
+            for n in range(1, 9):
                 name = role_dict['vm_prefix'] + str(n)
                 if not self.check_exists(name):
                     print "Note: VM name " + name + " is available"
@@ -615,13 +617,30 @@ class kvm_local_deploy:
                 hosts.append(h['mgtSvrName'])
         return hosts
 
+    # Get NSX config from Marvin
+    def get_nsx_nodes(self):
+        nodes = []
+        if not self.marvin_data:
+            self.load_marvin_json()
+        if 'niciraNvp' in self.marvin_data:
+            if 'controllerNodes' in self.marvin_data['niciraNvp']:
+                for h in self.marvin_data['niciraNvp']['controllerNodes']:
+                    nodes.append(h)
+            if 'serviceNodes' in self.marvin_data['niciraNvp']:
+                for h in self.marvin_data['niciraNvp']['serviceNodes']:
+                    nodes.append(h)
+            if 'managerNodes' in self.marvin_data['niciraNvp']:
+                for h in self.marvin_data['niciraNvp']['managerNodes']:
+                    nodes.append(h)
+        return nodes
+
     # Deploy Marvin infra
     def deploy_marvin(self):
         if not self.get_marvin_json():
             return False
         print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
-        hosts = self.get_management_hosts() + self.get_hosts()
-        pool = ThreadPool(4)
+        hosts = self.get_management_hosts() + self.get_hosts() + self.get_nsx_nodes()
+        pool = ThreadPool(10)
         results = pool.map(self.deploy_host, hosts)
         pool.close()
         pool.join()
@@ -638,6 +657,7 @@ class kvm_local_deploy:
         pool.close()
         pool.join()
         return True
+
 
 # Init our class
 d = kvm_local_deploy(DEBUG, DRYRUN, FORCE, deploy_marvin)
@@ -661,13 +681,13 @@ if len(deploy_cloud) > 0:
 if len(deploy_marvin) > 0:
     # Delete
     if delete == 1:
-       print "Note: Deleting"
-       d.delete_marvin()
-       sys.exit(0)
+        print "Note: Deleting"
+        d.delete_marvin()
+        sys.exit(0)
 
     print "Note: You want to deploy a cloud based on Marvin config file '" + deploy_marvin + "'.."
     if not d.marvin_exists(deploy_marvin):
-        print "Error: the Marvin config file '" + deploy_marvin  + "' does not exist."
+        print "Error: the Marvin config file '" + deploy_marvin + "' does not exist."
         sys.exit(1)
     # Deploy it
     if not d.deploy_marvin():

@@ -1,20 +1,15 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
-NSX_CONTROLLER=$1
-# We get this passed from the main script
-NEWHOST=$2
+NSX_CONTROLLER_NODE=$1
 
 echo "Note: Waiting for the VM to boot..."
-# Wait until the VM is alive
-while ! ping -c1 ${NEWHOST} &>/dev/null; do :; done
-echo "Note: Ping result for ${NEWHOST}"
-ping -c1 ${NEWHOST}
+while ! ping -c1 ${NSX_CONTROLLER_NODE} &>/dev/null; do :; done
 
-NSX_CONTROLLER_IP=$(getent hosts ${NSX_CONTROLLER} | awk '{ print $1 }')
+echo "Note: Ping result for ${NSX_CONTROLLER_NODE}"
+ping -c1 ${NSX_CONTROLLER_NODE}
 
 SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-sudo yum install -y -q sshpass
-
-echo "Joining cluster"
-sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NEWHOST} join control-cluster ${NSX_CONTROLLER_IP}
+echo "Cleaning controller node."
+echo 'yes' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER_NODE} clear everything
+echo 'y' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER_NODE} restart system

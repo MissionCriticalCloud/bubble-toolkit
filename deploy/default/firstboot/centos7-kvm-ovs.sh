@@ -51,19 +51,28 @@ echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 ### OVS ###
+ADM_IP=
 # Test to see if we have the internal mctadm1 box available
 ping -c1 mctadm1 >/dev/null 2>&1
-MCTADM1_AVAILABLE=$?
+if [ $? -eq 0 ]; then
+  ADM_IP='mctadm1'
+fi
+
+# Check if 192.168.31.41 is available.
+ping -c1 192.168.31.41 >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  ADM_IP='192.168.31.41'
+fi
 
 # If mctadm1 is available, get OVS packages from it
-if [ ${MCTADM1_AVAILABLE} -eq 0 ]
+if [ ! -v $( eval "echo \${ADM_IP}" ) ]
   then
-  echo "Detected we have server mctadm1 to get OVS packages from."
+  echo "Detected we have an internal server to get OVS packages from."
   # Custom 2.5.1
   mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
   yum -y install "kernel-devel-$(uname -r)"
-  yum -y install http://mctadm1/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
-  yum -y install http://mctadm1/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
+  yum -y install http://${ADM_IP}/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
+  yum -y install http://${ADM_IP}/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
 # If not, fall back to community sources
 else
   echo "Installing OVS from community sources."
@@ -163,14 +172,6 @@ BOND_IFACES=\"$IFACES\"
 #OVS_OPTIONS="bond_mode=balance-tcp lacp=active other_config:lacp-time=fast"
 HOTPLUG=no
 " > /etc/sysconfig/network-scripts/ifcfg-bond0
-
-echo "Generate OVS certificates"
-cd /etc/openvswitch
-ovs-pki req ovsclient
-ovs-pki self-sign ovsclient
-ovs-vsctl -- --bootstrap set-ssl \
-            "/etc/openvswitch/ovsclient-privkey.pem" "/etc/openvswitch/ovsclient-cert.pem"  \
-            /etc/openvswitch/vswitchd.cacert
 
 # NSX
 echo "Point manager to NSX controller"

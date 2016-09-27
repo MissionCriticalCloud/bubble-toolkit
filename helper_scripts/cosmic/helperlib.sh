@@ -173,7 +173,7 @@ print json.load(sys.stdin)['zones'][0]['secondaryStorages'][0]['url']" | cut -d:
 
   for i in 1 2 3 4 5 6 7 8 9
   do
-  # username hypervisor 1
+  # username hypervisor i
   export hvuser${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -182,7 +182,7 @@ except:
   print ''
   ")
 
-  # password hypervisor 1
+  # password hypervisor i
   export hvpass${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -191,7 +191,7 @@ except:
  print ''
   ")
 
-  # ip adress hypervisor 1
+  # ip adress hypervisor i
   export hvip${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -203,7 +203,7 @@ except:
 
   for i in 1 2 3 4 5 6 7 8 9
   do
-    # username cs 1
+    # username cs i
     export cs${i}user=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -212,7 +212,7 @@ except:
   print ''
 ")
 
-    # password cs 1
+    # password cs i
     export cs${i}pass=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -221,7 +221,7 @@ except:
  print ''
 ")
 
-    # ip adress cs 1
+    # ip adress cs i
     export cs${i}ip=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -230,7 +230,7 @@ except:
  print ''
 ")
 
-    # hostname cs 1
+    # hostname cs i
     export cs${i}hostname=$(cat ${marvinCfg} | grep -v "#" | python -c "
 try:
   import sys, json
@@ -246,6 +246,42 @@ except:
       export cs${i}ip=$(getent hosts ${cshostname} | awk '{ print $1 }')
     fi
   fi
+  done
+
+  for i in 1 2 3 4 5 6 7 8 9
+  do
+    # ip address controller node i
+    export nsx_controller_node_ip${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['niciraNvp']['controllerNodes'][${i}-1]
+except:
+ print ''
+  " | cut -d/ -f3)
+  done
+
+  for i in 1 2 3 4 5 6 7 8 9
+  do
+    # ip address service node i
+    export nsx_service_node_ip${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['niciraNvp']['serviceNodes'][${i}-1]
+except:
+ print ''
+  " | cut -d/ -f3)
+  done
+
+  for i in 1 2 3 4 5 6 7 8 9
+  do
+    # ip address management node i
+    export nsx_management_node_ip${i}=$(cat ${marvinCfg} | grep -v "#" | python -c "
+try:
+  import sys, json
+  print json.load(sys.stdin)['niciraNvp']['managerNodes'][${i}-1]
+except:
+ print ''
+  " | cut -d/ -f3)
   done
 }
 

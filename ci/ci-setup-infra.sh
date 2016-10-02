@@ -416,7 +416,7 @@ parse_marvin_config ${marvin_config}
 
 mkdir -p ${secondarystorage}
 
-say "Deploying CloudStack DB"
+say "Deploying Cosmic DB"
 deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Installing Marvin"
@@ -442,7 +442,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
     configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 
-    say "Deploying CloudStack WAR on host ${csip}"
+    say "Deploying Cosmic WAR on host ${csip}"
     deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
   fi
 done

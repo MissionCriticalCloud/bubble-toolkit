@@ -32,7 +32,7 @@ function wait_for_port {
 function wait_for_management_server {
   hostname=$1
 
-  say "Waiting for CloudStack Management Server to be running on ${hostname}"
+  say "Waiting for Cosmic Management Server to be running on ${hostname}"
   wait_for_port ${hostname} 8096 tcp
 }
 
@@ -40,7 +40,7 @@ function wait_for_systemvm_templates {
   hostname=$1
 
   say "Waiting for SystemVM templates to be ready on ${hostname}"
-  /data/shared/helper_scripts/cloudstack/wait_template_ready.py -t ${hostname}
+  /data/shared/helper_scripts/cosmic/wait_template_ready.py -t ${hostname}
 }
 
 function deploy_data_center {

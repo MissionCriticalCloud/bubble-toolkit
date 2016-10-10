@@ -21,6 +21,7 @@ if [ ! -d "${BASEDIR}/python_cloud" ]; then
   pip install --extra-index-url https://pypi.python.org/pypi/mysql-connector-python/2.0.4 mysql-connector-python
   pip install ${BASEDIR}/cloudstackOps/marvin/Marvin-0.1.0.tar.gz
   pip install prettytable clint
+  pip install fabric
 fi
 
 # Feed API keys to CloudMonkey config
@@ -35,4 +36,4 @@ echo "Done. To get started:"
 echo
 echo " source ${BASEDIR}/python_cloud/bin/activate" 
 echo " cd ${BASEDIR}/cloudstackOps"
-echo " python listVirtualMachines.py -o MCCT-XEN-1"
+echo " python listVirtualMachines.py -o MCCT-KVM-1"

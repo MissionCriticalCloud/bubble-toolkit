@@ -17,6 +17,9 @@
 # Source the helper functions
 . `dirname $0`/helperlib.sh
 
+# Reference to ci scripts
+scripts_dir="$(dirname $0)/../../ci"
+
 
 function maven_build {
   build_dir=$1

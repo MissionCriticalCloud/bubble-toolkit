@@ -345,6 +345,13 @@ function cloud_conf_offerings_ha {
   mysql -u cloud -pcloud cloud --exec "UPDATE vm_instance SET ha_enabled = 1;"
 }
 
+function minikube_get_ip {
+  # Get the IPv4 address from minikube
+
+  minikube_ip=`minikube ip`
+  say "Got minikube IP: ${minikube_ip}"
+}
+
 function minikube_stop {
   #Parameters
   local cleanup=$1
@@ -373,4 +380,6 @@ function minikube_start {
   fi
 
   minikube start --vm-driver kvm --kvm-network NAT
+
+  minikube_get_ip
 }

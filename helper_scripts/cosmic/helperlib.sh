@@ -352,11 +352,11 @@ function minikube_stop {
   # Start minikube
   if [ "${cleanup}" == "true" ]; then
    say "Stopping minikube with cleanup"
-   minikube stop
-   minikube delete
+   minikube stop || true
+   minikube delete || true
   else
    say "Stopping minikube without cleanup"
-   minikube stop
+   minikube stop || true
   fi
 }
 

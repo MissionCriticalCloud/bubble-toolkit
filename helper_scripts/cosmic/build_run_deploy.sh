@@ -176,7 +176,7 @@ gitssh=1
 verbose=0
 WORKSPACE_OVERRIDE=
 
-while getopts 'abCEHIm:T:tvVwW:x' OPTION
+while getopts 'abCEHIm:T:tvVwW:xk' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1

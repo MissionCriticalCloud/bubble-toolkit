@@ -302,7 +302,9 @@ fi
 
 # 00450 Prepare minikube
 if [ ${skip_deploy_minikube} -eq 0 ]; then
-  "${CI_SCRIPTS}/ci-prepare-minikube.sh"
+  PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
+  echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
+  "${CI_SCRIPTS}/ci-prepare-minikube.sh" 2>&1 > ${PREP_MINIKUBE_LOG}    &
   PREP_MINIKUBE_PID=$!
 else
   echo "Skipped prepare minikube"
@@ -317,6 +319,19 @@ if [ ${skip_maven_build} -eq 0 ]; then
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else
   echo "Skipped maven build"
+fi
+
+# 00550 Setup minikube
+if [ ${skip_deploy_minikube} -eq 0 ]; then
+  echo "Waiting for prepare-minikube to be ready."
+  wait ${PREP_MINIKUBE_PID}
+  echo "Prepare-minikube console output:"
+  cat  ${PREP_MINIKUBE_LOG}
+
+  say "Setting up minikube."
+  "${CI_SCRIPTS}/ci-setup-minikube.sh"
+else
+  echo "Skipped setup minikube"
 fi
 
 # 00400 Prepare Infra, create VMs
@@ -343,15 +358,6 @@ if [ ${enable_remote_debugging} -eq 1 ]; then
       enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass}
     fi
   done
-fi
-
-# 00550 Setup minikube
-if [ ${skip_deploy_minikube} -eq 0 ]; then
-  echo "Waiting for prepare-minikube to be ready."
-  wait ${PREP_MINIKUBE_PID}
-  "${CI_SCRIPTS}/ci-setup-minikube.sh"
-else
-  echo "Skipped setup minikube"
 fi
 
 # 00500 Setup Infra

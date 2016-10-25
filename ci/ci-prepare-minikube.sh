@@ -7,5 +7,7 @@ set -e
 
 say "Running script: $0"
 
-minikube_start "true"
-
+until minikube_start "true"
+do
+  say "minikube failed to start, retrying."
+done

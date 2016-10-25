@@ -164,6 +164,7 @@ skip_maven_build=0
 skip_prepare_infra=0
 skip_setup_infra=0
 skip_deploy_dc=0
+skip_deploy_minikube=0
 run_tests=0
 compile_threads=
 scenario_build_deploy_new_war=0
@@ -202,6 +203,8 @@ do
         ;;
   x)    skip_deploy_dc=1
         ;;
+  k)    skip_deploy_minikube=1
+        ;;
   I)    run_tests=1
         ;;
   T)    compile_threads="-T $OPTARG"
@@ -216,13 +219,14 @@ if [ ${verbose} -eq 1 ]; then
   echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
   echo "gitssh                   (-H) = ${gitssh}"
   echo ""
-  echo "skip_maven_build   (-t) = ${skip_maven_build}"
-  echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
-  echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
-  echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
-  echo "run_tests          (-I) = ${run_tests}"
-  echo "marvinCfg          (-m) = ${marvinCfg}"
-  echo "compile_threads    (-T) = ${compile_threads}"
+  echo "skip_maven_build     (-t) = ${skip_maven_build}"
+  echo "skip_prepare_infra   (-v) = ${skip_prepare_infra}"
+  echo "skip_setup_infra     (-w) = ${skip_setup_infra}"
+  echo "skip_deploy_dc       (-x) = ${skip_deploy_dc}"
+  echo "skip_deploy_minikube (-k) = ${skip_deploy_minikube}"
+  echo "run_tests            (-I) = ${run_tests}"
+  echo "marvinCfg            (-m) = ${marvinCfg}"
+  echo "compile_threads      (-T) = ${compile_threads}"
   echo ""
   echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
   echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
@@ -295,6 +299,13 @@ else
   echo "Skipped prepare infra"
 fi
 
+# 00450 Prepare minikube
+if [ ${skip_deploy_minikube} -eq 0 ]; then
+  "${CI_SCRIPTS}/ci-prepare-minikube.sh"
+else
+  echo "Skipped prepare minikube"
+fi
+
 # 00200 Build, unless told to skip
 if [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
@@ -330,6 +341,13 @@ if [ ${enable_remote_debugging} -eq 1 ]; then
       enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass}
     fi
   done
+fi
+
+# 00550 Setup minikube
+if [ ${skip_deploy_minikube} -eq 0 ]; then
+  "${CI_SCRIPTS}/ci-setup-minikube.sh"
+else
+  echo "Skipped setup minikube"
 fi
 
 # 00500 Setup Infra

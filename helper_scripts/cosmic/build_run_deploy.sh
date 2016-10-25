@@ -303,6 +303,7 @@ fi
 # 00450 Prepare minikube
 if [ ${skip_deploy_minikube} -eq 0 ]; then
   "${CI_SCRIPTS}/ci-prepare-minikube.sh"
+  PREP_MINIKUBE_PID=$!
 else
   echo "Skipped prepare minikube"
 fi
@@ -346,6 +347,8 @@ fi
 
 # 00550 Setup minikube
 if [ ${skip_deploy_minikube} -eq 0 ]; then
+  echo "Waiting for prepare-minikube to be ready."
+  wait ${PREP_MINIKUBE_PID}
   "${CI_SCRIPTS}/ci-setup-minikube.sh"
 else
   echo "Skipped setup minikube"

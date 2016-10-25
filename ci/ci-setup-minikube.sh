@@ -11,3 +11,9 @@ function usage {
 
 say "Running script: $0"
 
+say "Starting deployment: mariadb"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb-deployment.yml
+
+
+say "Starting service: mariadb"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb-service.yml

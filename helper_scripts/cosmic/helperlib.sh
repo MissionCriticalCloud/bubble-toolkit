@@ -289,62 +289,6 @@ except:
   done
 }
 
-# Depricated:
-# Following functions only used from build_run_deploy_test.sh
-function cloud_conf_cosmic {
-  # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
-  # Insert OVS bridge
-  # Garbage collector
-  cloud_conf_generic
-
-  # Adding the right SystemVMs, for both KVM and XenServer
-  cloud_conf_templ_system
-  # Adding the tiny linux VM templates for KVM and XenServer
-  cloud_conf_templ_tinylinux
-  # Make service offering support HA
-  cloud_conf_offerings_ha
-}
-
-function cloud_conf_generic {
-  # $host_ip defined in build_run_deploy_test.sh
-  # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
-  # Insert OVS bridges
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.private.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.public.network.device', 'pub0') ON DUPLICATE KEY UPDATE value = 'pub0';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.guest.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  # Garbage collector
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '10') ON DUPLICATE KEY UPDATE value = '10';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '10') ON DUPLICATE KEY UPDATE value = '10';"
-  # Number of VPC tiers (as required by smoke/test_privategw_acl.py)
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
-  # Force stop when destroying (makes it faster)
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vm.destroy.forcestop', 'true') ON DUPLICATE KEY UPDATE value = 'true';"
-}
-
-function cloud_conf_templ_system {
-  # Adding the right SystemVMs, for both KVM and XenServer
-  say "Config Templates"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2' where id=1;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
-}
-
-function cloud_conf_templ_tinylinux {
-  # Adding the tiny linux VM templates for KVM and XenServer
-  say "TinyLinux Templates"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
-}
-
-function cloud_conf_offerings_ha {
-  # Make service offering support HA
-  say "Set all offerings to HA"
-  mysql -u cloud -pcloud cloud --exec "UPDATE service_offering SET ha_enabled = 1;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE vm_instance SET ha_enabled = 1;"
-}
-
 function minikube_get_ip {
   # Get the IPv4 address from minikube
 

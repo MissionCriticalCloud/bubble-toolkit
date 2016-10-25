@@ -12,10 +12,6 @@ function usage {
   printf "Usage: %s: -m marvinCfg [ -s <skip compile> -t <run tests> -T <mvn -T flag> ]\n" $(basename $0) >&2
 }
 
-function say {
-  echo "==> $@"
-}
-
 function install_kvm_packages {
   # Parameters
   hvip=$1

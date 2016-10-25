@@ -1,6 +1,10 @@
 #!/bin/sh
 HELPERLIB_SH_SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+function say {
+  echo "==> $@"
+}
+
 function cosmic_sources_retrieve {
   BASEDIR=$1
   GITSSH=$2
@@ -14,7 +18,7 @@ function gitclone_recursive {
 
   mkdir -p "${CHECKOUT_PATH}"
   if [ ! -d "${CHECKOUT_PATH}/.git" ]; then
-    echo "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
+    say "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
   if [ -z ${GIT_SSH} ] || [ "${GIT_SSH}" -eq "1" ]; then
     git clone --recursive "${REPO_URL}" "${CHECKOUT_PATH}"
     else
@@ -26,9 +30,9 @@ function gitclone_recursive {
       git submodule update
       cd "${cwd}"
     fi
-    echo "Please use 'git checkout' to checkout the branch you need."
+    say "Please use 'git checkout' to checkout the branch you need."
   else
-    echo "Git repo already found at ${CHECKOUT_PATH}"
+    say "Git repo already found at ${CHECKOUT_PATH}"
   fi
 }
 
@@ -38,21 +42,21 @@ function gitclone {
   GIT_SSH=$3
   mkdir -p "${CHECKOUT_PATH}"
   if [ ! -d "${CHECKOUT_PATH}/.git" ]; then
-    echo "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
+    say "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
     if [ -z ${GIT_SSH} ] || [ "${GIT_SSH}" -eq "1" ]; then
       git clone "${REPO_URL}" "${CHECKOUT_PATH}"
     else
       git clone `echo ${REPO_URL} | sed 's@git\@github.com:@https://github.com/@'` "${CHECKOUT_PATH}"
     fi
-    echo "Please use 'git checkout' to checkout the branch you need."
+    say "Please use 'git checkout' to checkout the branch you need."
   else
-    echo "Git repo already found at ${CHECKOUT_PATH}"
+    say "Git repo already found at ${CHECKOUT_PATH}"
   fi
 }
 
 function wget_fetch {
   if [ ! -f "$2" ]; then
-    echo "Fetching $1"
+    say "Fetching $1"
     wget "$1" -O "$2"
   fi
 }
@@ -80,7 +84,7 @@ function install_kvm_packages {
     fi
   fi
 
-  echo "Dist dir is ${distdir}"
+  say "Dist dir is ${distdir}"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
@@ -321,14 +325,14 @@ function cloud_conf_generic {
 
 function cloud_conf_templ_system {
   # Adding the right SystemVMs, for both KVM and XenServer
-  echo "Config Templates"
+  say "Config Templates"
   mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2' where id=1;"
   mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
 }
 
 function cloud_conf_templ_tinylinux {
   # Adding the tiny linux VM templates for KVM and XenServer
-  echo "TinyLinux Templates"
+  say "TinyLinux Templates"
   mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
   mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
   mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
@@ -336,7 +340,37 @@ function cloud_conf_templ_tinylinux {
 
 function cloud_conf_offerings_ha {
   # Make service offering support HA
-  echo "Set all offerings to HA"
+  say "Set all offerings to HA"
   mysql -u cloud -pcloud cloud --exec "UPDATE service_offering SET ha_enabled = 1;"
   mysql -u cloud -pcloud cloud --exec "UPDATE vm_instance SET ha_enabled = 1;"
+}
+
+function minikube_stop {
+  #Parameters
+  local cleanup=$1
+
+  # Start minikube
+  if [ "${cleanup}" == "true" ]; then
+   say "Stopping minikube with cleanup"
+   minikube stop
+   minikube delete
+  else
+   say "Stopping minikube without cleanup"
+   minikube stop
+  fi
+}
+
+function minikube_start {
+  #Parameters
+  local cleanup=$1
+
+  # Start minikube
+  if [ "${cleanup}" == "true" ]; then
+   say "Starting minikube with cleanup"
+   minikube_stop "true"
+  else
+   say "Starting minikube without cleanup"
+  fi
+
+  minikube start --vm-driver kvm --kvm-network NAT
 }

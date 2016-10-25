@@ -325,5 +325,5 @@ function minikube_start {
 
   minikube start --vm-driver kvm --kvm-network NAT
 
-  minikube_get_ip
+  return $?
 }

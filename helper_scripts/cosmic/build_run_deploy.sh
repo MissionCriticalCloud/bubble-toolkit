@@ -153,7 +153,8 @@ function usage {
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
   printf "\t-w:\tSkip setup infra (DB creation, war deploy, agent-rpm installs)\n" >&2
-  printf "\t-x:\tSkip deployDC\n" >&2
+  printf "\t-x:\tSkip deploy DC\n" >&2
+  printf "\t-k:\tSkip deploy minikube\n" >&2
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
   printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -t -v)\n" >&2

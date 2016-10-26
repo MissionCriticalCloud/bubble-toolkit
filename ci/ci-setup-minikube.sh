@@ -22,3 +22,9 @@ kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry-dep
 
 say "Starting service: registry"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry-service.yml
+
+say "Starting deployment: rabbitmq"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq-deployment.yml
+
+say "Starting service: rabbitmq"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/rabbitmq-service.yml

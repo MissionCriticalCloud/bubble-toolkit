@@ -14,6 +14,11 @@ say "Running script: $0"
 say "Starting deployment: mariadb"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb-deployment.yml
 
-
 say "Starting service: mariadb"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb-service.yml
+
+say "Starting deployment: registry"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry-deployment.yml
+
+say "Starting service: registry"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry-service.yml

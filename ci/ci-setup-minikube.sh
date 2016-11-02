@@ -11,11 +11,27 @@ function usage {
 
 say "Running script: $0"
 
-say "Starting deployment: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb-deployment.yml
+minikube_get_ip
 
-say "Starting service: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb-service.yml
+function cosmic_usage_db {
+    say "Setup Cosmic usage database"
+    say "Starting deployment: mariadb"
+    kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb-deployment.yml
+
+    say "Starting service: mariadb"
+    kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb-service.yml
+
+    say "Waiting for mariadb to be available."
+    until (mysql -h ${minikube_ip} -u root -ppassword -P 30061 mysql -e"SHOW databases;" --connect-timeout=5) &> /dev/null 
+    do
+        sleep 10
+    done
+
+    say "Create Cosmic usage database"
+    mysql -h ${minikube_ip} -u root -ppassword -P 30061 mysql -e"create database \`usage\`;"
+}
+
+cosmic_usage_db
 
 say "Starting deployment: registry"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry-deployment.yml

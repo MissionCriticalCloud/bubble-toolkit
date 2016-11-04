@@ -31,6 +31,10 @@ function cosmic_usage_db {
     mysql -h ${minikube_ip} -u root -ppassword -P 30061 mysql -e"create database \`usage\`;"
 }
 
+# Create cosmic namespace
+kubectl create namespace cosmic
+
+# Setup usage db/container
 cosmic_usage_db
 
 say "Starting deployment: registry"

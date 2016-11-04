@@ -292,8 +292,8 @@ except:
 function minikube_get_ip {
   # Get the IPv4 address from minikube
 
-  minikube_ip=`minikube ip`
-  say "Got minikube IP: ${minikube_ip}"
+  export MINIKUBE_IP=`minikube ip`
+  say "Got minikube IP: ${MINIKUBE_IP}"
 }
 
 function minikube_stop {

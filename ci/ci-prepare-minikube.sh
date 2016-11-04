@@ -15,6 +15,6 @@ done
 minikube_get_ip
 
 say "Waiting for kubernetes to be available."
-until (echo > /dev/tcp/${minikube_ip}/8443) &> /dev/null; do
+until (echo > /dev/tcp/${MINIKUBE_IP}/8443) &> /dev/null; do
     sleep 1 
 done

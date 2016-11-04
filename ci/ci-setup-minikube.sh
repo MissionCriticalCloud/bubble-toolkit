@@ -22,13 +22,13 @@ function cosmic_usage_db {
     kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb-service.yml
 
     say "Waiting for mariadb to be available."
-    until (mysql -h ${minikube_ip} -u root -ppassword -P 30061 mysql -e"SHOW databases;" --connect-timeout=5) &> /dev/null 
+    until (mysql -h ${MINIKUBE_IP} -u root -ppassword -P 30061 mysql -e"SHOW databases;" --connect-timeout=5) &> /dev/null 
     do
         sleep 10
     done
 
     say "Create Cosmic usage database"
-    mysql -h ${minikube_ip} -u root -ppassword -P 30061 mysql -e"create database \`usage\`;"
+    mysql -h ${MINIKUBE_IP} -u root -ppassword -P 30061 mysql -e"create database \`usage\`;"
 }
 
 # Create cosmic namespace

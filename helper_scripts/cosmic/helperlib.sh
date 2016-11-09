@@ -293,7 +293,8 @@ function minikube_get_ip {
   # Get the IPv4 address from minikube
 
   export MINIKUBE_IP=`minikube ip`
-  say "Got minikube IP: ${MINIKUBE_IP}"
+  export MINIKUBE_HOST=${MINIKUBE_IP//./-}.cloud.lan
+  say "Got minikube IP: ${MINIKUBE_IP}, Host: ${MINIKUBE_HOST}"
 }
 
 function minikube_stop {
@@ -323,7 +324,7 @@ function minikube_start {
    say "Starting minikube without cleanup"
   fi
 
-  minikube start --vm-driver kvm --kvm-network NAT
+  minikube start --insecure-registry true --vm-driver kvm --kvm-network NAT
 
   return $?
 }

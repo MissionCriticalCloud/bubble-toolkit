@@ -13,5 +13,18 @@ spec:
       containers:
       - name: registry
         image: registry
+        env:
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: "/etc/registry-certs/domain.crt"
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: "/etc/registry-certs/domain.key"
         ports:
         - containerPort: 5000
+        volumeMounts:
+        - name: cert
+          mountPath: "/etc/registry-certs"
+          readOnly: true 
+      volumes:
+      - name: cert
+        secret:
+          secretName: "registry-certs"

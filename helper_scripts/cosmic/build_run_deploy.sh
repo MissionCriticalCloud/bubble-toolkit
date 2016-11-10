@@ -145,7 +145,6 @@ function usage {
   printf "\t-V:\tVerbose logging" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
-  printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2

@@ -11,6 +11,12 @@ function cosmic_sources_retrieve {
   gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic.git' "${BASEDIR}/cosmic"  ${GITSSH}
 }
 
+function cosmic_spring-boot_sources_retrieve {
+  BASEDIR=$1
+  GITSSH=$2
+  gitclone_recursive 'ssh://git@sbp.gitlab.schubergphilis.com:2228/MCC/cosmic-spring-boot.git' "${BASEDIR}/cosmic-spring-boot"  ${GITSSH}
+}
+
 function gitclone_recursive {
   REPO_URL=$1
   CHECKOUT_PATH=$2

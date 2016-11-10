@@ -149,6 +149,7 @@ function usage {
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
+  printf "\t-S:\t(Experimental) make use of cosmic-spring-boot"
   printf "\nSkip flags:\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
@@ -173,11 +174,12 @@ scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
 enable_remote_debugging=1
+enable_cosmic_spring_boot=0
 gitssh=1
 verbose=0
 WORKSPACE_OVERRIDE=
 
-while getopts 'abCEHIm:T:tvVwW:xk' OPTION
+while getopts 'abCEHIm:ST:tvVwW:xk' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -195,6 +197,8 @@ do
   W)    WORKSPACE_OVERRIDE="$OPTARG"
         ;;
   m)    marvinCfg="$OPTARG"
+        ;;
+  S)    enable_cosmic_spring_boot=1
         ;;
   t)    skip_maven_build=1
         ;;
@@ -285,6 +289,9 @@ cd ${WORKSPACE}
 
 # 00100 Checkout the code
 cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  cosmic_spring-boot_sources_retrieve ${WORKSPACE} ${gitssh}
+fi
 
 # 00110 Config nexus for maven
 config_maven
@@ -301,13 +308,15 @@ else
 fi
 
 # 00450 Prepare minikube
-if [ ${skip_deploy_minikube} -eq 0 ]; then
-  PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
-  echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
-  "${CI_SCRIPTS}/ci-prepare-minikube.sh" 2>&1 > ${PREP_MINIKUBE_LOG}    &
-  PREP_MINIKUBE_PID=$!
-else
-  echo "Skipped prepare minikube"
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
+    PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
+    echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
+    "${CI_SCRIPTS}/ci-prepare-minikube.sh" 2>&1 > ${PREP_MINIKUBE_LOG}    &
+    PREP_MINIKUBE_PID=$!
+  else
+    echo "Skipped prepare minikube"
+  fi
 fi
 
 # 00200 Build, unless told to skip
@@ -322,16 +331,18 @@ else
 fi
 
 # 00550 Setup minikube
-if [ ${skip_deploy_minikube} -eq 0 ]; then
-  echo "Waiting for prepare-minikube to be ready."
-  wait ${PREP_MINIKUBE_PID}
-  echo "Prepare-minikube console output:"
-  cat  ${PREP_MINIKUBE_LOG}
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
+    echo "Waiting for prepare-minikube to be ready."
+    wait ${PREP_MINIKUBE_PID}
+    echo "Prepare-minikube console output:"
+    cat  ${PREP_MINIKUBE_LOG}
 
-  say "Setting up minikube."
-  "${CI_SCRIPTS}/ci-setup-minikube.sh"
-else
-  echo "Skipped setup minikube"
+    say "Setting up minikube."
+    "${CI_SCRIPTS}/ci-setup-minikube.sh"
+  else
+    echo "Skipped setup minikube"
+  fi
 fi
 
 # 00400 Prepare Infra, create VMs

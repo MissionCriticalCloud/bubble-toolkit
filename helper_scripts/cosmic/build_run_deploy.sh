@@ -282,6 +282,11 @@ COSMIC_CORE_PATH=$COSMIC_BUILD_PATH/cosmic-core
 PACKAGING_BUILD_PATH=$WORKSPACE/packaging
 CI_SCRIPTS=/data/shared/ci
 
+# Spring boot build path
+COSMIC_SB_BUILD_PATH=${WORKSPACE}/cosmic-spring-boot
+# Config server build path
+COSMIC_SB_CS_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-config-server
+
 
 # 00060 We work from here
 cd ${WORKSPACE}
@@ -329,14 +334,28 @@ else
   echo "Skipped maven build"
 fi
 
-# 00550 Setup minikube
+# ----- Wait for minikube
 if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     echo "Waiting for prepare-minikube to be ready."
     wait ${PREP_MINIKUBE_PID}
     echo "Prepare-minikube console output:"
     cat  ${PREP_MINIKUBE_LOG}
+  fi
+fi
 
+# Build cosmic-spring-boot
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  cd "${COSMIC_SB_CS_BUILD_PATH}"
+  minikube_get_ip &> /dev/null
+  mvn clean install
+  mvn package docker:build docker:push
+
+fi
+
+# 00550 Setup minikube
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
     say "Setting up minikube."
     "${CI_SCRIPTS}/ci-setup-minikube.sh"
   else

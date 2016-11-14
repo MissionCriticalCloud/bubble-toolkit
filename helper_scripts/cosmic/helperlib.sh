@@ -297,7 +297,7 @@ except:
 
 function minikube_get_ip {
   # Get the IPv4 address from minikube
-
+  eval $(minikube docker-env)
   export MINIKUBE_IP=`minikube ip`
   export MINIKUBE_HOST=${MINIKUBE_IP//./-}.cloud.lan
   say "Got minikube IP: ${MINIKUBE_IP}, Host: ${MINIKUBE_HOST}"

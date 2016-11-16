@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: cosmic-usage-db-api
+  namespace: cosmic
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cosmic-usage-db-api
+    spec:
+      containers:
+      - name: cosmic-usage-db-api
+        image: cosmic-usage-db-api

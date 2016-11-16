@@ -32,3 +32,7 @@ cosmic_usage_db
 
 say "Starting deployment: cosmic-config-server"
 cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-config-server.yml | sed "s/image: .*cosmic-config-server/image: ${MINIKUBE_HOST}:30081\/cosmic-config-server/g" | kubectl create -f -
+
+say "Starting deployment: cosmic-usage-db-api"
+cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-usage-db-api.yml | sed "s/image: .*cosmic-usage-db-api/image: ${MINIKUBE_HOST}:30081\/cosmic-usage-db-api/g" | kubectl create -f -
+

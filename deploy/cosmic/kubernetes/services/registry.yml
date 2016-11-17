@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mariadb-service
+  name: registry
   namespace: cosmic
 spec:
   selector:
-    app: mariadb
+    app: registry
   ports:
-    - port: 3306
+    - port: 5000
       protocol: TCP
-      targetPort: 3306
-      nodePort: 30061
+      targetPort: 5000
+      nodePort: 30081
   type: NodePort

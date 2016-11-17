@@ -91,7 +91,8 @@ function undeploy_cloudstack_war {
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  ${ssh_base} ${csuser}@${csip} service tomcat stop
+  ${ssh_base} ${csuser}@${csip} killall -9 java &> /dev/null || true
+  ${ssh_base} ${csuser}@${csip} service tomcat stop &> /dev/null
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
   ${ssh_base} ${csuser}@${csip} rm -rf /var/log/cosmic/
@@ -123,9 +124,9 @@ function cleanup_cs {
 
   undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
   # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
-  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" >/dev/null
-  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" >/dev/null
-  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" >/dev/null
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" &>/dev/null || true
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" &>/dev/null || true
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" &>/dev/null || true
 }
 function cleanup_kvm {
   local hvip=$1
@@ -412,6 +413,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       eval csip="\${cs${i}ip}"
       eval cspass="\${cs${i}ip}"
       # Cleanup CS in case of re-deploy
+      say "Cleanup ${csip}"
       cleanup_cs ${csip} ${csuser} ${cspass}
     fi
 
@@ -423,6 +425,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       eval hvuser="\${hvuser${i}}"
       eval hvip="\${hvip${i}}"
       eval hvpass="\${hvpass${i}}"
+      say "Cleanup ${hvip}"
       cleanup_kvm ${hvip} ${hvuser} ${hvpass}
     fi
   done

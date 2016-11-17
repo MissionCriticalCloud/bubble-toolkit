@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script builds and runs Cosmic and deploys a data center using the supplied Marvin config.
 # When KVM is used Cosmic Agent is installed on the hypervisor.
@@ -155,6 +156,7 @@ function usage {
   printf "\t-w:\tSkip setup infra (DB creation, war deploy, agent-rpm installs)\n" >&2
   printf "\t-x:\tSkip deploy DC\n" >&2
   printf "\t-k:\tSkip deploy minikube\n" >&2
+  printf "\t-K:\tKeep previous minikube infra\n" >&2
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
   printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -t -v)\n" >&2
@@ -173,11 +175,12 @@ scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
 enable_cosmic_spring_boot=0
+remove_minikube_infra="true"
 gitssh=1
 verbose=0
 WORKSPACE_OVERRIDE=
 
-while getopts 'abCEHIm:ST:tvVwW:xk' OPTION
+while getopts 'abCEHIm:ST:tvVwW:xkK' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -208,6 +211,8 @@ do
         ;;
   k)    skip_deploy_minikube=1
         ;;
+  K)    remove_minikube_infra="false"
+        ;;
   I)    run_tests=1
         ;;
   T)    compile_threads="-T $OPTARG"
@@ -217,22 +222,23 @@ done
 
 if [ ${verbose} -eq 1 ]; then
   echo "Received arguments:"
-  echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
-  echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
-  echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
-  echo "gitssh                   (-H) = ${gitssh}"
+  echo "disable_maven_clean           (-C) = ${disable_maven_clean}"
+  echo "disable_maven_unit_tests      (-E) = ${disable_maven_unit_tests}"
+  echo "WORKSPACE_OVERRIDE            (-W) = ${WORKSPACE_OVERRIDE}"
+  echo "gitssh                        (-H) = ${gitssh}"
   echo ""
-  echo "skip_maven_build     (-t) = ${skip_maven_build}"
-  echo "skip_prepare_infra   (-v) = ${skip_prepare_infra}"
-  echo "skip_setup_infra     (-w) = ${skip_setup_infra}"
-  echo "skip_deploy_dc       (-x) = ${skip_deploy_dc}"
-  echo "skip_deploy_minikube (-k) = ${skip_deploy_minikube}"
-  echo "run_tests            (-I) = ${run_tests}"
-  echo "marvinCfg            (-m) = ${marvinCfg}"
-  echo "compile_threads      (-T) = ${compile_threads}"
+  echo "skip_maven_build              (-t) = ${skip_maven_build}"
+  echo "skip_prepare_infra            (-v) = ${skip_prepare_infra}"
+  echo "skip_setup_infra              (-w) = ${skip_setup_infra}"
+  echo "skip_deploy_dc                (-x) = ${skip_deploy_dc}"
+  echo "skip_deploy_minikube          (-k) = ${skip_deploy_minikube}"
+  echo "remove_minikube_infra         (-K) = ${remove_minikube_infra}"
+  echo "run_tests                     (-I) = ${run_tests}"
+  echo "marvinCfg                     (-m) = ${marvinCfg}"
+  echo "compile_threads               (-T) = ${compile_threads}"
   echo ""
   echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
-  echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
+  echo "scenario_redeploy_cosmic      (-b) = ${scenario_redeploy_cosmic}"
   echo ""
 fi
 # Check if a marvin dc file was specified
@@ -316,7 +322,7 @@ if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
     echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
-    "${CI_SCRIPTS}/ci-prepare-minikube.sh" 2>&1 > ${PREP_MINIKUBE_LOG}    &
+    "${CI_SCRIPTS}/ci-prepare-minikube.sh" ${remove_minikube_infra} 2>&1 > ${PREP_MINIKUBE_LOG}    &
     PREP_MINIKUBE_PID=$!
   else
     echo "Skipped prepare minikube"

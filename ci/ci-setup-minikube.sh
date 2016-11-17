@@ -13,7 +13,6 @@ say "Running script: $0"
 
 minikube_get_ip
 
-
 function cosmic_usage_db {
     say "Setup Cosmic usage database"
 

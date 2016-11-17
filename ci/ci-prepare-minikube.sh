@@ -7,7 +7,14 @@ set -e
 
 say "Running script: $0"
 
-until minikube_start "true"
+if [ -z $1 ]; then
+  minikube_destroy="true"
+else
+  minikube_destroy=$1
+fi
+
+
+until minikube_start ${minikube_destroy}
 do
   say "minikube failed to start, retrying."
 done
@@ -19,11 +26,17 @@ until (echo > /dev/tcp/${MINIKUBE_IP}/8443) &> /dev/null; do
     sleep 1 
 done
 
-# Create cosmic namespace
-kubectl create namespace cosmic
+if [ "${minikube_destroy}" == "true" ]; then
+  # Create cosmic namespace
+  kubectl create namespace cosmic
+  kubectl create namespace internal
+else
+  kubectl delete --all deployments  --namespace=cosmic
+  kubectl delete --all services  --namespace=cosmic
+fi
 
 # Setup docker registry with certificates
-cosmic_docker_registry
+cosmic_docker_registry ${minikube_destroy}
 
 say "Starting deployment: rabbitmq"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq.yml

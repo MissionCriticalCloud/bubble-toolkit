@@ -1,10 +1,20 @@
 #!/bin/sh
 HELPERLIB_SH_SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+function say {
+  echo "==> $@"
+}
+
 function cosmic_sources_retrieve {
   BASEDIR=$1
   GITSSH=$2
   gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic.git' "${BASEDIR}/cosmic"  ${GITSSH}
+}
+
+function cosmic_spring-boot_sources_retrieve {
+  BASEDIR=$1
+  GITSSH=$2
+  gitclone_recursive 'ssh://git@sbp.gitlab.schubergphilis.com:2228/MCC/cosmic-spring-boot.git' "${BASEDIR}/cosmic-spring-boot"  ${GITSSH}
 }
 
 function gitclone_recursive {
@@ -14,7 +24,7 @@ function gitclone_recursive {
 
   mkdir -p "${CHECKOUT_PATH}"
   if [ ! -d "${CHECKOUT_PATH}/.git" ]; then
-    echo "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
+    say "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
   if [ -z ${GIT_SSH} ] || [ "${GIT_SSH}" -eq "1" ]; then
     git clone --recursive "${REPO_URL}" "${CHECKOUT_PATH}"
     else
@@ -26,9 +36,9 @@ function gitclone_recursive {
       git submodule update
       cd "${cwd}"
     fi
-    echo "Please use 'git checkout' to checkout the branch you need."
+    say "Please use 'git checkout' to checkout the branch you need."
   else
-    echo "Git repo already found at ${CHECKOUT_PATH}"
+    say "Git repo already found at ${CHECKOUT_PATH}"
   fi
 }
 
@@ -38,21 +48,21 @@ function gitclone {
   GIT_SSH=$3
   mkdir -p "${CHECKOUT_PATH}"
   if [ ! -d "${CHECKOUT_PATH}/.git" ]; then
-    echo "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
+    say "No git repo found at ${CHECKOUT_PATH}, cloning ${REPO_URL}"
     if [ -z ${GIT_SSH} ] || [ "${GIT_SSH}" -eq "1" ]; then
       git clone "${REPO_URL}" "${CHECKOUT_PATH}"
     else
       git clone `echo ${REPO_URL} | sed 's@git\@github.com:@https://github.com/@'` "${CHECKOUT_PATH}"
     fi
-    echo "Please use 'git checkout' to checkout the branch you need."
+    say "Please use 'git checkout' to checkout the branch you need."
   else
-    echo "Git repo already found at ${CHECKOUT_PATH}"
+    say "Git repo already found at ${CHECKOUT_PATH}"
   fi
 }
 
 function wget_fetch {
   if [ ! -f "$2" ]; then
-    echo "Fetching $1"
+    say "Fetching $1"
     wget "$1" -O "$2"
   fi
 }
@@ -80,7 +90,7 @@ function install_kvm_packages {
     fi
   fi
 
-  echo "Dist dir is ${distdir}"
+  say "Dist dir is ${distdir}"
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
@@ -285,58 +295,67 @@ except:
   done
 }
 
-# Depricated:
-# Following functions only used from build_run_deploy_test.sh
-function cloud_conf_cosmic {
-  # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
-  # Insert OVS bridge
-  # Garbage collector
-  cloud_conf_generic
-
-  # Adding the right SystemVMs, for both KVM and XenServer
-  cloud_conf_templ_system
-  # Adding the tiny linux VM templates for KVM and XenServer
-  cloud_conf_templ_tinylinux
-  # Make service offering support HA
-  cloud_conf_offerings_ha
+function minikube_get_ip {
+  # Get the IPv4 address from minikube
+  eval $(minikube docker-env)
+  export MINIKUBE_IP=`minikube ip`
+  export MINIKUBE_HOST=${MINIKUBE_IP//./-}.cloud.lan
+  say "Got minikube IP: ${MINIKUBE_IP}, Host: ${MINIKUBE_HOST}"
 }
 
-function cloud_conf_generic {
-  # $host_ip defined in build_run_deploy_test.sh
-  # Configure the hostname properly - it doesn't exist if the deployeDB doesn't include devcloud
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '$host_ip') ON DUPLICATE KEY UPDATE value = '$host_ip';"
-  # Insert OVS bridges
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.private.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.public.network.device', 'pub0') ON DUPLICATE KEY UPDATE value = 'pub0';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.guest.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  # Garbage collector
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '10') ON DUPLICATE KEY UPDATE value = '10';"
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '10') ON DUPLICATE KEY UPDATE value = '10';"
-  # Number of VPC tiers (as required by smoke/test_privategw_acl.py)
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
-  # Force stop when destroying (makes it faster)
-  mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vm.destroy.forcestop', 'true') ON DUPLICATE KEY UPDATE value = 'true';"
+function minikube_stop {
+  #Parameters
+  local cleanup=$1
+
+  # Start minikube
+  if [ "${cleanup}" == "true" ]; then
+   say "Stopping minikube with cleanup"
+   minikube stop || true
+   minikube delete || true
+  else
+   say "Stopping minikube without cleanup"
+   minikube stop || true
+  fi
 }
 
-function cloud_conf_templ_system {
-  # Adding the right SystemVMs, for both KVM and XenServer
-  echo "Config Templates"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2' where id=1;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
+function minikube_start {
+  #Parameters
+  local cleanup=$1
+
+  # Start minikube
+  if [ "${cleanup}" == "true" ]; then
+   say "Starting minikube with cleanup"
+   minikube_stop "true"
+  else
+   say "Starting minikube without cleanup"
+  fi
+
+  minikube start --insecure-registry true --vm-driver kvm --kvm-network NAT
+
+  return $?
 }
 
-function cloud_conf_templ_tinylinux {
-  # Adding the tiny linux VM templates for KVM and XenServer
-  echo "TinyLinux Templates"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
-}
+function cosmic_docker_registry {
+    say "Generating certificates for registry"
+    mkdir -p /tmp/registry/certs
+    rm -f /tmp/registry/certs/*
+    # Generate self-signed certificate
+    openssl req -x509 -sha256 -nodes -newkey rsa:4096 -keyout /tmp/registry/certs/domain.key -out /tmp/registry/certs/domain.crt -days 365 -subj "/C=NL/ST=NH/L=AMS/O=SBP/OU=cosmic/CN=${MINIKUBE_HOST}" &> /dev/null
+    # Add certificate to local trust store
+    sudo cp /tmp/registry/certs/domain.crt /etc/pki/ca-trust/source/anchors/
+    sudo update-ca-trust
+    # Add certificate to the docker deamon (to trust)
+    minikube ssh "sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081"
+    cat /tmp/registry/certs/domain.crt | minikube ssh "sudo cat > ca.crt"
+    minikube ssh "sudo mv ca.crt /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt"
+    minikube ssh "sudo /etc/init.d/docker restart"
 
-function cloud_conf_offerings_ha {
-  # Make service offering support HA
-  echo "Set all offerings to HA"
-  mysql -u cloud -pcloud cloud --exec "UPDATE service_offering SET ha_enabled = 1;"
-  mysql -u cloud -pcloud cloud --exec "UPDATE vm_instance SET ha_enabled = 1;"
+    say "Uploading certificates as secrets"
+    kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=cosmic
+
+    say "Starting deployment: registry"
+    kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry-deployment.yml
+
+    say "Starting service: registry"
+    kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry-service.yml
 }

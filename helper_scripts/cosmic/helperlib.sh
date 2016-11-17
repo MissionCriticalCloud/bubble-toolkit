@@ -354,8 +354,8 @@ function cosmic_docker_registry {
     kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=cosmic
 
     say "Starting deployment: registry"
-    kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry-deployment.yml
+    kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry.yml
 
     say "Starting service: registry"
-    kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry-service.yml
+    kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry.yml
 }

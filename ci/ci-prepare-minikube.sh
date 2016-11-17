@@ -26,14 +26,14 @@ kubectl create namespace cosmic
 cosmic_docker_registry
 
 say "Starting deployment: rabbitmq"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq-deployment.yml
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq.yml
 
 say "Starting service: rabbitmq"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/rabbitmq-service.yml
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/rabbitmq.yml
 
 say "Starting deployment: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb-deployment.yml
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb.yml
 
 say "Starting service: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb-service.yml
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb.yml
 

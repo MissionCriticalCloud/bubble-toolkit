@@ -367,4 +367,7 @@ function cosmic_docker_registry {
 
     say "Starting service: registry"
     kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry.yml
+
+    say "Waiting for registry service to be available."
+    until [[ $(kubectl get deployment --namespace=cosmic registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }

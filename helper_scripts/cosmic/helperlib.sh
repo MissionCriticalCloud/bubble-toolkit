@@ -330,7 +330,11 @@ function minikube_start {
    say "Starting minikube without cleanup"
   fi
 
-  minikube start --insecure-registry true --vm-driver kvm --kvm-network NAT
+  if [[ $(minikube status) =~ 'minikubeVM: Running' && $(minikube status) =~ 'localkube: Running' ]]; then 
+    say "Minikube already running"
+  else
+    minikube start --vm-driver kvm --kvm-network NAT
+  fi
 
   return $?
 }
@@ -359,15 +363,15 @@ function cosmic_docker_registry {
         minikube ssh "sudo /etc/init.d/docker restart"
 
         say "Uploading certificates as secrets"
-        kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=cosmic
+        kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=internal
+
+        say "Starting deployment: registry"
+        kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry.yml
+
+        say "Starting service: registry"
+        kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry.yml
     fi
 
-    say "Starting deployment: registry"
-    kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/registry.yml
-
-    say "Starting service: registry"
-    kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/registry.yml
-
     say "Waiting for registry service to be available."
-    until [[ $(kubectl get deployment --namespace=cosmic registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
+    until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }

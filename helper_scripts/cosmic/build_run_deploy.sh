@@ -170,7 +170,6 @@ scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
-enable_remote_debugging=1
 gitssh=1
 verbose=0
 WORKSPACE_OVERRIDE=
@@ -318,19 +317,18 @@ if [ ${skip_prepare_infra} -eq 0 ]; then
   if [ "${PREP_INFRA_RETURN}" -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
 fi
 
-if [ ${enable_remote_debugging} -eq 1 ]; then
-  for i in 1 2 3 4 5 6 7 8 9; do
-    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
-      hvuser=
-      hvip=
-      hvpass=
-      eval hvuser="\${hvuser${i}}"
-      eval hvip="\${hvip${i}}"
-      eval hvpass="\${hvpass${i}}"
-      enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass}
-    fi
-  done
-fi
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+    hvuser=
+    hvip=
+    hvpass=
+    eval hvuser="\${hvuser${i}}"
+    eval hvip="\${hvip${i}}"
+    eval hvpass="\${hvpass${i}}"
+    enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass}
+  fi
+done
+
 
 # 00500 Setup Infra
 if [ ${skip_setup_infra} -eq 0 ]; then
@@ -366,6 +364,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -rf ${primarystorage}/*
 
   # JENKINS: setupInfraForIntegrationTests: no change
+  enable_remote_debug_war ${csip} ${csuser} ${cspass}
   "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
 
 else
@@ -382,16 +381,13 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval csip="\${cs${i}ip}"
     eval cspass="\${cs${i}ip}"
 
-    if [ ${enable_remote_debugging} -eq 1 ]; then
-      enable_remote_debug_war ${csip} ${csuser} ${cspass}
-    fi
-
     if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
       # 00510 Setup only war deploy
       # Jenkins: war deploy is part of setupInfraForIntegrationTests
 
       # Cleanup CS in case of re-deploy
       undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+      enable_remote_debug_war ${csip} ${csuser} ${cspass}
       deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
     fi
   fi

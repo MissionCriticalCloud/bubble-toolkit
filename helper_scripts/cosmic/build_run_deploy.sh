@@ -419,6 +419,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
         enable_messagequeue ${csip} ${csuser} ${cspass} direct ${MINIKUBE_IP} 30103    
       fi
+      enable_remote_debug_war ${csip} ${csuser} ${cspass}
     fi
 
     # Clean KVMs in case of re-deploy
@@ -438,9 +439,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -rf ${primarystorage}/*
 
   # JENKINS: setupInfraForIntegrationTests: no change
-  enable_remote_debug_war ${csip} ${csuser} ${cspass}
   "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
-
 else
   echo "Skipped setup infra"
 fi

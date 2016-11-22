@@ -375,3 +375,32 @@ function cosmic_docker_registry {
     say "Waiting for registry service to be available."
     until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }
+
+function enable_messagequeue {
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+  local qtype=$4
+  local server=$5
+  local port=$6
+  say "Enable RabbitMQ message queue type: ${qtype} towards ${server}:${port}"
+
+  # SSH/SCP helpers
+  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+
+  if [[ "${qtype}" == "direct" ]]; then
+    local xml_config="${CI_SCRIPTS}/setup_files/direct-spring-event-bus-context.xml"
+  fi
+  if [[ "${qtype}" == "publish_subscribe" ]]; then
+    local xml_config="${CI_SCRIPTS}/setup_files/pubsub-spring-event-bus-context.xml"
+  fi
+
+  local xml_config_transfer=/tmp/spring-event-bus-context.xml-$$
+  cat "${xml_config}" | sed -e "s/192.168.22.1/${MINIKUBE_IP}/" -e 's/5011/30104/' -e 's/rbmquser/root/' -e 's/rbmqpassword/password/' >${xml_config_transfer}
+
+  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management/META-INF/cloudstack/core
+  ${scp_base} ${xml_config_transfer} ${csuser}@${csip}:/etc/cosmic/management/META-INF/cloudstack/core/spring-event-bus-context.xml
+}
+
+

@@ -7,10 +7,6 @@ function usage {
   printf "Usage: %s:\n" $(basename $0) >&2
 }
 
-function say {
-  echo "==> $@"
-}
-
 say "Running script: $0"
 
 

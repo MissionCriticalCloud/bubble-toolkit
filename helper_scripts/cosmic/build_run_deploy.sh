@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script builds and runs Cosmic and deploys a data center using the supplied Marvin config.
 # When KVM is used Cosmic Agent is installed on the hypervisor.
@@ -90,7 +91,8 @@ function undeploy_cloudstack_war {
 
   # SSH/SCP helpers
   ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  ${ssh_base} ${csuser}@${csip} service tomcat stop
+  ${ssh_base} ${csuser}@${csip} killall -9 java &> /dev/null || true
+  ${ssh_base} ${csuser}@${csip} service tomcat stop &> /dev/null
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
   ${ssh_base} ${csuser}@${csip} rm -rf /var/log/cosmic/
@@ -122,9 +124,9 @@ function cleanup_cs {
 
   undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
   # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
-  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" >/dev/null
-  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" >/dev/null
-  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" >/dev/null
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" &>/dev/null || true
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" &>/dev/null || true
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" &>/dev/null || true
 }
 function cleanup_kvm {
   local hvip=$1
@@ -145,15 +147,17 @@ function usage {
   printf "\t-V:\tVerbose logging" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2
-  printf "\t-D:\tEnable remote debugging on tomcat (port 8000)\n" >&2
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
+  printf "\t-S:\t(Experimental) make use of cosmic-spring-boot"
   printf "\nSkip flags:\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
   printf "\t-w:\tSkip setup infra (DB creation, war deploy, agent-rpm installs)\n" >&2
-  printf "\t-x:\tSkip deployDC\n" >&2
+  printf "\t-x:\tSkip deploy DC\n" >&2
+  printf "\t-k:\tSkip deploy minikube\n" >&2
+  printf "\t-K:\tKeep previous minikube infra\n" >&2
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
   printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -t -v)\n" >&2
@@ -164,17 +168,20 @@ skip_maven_build=0
 skip_prepare_infra=0
 skip_setup_infra=0
 skip_deploy_dc=0
+skip_deploy_minikube=0
 run_tests=0
 compile_threads=
 scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
+enable_cosmic_spring_boot=0
+remove_minikube_infra="true"
 gitssh=1
 verbose=0
 WORKSPACE_OVERRIDE=
 
-while getopts 'abCEHIm:T:tvVwW:x' OPTION
+while getopts 'abCEHIm:ST:tvVwW:xkK' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -193,6 +200,8 @@ do
         ;;
   m)    marvinCfg="$OPTARG"
         ;;
+  S)    enable_cosmic_spring_boot=1
+        ;;
   t)    skip_maven_build=1
         ;;
   v)    skip_prepare_infra=1
@@ -200,6 +209,10 @@ do
   w)    skip_setup_infra=1
         ;;
   x)    skip_deploy_dc=1
+        ;;
+  k)    skip_deploy_minikube=1
+        ;;
+  K)    remove_minikube_infra="false"
         ;;
   I)    run_tests=1
         ;;
@@ -210,21 +223,23 @@ done
 
 if [ ${verbose} -eq 1 ]; then
   echo "Received arguments:"
-  echo "disable_maven_clean      (-C) = ${disable_maven_clean}"
-  echo "disable_maven_unit_tests (-E) = ${disable_maven_unit_tests}"
-  echo "WORKSPACE_OVERRIDE       (-W) = ${WORKSPACE_OVERRIDE}"
-  echo "gitssh                   (-H) = ${gitssh}"
+  echo "disable_maven_clean           (-C) = ${disable_maven_clean}"
+  echo "disable_maven_unit_tests      (-E) = ${disable_maven_unit_tests}"
+  echo "WORKSPACE_OVERRIDE            (-W) = ${WORKSPACE_OVERRIDE}"
+  echo "gitssh                        (-H) = ${gitssh}"
   echo ""
-  echo "skip_maven_build   (-t) = ${skip_maven_build}"
-  echo "skip_prepare_infra (-v) = ${skip_prepare_infra}"
-  echo "skip_setup_infra   (-w) = ${skip_setup_infra}"
-  echo "skip_deploy_dc     (-x) = ${skip_deploy_dc}"
-  echo "run_tests          (-I) = ${run_tests}"
-  echo "marvinCfg          (-m) = ${marvinCfg}"
-  echo "compile_threads    (-T) = ${compile_threads}"
+  echo "skip_maven_build              (-t) = ${skip_maven_build}"
+  echo "skip_prepare_infra            (-v) = ${skip_prepare_infra}"
+  echo "skip_setup_infra              (-w) = ${skip_setup_infra}"
+  echo "skip_deploy_dc                (-x) = ${skip_deploy_dc}"
+  echo "skip_deploy_minikube          (-k) = ${skip_deploy_minikube}"
+  echo "remove_minikube_infra         (-K) = ${remove_minikube_infra}"
+  echo "run_tests                     (-I) = ${run_tests}"
+  echo "marvinCfg                     (-m) = ${marvinCfg}"
+  echo "compile_threads               (-T) = ${compile_threads}"
   echo ""
   echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
-  echo "scenario_redeploy_cosmic (-b)      = ${scenario_redeploy_cosmic}"
+  echo "scenario_redeploy_cosmic      (-b) = ${scenario_redeploy_cosmic}"
   echo ""
 fi
 # Check if a marvin dc file was specified
@@ -273,12 +288,21 @@ COSMIC_CORE_PATH=$COSMIC_BUILD_PATH/cosmic-core
 PACKAGING_BUILD_PATH=$WORKSPACE/packaging
 CI_SCRIPTS=/data/shared/ci
 
+# Spring boot build path
+COSMIC_SB_BUILD_PATH=${WORKSPACE}/cosmic-spring-boot
+# Config server build path
+COSMIC_SB_CS_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-config-server
+COSMIC_SB_DB_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-usage-db-api
+
 
 # 00060 We work from here
 cd ${WORKSPACE}
 
 # 00100 Checkout the code
 cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  cosmic_spring-boot_sources_retrieve ${WORKSPACE} ${gitssh}
+fi
 
 # 00110 Config nexus for maven
 config_maven
@@ -294,6 +318,18 @@ else
   echo "Skipped prepare infra"
 fi
 
+# 00450 Prepare minikube
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
+    PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
+    echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
+    "${CI_SCRIPTS}/ci-prepare-minikube.sh" ${remove_minikube_infra} 2>&1 > ${PREP_MINIKUBE_LOG}    &
+    PREP_MINIKUBE_PID=$!
+  else
+    echo "Skipped prepare minikube"
+  fi
+fi
+
 # 00200 Build, unless told to skip
 if [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
@@ -303,6 +339,38 @@ if [ ${skip_maven_build} -eq 0 ]; then
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else
   echo "Skipped maven build"
+fi
+
+# ----- Wait for minikube
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
+    echo "Waiting for prepare-minikube to be ready."
+    wait ${PREP_MINIKUBE_PID}
+    echo "Prepare-minikube console output:"
+    cat  ${PREP_MINIKUBE_LOG}
+  fi
+fi
+
+# Build cosmic-spring-boot
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  cd "${COSMIC_SB_CS_BUILD_PATH}"
+  minikube_get_ip &> /dev/null
+  mvn package docker:build docker:push
+
+  cd "${COSMIC_SB_DB_BUILD_PATH}"
+  minikube_get_ip &> /dev/null
+  mvn package docker:build docker:push
+
+fi
+
+# 00550 Setup minikube
+if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
+    say "Setting up minikube."
+    "${CI_SCRIPTS}/ci-setup-minikube.sh"
+  else
+    echo "Skipped setup minikube"
+  fi
 fi
 
 # 00400 Prepare Infra, create VMs
@@ -345,6 +413,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       eval csip="\${cs${i}ip}"
       eval cspass="\${cs${i}ip}"
       # Cleanup CS in case of re-deploy
+      say "Cleanup ${csip}"
       cleanup_cs ${csip} ${csuser} ${cspass}
     fi
 
@@ -356,6 +425,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       eval hvuser="\${hvuser${i}}"
       eval hvip="\${hvip${i}}"
       eval hvpass="\${hvpass${i}}"
+      say "Cleanup ${hvip}"
       cleanup_kvm ${hvip} ${hvuser} ${hvpass}
     fi
   done

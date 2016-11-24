@@ -9,10 +9,6 @@ function usage {
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
 }
 
-function say {
-  echo "==> $@"
-}
-
 say "Running script: $0"
 
 sudo yum install -y -q sshpass
@@ -137,8 +133,8 @@ function deploy_cosmic_db {
 function install_marvin {
   marvin_dist=$1
 
-  sudo pip install --upgrade ${marvin_dist}
-  sudo pip install nose --upgrade --force
+  sudo pip install --upgrade ${marvin_dist} &> /dev/null
+  sudo pip install nose --upgrade --force &> /dev/null
 
   say "Marvin installed"
 }
@@ -222,7 +218,7 @@ function deploy_cosmic_war {
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
-  ${ssh_base} ${csuser}@${csip} service tomcat start
+  ${ssh_base} ${csuser}@${csip} service tomcat start &> /dev/null
 
   say "WAR deployed"
 }

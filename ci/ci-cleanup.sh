@@ -7,10 +7,6 @@ function usage {
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
 }
 
-function say {
-  echo "==> $@"
-}
-
 say "Running script: $0"
 
 function collect_files_from_vm {

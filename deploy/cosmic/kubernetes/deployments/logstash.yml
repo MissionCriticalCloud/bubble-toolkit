@@ -1,0 +1,27 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: logstash
+  namespace: cosmic
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash
+        image: logstash:2
+        args:
+        - -f/config-dir/logstash.conf
+        - --debug
+        - --debug-config
+        volumeMounts:
+        - name: config-dir
+          mountPath: "/config-dir"
+          readOnly: true 
+      volumes:
+      - name: config-dir
+        secret:
+          secretName: "logstash.conf"

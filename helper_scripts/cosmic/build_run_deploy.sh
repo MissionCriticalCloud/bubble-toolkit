@@ -352,7 +352,14 @@ if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
     "${CI_SCRIPTS}/ci-prepare-minikube.sh" ${remove_minikube_infra} 2>&1 > ${PREP_MINIKUBE_LOG}    &
     PREP_MINIKUBE_PID=$!
   else
-    echo "Skipped prepare minikube"
+    echo "Skipped prepare minikube."
+  fi
+
+  if [ "${remove_minikube_infra}" == "false" ]; then
+    echo "Minikube infra retained, cleanup..."
+    if [[ $(kubectl get secret --all-namespaces | egrep logstash.conf) = *logstash.conf* ]]; then
+      kubectl delete secret --namespace=cosmic logstash.conf
+    fi
   fi
 fi
 

@@ -285,7 +285,6 @@ fi
 echo "Started!"
 date
 if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
-  skip_maven_build=0
   skip_prepare_infra=1
   skip_setup_infra=1
   skip_deploy_dc=1

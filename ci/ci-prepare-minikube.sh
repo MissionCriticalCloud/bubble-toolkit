@@ -44,12 +44,6 @@ kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq.yml
 say "Starting service: rabbitmq"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/rabbitmq.yml
 
-say "Starting deployment: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb.yml
-
-say "Starting service: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb.yml
-
 say "Starting deployment: elasticsearch"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/elasticsearch.yml
 

@@ -318,8 +318,6 @@ CI_SCRIPTS=/data/shared/ci
 COSMIC_SB_BUILD_PATH=${WORKSPACE}/cosmic-spring-boot
 # Config server build path
 COSMIC_SB_CS_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-config-server
-COSMIC_SB_DB_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-usage-db-api
-
 
 # 00060 We work from here
 cd ${WORKSPACE}
@@ -389,11 +387,6 @@ if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
   cd "${COSMIC_SB_CS_BUILD_PATH}"
   minikube_get_ip &> /dev/null
   mvn package docker:build docker:push
-
-  cd "${COSMIC_SB_DB_BUILD_PATH}"
-  minikube_get_ip &> /dev/null
-  mvn package docker:build docker:push
-
 fi
 
 # 00550 Setup minikube

@@ -17,6 +17,10 @@ say "Starting deployment: cosmic-config-server"
 cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-config-server.yml | sed "s/image: .*cosmic-config-server/image: ${MINIKUBE_HOST}:30081\/missioncriticalcloud\/cosmic-config-server/g" | kubectl create -f -
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-config-server.yml
 
+say "Waiting for cosmic-config-server to be available."
+until curl -m 5 -sD - http://${MINIKUBE_IP}:31001/cosmic-usage-api/development | grep "HTTP/1.1 200" &>/dev/null
+do echo -n .; sleep 1; done; echo ""
+
 say "Starting deployment: cosmic-metrics-collector"
 cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-metrics-collector.yml | sed "s/image: .*cosmic-metrics-collector/image: ${MINIKUBE_HOST}:30081\/missioncriticalcloud\/cosmic-metrics-collector/g" | kubectl create -f -
 

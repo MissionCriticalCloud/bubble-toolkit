@@ -314,9 +314,11 @@ PACKAGING_BUILD_PATH=$WORKSPACE/packaging
 CI_SCRIPTS=/data/shared/ci
 
 # Spring boot build path
-COSMIC_SB_BUILD_PATH=${WORKSPACE}/cosmic-microservices
-# Config server build path
-COSMIC_SB_CS_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-config-server
+COSMIC_MS_BUILD_PATH=${WORKSPACE}/cosmic-microservices
+# Microservices build path
+COSMIC_MS_CS_BUILD_PATH=${COSMIC_MS_BUILD_PATH}/cosmic-config-server
+COSMIC_MS_MC_BUILD_PATH=${COSMIC_MS_BUILD_PATH}/cosmic-metrics-collector
+COSMIC_MS_UA_BUILD_PATH=${COSMIC_MS_BUILD_PATH}/cosmic-usage-api
 
 # 00060 We work from here
 cd ${WORKSPACE}
@@ -383,9 +385,13 @@ fi
 
 # Build cosmic-microservices
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
-  cd "${COSMIC_SB_CS_BUILD_PATH}"
   minikube_get_ip &> /dev/null
-  mvn package docker:build docker:push
+  cd "${COSMIC_MS_CS_BUILD_PATH}"
+  mvn clean install
+  cd "${COSMIC_MS_MC_BUILD_PATH}"
+  mvn clean install
+  cd "${COSMIC_MS_UA_BUILD_PATH}"
+  mvn clean install
 fi
 
 # 00550 Setup minikube

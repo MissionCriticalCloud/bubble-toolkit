@@ -168,7 +168,7 @@ function usage {
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
-  printf "\t-S:\t(Experimental) make use of cosmic-spring-boot"
+  printf "\t-S:\t(Experimental) make use of cosmic-microservices"
   printf "\nSkip flags:\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
@@ -195,7 +195,7 @@ scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
-enable_cosmic_spring_boot=0
+enable_cosmic_microservices=0
 remove_minikube_infra="true"
 gitssh=1
 verbose=0
@@ -224,7 +224,7 @@ do
         ;;
   p)    debug_kvm_startup=1
         ;;
-  S)    enable_cosmic_spring_boot=1
+  S)    enable_cosmic_microservices=1
         ;;
   t)    skip_maven_build=1
         ;;
@@ -314,7 +314,7 @@ PACKAGING_BUILD_PATH=$WORKSPACE/packaging
 CI_SCRIPTS=/data/shared/ci
 
 # Spring boot build path
-COSMIC_SB_BUILD_PATH=${WORKSPACE}/cosmic-spring-boot
+COSMIC_SB_BUILD_PATH=${WORKSPACE}/cosmic-microservices
 # Config server build path
 COSMIC_SB_CS_BUILD_PATH=${COSMIC_SB_BUILD_PATH}/cosmic-config-server
 
@@ -323,8 +323,8 @@ cd ${WORKSPACE}
 
 # 00100 Checkout the code
 cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
-if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
-  cosmic_spring-boot_sources_retrieve ${WORKSPACE} ${gitssh}
+if [ ${enable_cosmic_microservices} -eq 1 ]; then
+  cosmic_microservices_sources_retrieve ${WORKSPACE} ${gitssh}
 fi
 
 # 00110 Config nexus for maven
@@ -342,7 +342,7 @@ else
 fi
 
 # 00450 Prepare minikube
-if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
     echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
@@ -354,8 +354,8 @@ if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
 
   if [ "${remove_minikube_infra}" == "false" ]; then
     echo "Minikube infra retained, cleanup..."
-    if [[ $(kubectl get secret --all-namespaces | egrep logstash.conf) = *logstash.conf* ]]; then
-      kubectl delete secret --namespace=cosmic logstash.conf
+    if [[ $(kubectl get secret --all-namespaces | egrep logstash-files) = *logstash-files* ]]; then
+      kubectl delete secret --namespace=cosmic logstash-files
     fi
   fi
 fi
@@ -372,7 +372,7 @@ else
 fi
 
 # ----- Wait for minikube
-if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     echo "Waiting for prepare-minikube to be ready."
     wait ${PREP_MINIKUBE_PID}
@@ -381,15 +381,15 @@ if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
   fi
 fi
 
-# Build cosmic-spring-boot
-if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+# Build cosmic-microservices
+if [ ${enable_cosmic_microservices} -eq 1 ]; then
   cd "${COSMIC_SB_CS_BUILD_PATH}"
   minikube_get_ip &> /dev/null
   mvn package docker:build docker:push
 fi
 
 # 00550 Setup minikube
-if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     say "Setting up minikube."
     "${CI_SCRIPTS}/ci-setup-minikube.sh"
@@ -441,7 +441,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       say "Cleanup ${csip}"
       cleanup_cs ${csip} ${csuser} ${cspass}
       # Add config to management saerver for message queue
-      if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+      if [ ${enable_cosmic_microservices} -eq 1 ]; then
         enable_messagequeue ${csip} ${csuser} ${cspass} direct ${MINIKUBE_IP} 30103    
       fi
       enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
@@ -486,7 +486,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
       # Cleanup CS in case of re-deploy
       undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
       enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
-      if [ ${enable_cosmic_spring_boot} -eq 1 ]; then
+      if [ ${enable_cosmic_microservices} -eq 1 ]; then
         enable_messagequeue ${csip} ${csuser} ${cspass} direct ${MINIKUBE_IP} 30103
       fi
       deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'

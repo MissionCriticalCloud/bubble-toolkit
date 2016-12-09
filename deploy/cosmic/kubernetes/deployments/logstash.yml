@@ -24,4 +24,4 @@ spec:
       volumes:
       - name: config-dir
         secret:
-          secretName: "logstash.conf"
+          secretName: "logstash-files"

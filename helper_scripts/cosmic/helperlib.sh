@@ -375,3 +375,34 @@ function cosmic_docker_registry {
     say "Waiting for registry service to be available."
     until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }
+
+
+# Some convenient helper methods for container troubleshooting
+function d_show_message_queue {
+  if [ -z "${MINIKUBE_IP}" ]; then minikube_get_ip; fi
+  echo "Show queues on ${MINIKUBE_IP}"
+  curl -s -u root:password "http://${MINIKUBE_IP}:30101/api/queues?columns=name,messages,message_stats.publish,message_stats.deliver" | python -m json.tool
+}
+
+function d_show_usage {
+  if [ -z "${MINIKUBE_IP}" ]; then minikube_get_ip; fi
+  local STARTDATE=$(date +'%Y-%m-01')
+  local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months")
+
+  echo "Show usage (unfiltered) from ${STARTDATE} till ${ENDDATE}"
+  curl http://${MINIKUBE_IP}:31011\?\from\=${STARTDATE}\&to\=${ENDDATE}
+  echo ""
+}
+
+function d_show_elasticsearch_aggr_by_vm {
+  if [ -z "${MINIKUBE_IP}" ]; then minikube_get_ip; fi
+
+  if [ -z "${STARTDATE}" ]; then local STARTDATE=$(date +'%Y-%m-01'); fi
+  if [ -z "${ENDDATE}" ]; then local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months"); fi
+  echo "Show usage aggregated by VM from ${STARTDATE} till ${ENDDATE}"
+
+  echo '{"query":{"bool":{"must":[{"range":{"@timestamp":{"gte":"STARTDATE","lt":"ENDDATE"}}},{"term":{"resourceType":"VirtualMachine"}}]}},"from":0,"size":0,"aggs":{"domains":{"terms":{"field":"domainUuid"},"aggs":{"virtualMachines":{"terms":{"field":"resourceUuid"},"aggs":{"states":{"terms":{"field":"payload.state"},"aggs":{"cpu":{"avg":{"field":"payload.cpu"}},"memory":{"avg":{"field":"payload.memory"}}}}}}}}}}' | \
+  sed "s/STARTDATE/${STARTDATE}/g" | \
+  sed "s/ENDDATE/${ENDDATE}/g" | \
+  curl -s -X POST http://${MINIKUBE_IP}:30121/_search -d@- | python -m json.tool
+}

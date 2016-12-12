@@ -446,10 +446,6 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       # Cleanup CS in case of re-deploy
       say "Cleanup ${csip}"
       cleanup_cs ${csip} ${csuser} ${cspass}
-      # Add config to management saerver for message queue
-      if [ ${enable_cosmic_microservices} -eq 1 ]; then
-        enable_messagequeue ${csip} ${csuser} ${cspass} direct ${MINIKUBE_IP} 30103    
-      fi
       enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
     fi
 
@@ -492,9 +488,6 @@ for i in 1 2 3 4 5 6 7 8 9; do
       # Cleanup CS in case of re-deploy
       undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
       enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
-      if [ ${enable_cosmic_microservices} -eq 1 ]; then
-        enable_messagequeue ${csip} ${csuser} ${cspass} direct ${MINIKUBE_IP} 30103
-      fi
       deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
     fi
   fi

@@ -14,6 +14,7 @@ sed -i 's/#baseurl/baseurl/' /etc/yum.repos.d/*.repo
 
 # Install dependencies for KVM on Cloudstack
 sleep 5
+yum -y update
 yum -y install epel-release qemu-kvm libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass wget vim socat
 yum --enablerepo=epel -y install sshpass
 

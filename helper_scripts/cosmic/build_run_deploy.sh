@@ -158,8 +158,8 @@ function usage {
   printf "\t-m:\tMarvin config\n" >&2
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
   printf "\t-W:\tOverride workspace folder\n" >&2
-  printf "\t-V:\tVerbose logging" >&2
-  printf "\t-o:\tSuspend management server on startup (DEBUG)" >&2
+  printf "\t-V:\tVerbose logging\n" >&2
+  printf "\t-o:\tSuspend management server on startup (DEBUG)\n" >&2
   printf "\t-p:\tSuspend kvm hypervisor on startup (DEBUG)" >&2
   printf "\nFeature flags:\n" >&2
   printf "\t-I:\tRun integration tests\n" >&2

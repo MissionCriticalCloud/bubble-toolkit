@@ -386,12 +386,13 @@ fi
 # Build cosmic-microservices
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   minikube_get_ip &> /dev/null
+  mvn_args="clean install -P development -Ddocker.push.registry=${MINIKUBE_HOST}:30081"
   cd "${COSMIC_MS_CS_BUILD_PATH}"
-  mvn clean install
+  mvn $mvn_args
   cd "${COSMIC_MS_MC_BUILD_PATH}"
-  mvn clean install
+  mvn $mvn_args
   cd "${COSMIC_MS_UA_BUILD_PATH}"
-  mvn clean install
+  mvn $mvn_args
 fi
 
 # 00550 Setup minikube

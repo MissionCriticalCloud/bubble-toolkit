@@ -52,6 +52,7 @@ function add_nsx_connectivy_to_offerings {
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.ntwk_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.network_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.ntwk_offering_service_map X);"
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.vpc_offering_service_map (vpc_offering_id, service, provider, created) (SELECT DISTINCT X.vpc_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.vpc_offering_service_map X);"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.ntwk_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.network_offerings X WHERE name = 'System-Private-Gateway-Network-Offering');"
 }
 
 function add_nsx_controller_to_cosmic {

@@ -54,36 +54,40 @@ sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 ### OVS ###
 ADM_IP=
 # Test to see if we have the internal mctadm1 box available
-#ping -c1 mctadm1 >/dev/null 2>&1
-#if [ $? -eq 0 ]; then
-#  ADM_IP='mctadm1'
-#fi
+ping -c1 mctadm1 >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  ADM_IP='mctadm1'
+fi
 
 ## Check if 192.168.31.41 is available.
-#ping -c1 192.168.31.41 >/dev/null 2>&1
-#if [ $? -eq 0 ]; then
-#  ADM_IP='192.168.31.41'
-#fi
+ping -c1 192.168.31.41 >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  ADM_IP='192.168.31.41'
+fi
 
 # If mctadm1 is available, get OVS packages from it
-#if [ ! -v $( eval "echo \${ADM_IP}" ) ]
-#  then
-#  echo "Detected we have an internal server to get OVS packages from."
-#  # Custom 2.5.1
-#  mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
-#  yum -y install "kernel-devel-$(uname -r)"
-#  yum -y install http://${ADM_IP}/openvswitch/openvswitch-dkms-2.5.1-1.el7.centos.x86_64.rpm
-#  yum -y install http://${ADM_IP}/openvswitch/openvswitch-2.5.1-1.el7.centos.x86_64.rpm
-## If not, fall back to community sources
-#else
-
-echo "Installing OVS from community sources."
-# Comunity 2.4.x
-yum install -y yum-utils
-yum-config-manager --enablerepo=extras
-yum install -y centos-release-openstack-mitaka
-yum install -y openvswitch
-#fi
+if [ ! -v $( eval "echo \${ADM_IP}" ) ]
+then
+    echo "Detected we have an internal server to get OVS packages from."
+    # Custom 2.6.2 with STT
+    mv "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.ko" "/lib/modules/$(uname -r)/kernel/net/openvswitch/openvswitch.org"
+    yum -y install "kernel-devel-$(uname -r)"
+    yum install -y dkms
+    sed -i -e 's/srcversion:/srcversion.disabled:/' /usr/sbin/dkms
+    yum -y install http://${ADM_IP}/openvswitch/openvswitch-dkms-2.6.2-1.el7.centos.x86_64.rpm
+    yum -y install http://${ADM_IP}/openvswitch/openvswitch-2.6.2-1.el7.centos.x86_64.rpm
+    dkms uninstall openvswitch/2.6.2
+    dkms autoinstall openvswitch/2.6.2
+    dkms status
+# If not, fall back to community sources
+else
+    echo "Installing OVS from community sources."
+    # Comunity 2.4.x
+    yum install -y yum-utils
+    yum-config-manager --enablerepo=extras
+    yum install -y centos-release-openstack-mitaka
+    yum install -y openvswitch
+fi
 
 # Start and enable OVS
 systemctl enable openvswitch

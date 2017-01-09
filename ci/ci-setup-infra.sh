@@ -441,7 +441,7 @@ say "Deploying Cosmic DB"
 deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Installing Marvin"
-install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=releases&g=cloud.cosmic&a=cloud-marvin&v=RELEASE&p=tar.gz"
+install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
 
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/cosmic-systemvm.qcow2"

@@ -3,7 +3,7 @@
 scripts_dir=$(dirname $0)
 . ${scripts_dir}/../helper_scripts/cosmic/helperlib.sh
 
-set -x
+set -e
 
 function usage {
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
@@ -335,19 +335,15 @@ function authenticate_nsx {
   say "Authenticating against NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
 
-  is_still_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
-  if [ $? -gt 0 ]; then
-     echo "Not master, look for the new one"
-      nsx_master_controller_node_ip_new=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 301|Location' | grep 'Location' | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}')
+  nsx_master_controller_node_ip_new=
+  nsx_master_controller_node_ip_new=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 301|Location' | grep 'Location' | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}')
 
-      if [ ! -v "${nsx_master_controller_node_ip_new}" ]; then
-        curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip_new}/ws.v1/login
-        echo "New master ip ${nsx_master_controller_node_ip_new}"
-        echo "Old master ip ${nsx_master_controller_node_ip}"
-        export nsx_master_controller_node_ip=${nsx_master_controller_node_ip_new}
-      fi
-  else
-    export nsx_master_controller_node_ip=${nsx_master_controller_node_ip}
+  if [ ! -v "${nsx_master_controller_node_ip_new}" ]; then
+    curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip_new}/ws.v1/login
+    echo "New master ip ${nsx_master_controller_node_ip_new}"
+    echo "Old master ip ${nsx_master_controller_node_ip}"
+
+    export nsx_master_controller_node_ip=${nsx_master_controller_node_ip_new}
   fi
 }
 
@@ -441,7 +437,7 @@ say "Deploying Cosmic DB"
 deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Installing Marvin"
-install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=releases&g=cloud.cosmic&a=cloud-marvin&v=RELEASE&p=tar.gz"
+install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=snapshots&g=cloud.cosmic&a=cloud-marvin&v=LATEST&p=tar.gz"
 
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/cosmic-systemvm.qcow2"

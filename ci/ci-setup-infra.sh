@@ -130,15 +130,6 @@ function deploy_cosmic_db {
   say "Cosmic DB deployed at ${csip}"
 }
 
-function install_marvin {
-  marvin_dist=$1
-
-  sudo pip install --upgrade ${marvin_dist} &> /dev/null
-  sudo pip install nose --upgrade --force &> /dev/null
-
-  say "Marvin installed"
-}
-
 function install_systemvm_templates {
   csip=$1
   csuser=$2
@@ -439,9 +430,6 @@ mkdir -p ${secondarystorage}
 
 say "Deploying Cosmic DB"
 deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
-
-say "Installing Marvin"
-install_marvin "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=releases&g=cloud.cosmic&a=cloud-marvin&v=RELEASE&p=tar.gz"
 
 say "Installing SystemVM templates"
 systemtemplate="/data/templates/cosmic-systemvm.qcow2"

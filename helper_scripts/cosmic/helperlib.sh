@@ -296,6 +296,8 @@ except:
 }
 
 function marvin_build_and_install {
+  cwd=$(pwd)
+
   # Marvin's root path
   build_dir=$1
 
@@ -329,6 +331,7 @@ function marvin_build_and_install {
   sudo pip install nose --upgrade --force &> /dev/null
 
   say "[MARVIN] Successfully installed"
+  cd "${cwd}"
 }
 
 function minikube_get_ip {

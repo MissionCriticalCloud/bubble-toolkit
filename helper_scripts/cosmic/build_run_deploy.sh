@@ -23,6 +23,7 @@ scripts_dir="$(dirname $0)/../../ci"
 
 
 function maven_build {
+  cwd=$(pwd)
   build_dir=$1
   compile_threads=$2
   disable_maven_clean=$3
@@ -56,6 +57,7 @@ function maven_build {
     echo "Build failed, please investigate!"
     exit 1
   fi
+  cd "${cwd}"
   date
 }
 

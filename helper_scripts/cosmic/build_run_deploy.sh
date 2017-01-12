@@ -311,7 +311,6 @@ echo "Using workspace '${WORKSPACE}'."
 
 COSMIC_BUILD_PATH=$WORKSPACE/cosmic
 COSMIC_CORE_PATH=$COSMIC_BUILD_PATH/cosmic-core
-COSMIC_MARVIN_PATH=$COSMIC_BUILD_PATH/cosmic-marvin
 PACKAGING_BUILD_PATH=$WORKSPACE/packaging
 CI_SCRIPTS=/data/shared/ci
 
@@ -362,7 +361,6 @@ if [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
 
   maven_build "$COSMIC_BUILD_PATH" "${compile_threads}" ${disable_maven_clean} ${disable_maven_unit_tests}
-  marvin_build_and_install "$COSMIC_MARVIN_PATH"
 
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else

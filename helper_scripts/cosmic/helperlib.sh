@@ -295,6 +295,42 @@ except:
   done
 }
 
+function marvin_build_and_install {
+  # Marvin's root path
+  build_dir=$1
+
+  say "[MARVIN] Installing..."
+
+  # Generate Cosmic API commands
+  say "[MARVIN] Generating API commands..."
+  cd "${build_dir}/marvin"
+  rm -rf ./cloudstackAPI
+  python codegenerator.py -s ../../cosmic-core/apidoc/target/commands.xml
+  say "[MARVIN] API commands generated"
+
+  # Back to Marvin's root path
+  cd "${build_dir}"
+
+  # Test Marvin
+  say "[MARVIN] Starting tests..."
+  nosetests -v --with-xunit tests
+
+  # Create Marvin distribution package
+  say "[MARVIN] Creating distribution package..."
+  python setup.py sdist
+
+  # Find out Marvin's version
+  version=$(grep "VERSION = " setup.py | grep -o "'.*'" | sed "s/'//g")
+  marvin_dist="dist/Marvin-${version}.tar.gz"
+
+  # Locally install Marvin distribution package
+  say "[MARVIN] Locally installing distribution package..."
+  sudo pip install --upgrade ${marvin_dist} &> /dev/null
+  sudo pip install nose --upgrade --force &> /dev/null
+
+  say "[MARVIN] Successfully installed"
+}
+
 function minikube_get_ip {
   # Get the IPv4 address from minikube
   eval $(minikube docker-env)

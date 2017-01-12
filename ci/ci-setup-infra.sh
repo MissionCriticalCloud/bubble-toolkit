@@ -426,6 +426,8 @@ fi
 
 parse_marvin_config ${marvin_config}
 
+marvin_build_and_install "$PWD/cosmic-marvin"
+
 mkdir -p ${secondarystorage}
 
 say "Deploying Cosmic DB"

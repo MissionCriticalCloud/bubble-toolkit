@@ -59,42 +59,6 @@ function maven_build {
   date
 }
 
-function marvin_build {
-  # Marvin's root path
-  build_dir=$1
-
-  say "[MARVIN] Installing..."
-
-  # Generate Cosmic API commands
-  say "[MARVIN] Generating API commands..."
-  cd "${build_dir}/marvin"
-  rm -rf ./cloudstackAPI
-  python codegenerator.py -s ../../cosmic-core/apidoc/target/commands.xml
-  say "[MARVIN] API commands generated"
-
-  # Back to Marvin's root path
-  cd "${build_dir}"
-
-  # Test Marvin
-  say "[MARVIN] Starting tests..."
-  nosetests -v --with-xunit tests
-
-  # Create Marvin distribution package
-  say "[MARVIN] Creating distribution package..."
-  python setup.py sdist
-
-  # Find out Marvin's version
-  version=$(grep "VERSION = " setup.py | grep -o "'.*'" | sed "s/'//g")
-  marvin_dist="dist/Marvin-${version}.tar.gz"
-
-  # Locally install Marvin distribution package
-  say "[MARVIN] Locally installing distribution package..."
-  sudo pip install --upgrade ${marvin_dist} &> /dev/null
-  sudo pip install nose --upgrade --force &> /dev/null
-
-  say "[MARVIN] Successfully installed"
-}
-
 # deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
 # so should be moved to a "library" sh script which can be sourced
 function deploy_cloudstack_war {
@@ -396,7 +360,7 @@ if [ ${skip_maven_build} -eq 0 ]; then
   # Compile Cosmic
 
   maven_build "$COSMIC_BUILD_PATH" "${compile_threads}" ${disable_maven_clean} ${disable_maven_unit_tests}
-  marvin_build "$COSMIC_MARVIN_PATH"
+  marvin_build_and_install "$COSMIC_MARVIN_PATH"
 
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else

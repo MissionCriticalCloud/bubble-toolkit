@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: cosmic
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - port: 9200
+      name: http-port
+      protocol: TCP
+      targetPort: 9200
+      nodePort: 30121
+    - port: 9300
+      name: bin-port
+      protocol: TCP
+      targetPort: 9300
+      nodePort: 30122
+  type: NodePort

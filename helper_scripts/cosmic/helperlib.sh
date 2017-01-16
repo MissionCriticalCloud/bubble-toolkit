@@ -11,10 +11,10 @@ function cosmic_sources_retrieve {
   gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic.git' "${BASEDIR}/cosmic"  ${GITSSH}
 }
 
-function cosmic_spring-boot_sources_retrieve {
+function cosmic_microservices_sources_retrieve {
   BASEDIR=$1
   GITSSH=$2
-  gitclone_recursive 'ssh://git@sbp.gitlab.schubergphilis.com:2228/MCC/cosmic-spring-boot.git' "${BASEDIR}/cosmic-spring-boot"  ${GITSSH}
+  gitclone_recursive 'ssh://git@sbp.gitlab.schubergphilis.com:2228/MCC/cosmic-microservices.git' "${BASEDIR}/cosmic-microservices"  ${GITSSH}
 }
 
 function gitclone_recursive {
@@ -415,31 +415,33 @@ function cosmic_docker_registry {
     until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }
 
-function enable_messagequeue {
-  local csip=$1
-  local csuser=$2
-  local cspass=$3
-  local qtype=$4
-  local server=$5
-  local port=$6
-  say "Enable RabbitMQ message queue type: ${qtype} towards ${server}:${port}"
 
-  # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
-
-  if [[ "${qtype}" == "direct" ]]; then
-    local xml_config="${CI_SCRIPTS}/setup_files/direct-spring-event-bus-context.xml"
-  fi
-  if [[ "${qtype}" == "publish_subscribe" ]]; then
-    local xml_config="${CI_SCRIPTS}/setup_files/pubsub-spring-event-bus-context.xml"
-  fi
-
-  local xml_config_transfer=/tmp/spring-event-bus-context.xml-$$
-  cat "${xml_config}" | sed -e "s/192.168.22.1/${MINIKUBE_IP}/" -e 's/5011/30104/' -e 's/rbmquser/root/' -e 's/rbmqpassword/password/' >${xml_config_transfer}
-
-  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management/META-INF/cloudstack/core
-  ${scp_base} ${xml_config_transfer} ${csuser}@${csip}:/etc/cosmic/management/META-INF/cloudstack/core/spring-event-bus-context.xml
+# Some convenient helper methods for container troubleshooting
+function d_show_message_queue {
+  if [ -z "${MINIKUBE_IP}" ]; then minikube_get_ip; fi
+  echo "Show queues on ${MINIKUBE_IP}"
+  curl -s -u root:password "http://${MINIKUBE_IP}:30101/api/queues?columns=name,messages,message_stats.publish,message_stats.deliver" | python -m json.tool
 }
 
+function d_show_usage {
+  if [ -z "${MINIKUBE_IP}" ]; then minikube_get_ip; fi
+  local STARTDATE=$(date +'%Y-%m-01')
+  local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months")
 
+  echo "Show usage (unfiltered) from ${STARTDATE} till ${ENDDATE}"
+  curl http://${MINIKUBE_IP}:31011\?\from\=${STARTDATE}\&to\=${ENDDATE}
+  echo ""
+}
+
+function d_show_elasticsearch_aggr_by_vm {
+  if [ -z "${MINIKUBE_IP}" ]; then minikube_get_ip; fi
+
+  if [ -z "${STARTDATE}" ]; then local STARTDATE=$(date +'%Y-%m-01'); fi
+  if [ -z "${ENDDATE}" ]; then local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months"); fi
+  echo "Show usage aggregated by VM from ${STARTDATE} till ${ENDDATE}"
+
+  echo '{"query":{"bool":{"must":[{"range":{"@timestamp":{"gte":"STARTDATE","lt":"ENDDATE"}}},{"term":{"resourceType":"VirtualMachine"}}]}},"from":0,"size":0,"aggs":{"domains":{"terms":{"field":"domainUuid"},"aggs":{"virtualMachines":{"terms":{"field":"resourceUuid"},"aggs":{"states":{"terms":{"field":"payload.state"},"aggs":{"cpu":{"avg":{"field":"payload.cpu"}},"memory":{"avg":{"field":"payload.memory"}}}}}}}}}}' | \
+  sed "s/STARTDATE/${STARTDATE}/g" | \
+  sed "s/ENDDATE/${ENDDATE}/g" | \
+  curl -s -X POST http://${MINIKUBE_IP}:30121/_search -d@- | python -m json.tool
+}

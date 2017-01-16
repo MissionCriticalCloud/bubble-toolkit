@@ -44,9 +44,14 @@ kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq.yml
 say "Starting service: rabbitmq"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/rabbitmq.yml
 
-say "Starting deployment: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/mariadb.yml
+say "Starting deployment: elasticsearch"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/elasticsearch.yml
 
-say "Starting service: mariadb"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/mariadb.yml
+say "Starting service: elasticsearch"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/elasticsearch.yml
 
+say "Adding logstash.conf file"
+kubectl create secret generic logstash-files --from-file=/data/shared/ci/setup_files/logstash.conf --from-file=/data/shared/ci/setup_files/cosmic-metrics-template.json --namespace=cosmic
+
+say "Starting deployment: logstash"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/logstash.yml

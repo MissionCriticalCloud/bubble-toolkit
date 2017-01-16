@@ -13,27 +13,17 @@ say "Running script: $0"
 
 minikube_get_ip
 
-function cosmic_usage_db {
-    say "Setup Cosmic usage database"
-
-    say "Waiting for mariadb to be available."
-    until (mysql -h ${MINIKUBE_IP} -u root -ppassword -P 30061 mysql -e"SHOW databases;" --connect-timeout=5) &> /dev/null 
-    do
-        sleep 10
-    done
-
-    say "Create Cosmic usage database"
-    mysql -h ${MINIKUBE_IP} -u root -ppassword -P 30061 mysql -e"create database \`usage\`;"
-}
-
-# Setup usage db/container
-cosmic_usage_db
-
 say "Starting deployment: cosmic-config-server"
-cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-config-server.yml | sed "s/image: .*cosmic-config-server/image: ${MINIKUBE_HOST}:30081\/cosmic-config-server/g" | kubectl create -f -
+cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-config-server.yml | sed "s/image: .*cosmic-config-server/image: ${MINIKUBE_HOST}:30081\/missioncriticalcloud\/cosmic-config-server/g" | kubectl create -f -
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-config-server.yml
 
-say "Starting deployment: cosmic-usage-db-api"
-cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-usage-db-api.yml | sed "s/image: .*cosmic-usage-db-api/image: ${MINIKUBE_HOST}:30081\/cosmic-usage-db-api/g" | kubectl create -f -
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-usage-db-api.yml
+say "Waiting for cosmic-config-server to be available."
+until curl -m 5 -sD - http://${MINIKUBE_IP}:31001/cosmic-usage-api/development | grep "HTTP/1.1 200" &>/dev/null
+do echo -n .; sleep 1; done; echo ""
 
+say "Starting deployment: cosmic-metrics-collector"
+cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-metrics-collector.yml | sed "s/image: .*cosmic-metrics-collector/image: ${MINIKUBE_HOST}:30081\/missioncriticalcloud\/cosmic-metrics-collector/g" | kubectl create -f -
+
+say "Starting deployment: cosmic-usage-api"
+cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-usage-api.yml | sed "s/image: .*cosmic-usage-api/image: ${MINIKUBE_HOST}:30081\/missioncriticalcloud\/cosmic-usage-api/g" | kubectl create -f -
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-usage-api.yml

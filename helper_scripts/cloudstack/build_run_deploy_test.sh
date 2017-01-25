@@ -60,24 +60,11 @@ date
 
 JAVA_VERSION_FOUND=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' | cut -d\. -f1,2)
 
-if [ "$JAVA_VERSION_FOUND" == "1.8" ]; then
+if [ "$JAVA_VERSION_FOUND" != "1.8" ]; then
   echo
-  echo "*** WARNING: JAVA 8 FOUND! ***"
+  echo "*** WARNING: JAVA 8 NOT FOUND! ***"
   echo
-  echo "The active Java version is compatible with Cosmic, not with CloudStack."
-  echo
-  echo "CloudStack does not run on Java 8 yet. Since The Bubbles are also used for Cosmic, it has Java 8."
-  echo
-  echo "Run this to deinstall Java 8 and use Java 7:"
-
-  for j in $(rpm -qa| grep java-1.8); do echo " yum remove $j"; done
-  echo 
-  echo "You may also switch Java with:"
-  echo " alternatives --config java"
-  echo " alternatives --config javac"
-  echo
-  echo "In case you want to build Cosmic, look in the 'helper_scripts/cosmic' folder."
-  echo
+  echo "The active Java version is not compatible with CloudStack or Cosmic."
   exit
 fi
 
@@ -378,7 +365,7 @@ mysql -u cloud -pcloud cloud --exec "INSERT INTO cloud.configuration (instance, 
 # Adding the tiny linux VM templates for KVM and XenServer
 echo "Config Templates"
 mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-xen.vhd.bz2' where id=1;"
-mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
+mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://packages.shapeblue.com/systemvmtemplate/4.10/systemvm64template-4.10-kvm.qcow2.bz2' where id=3;"
 mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
 mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=2;"
 mysql -u cloud -pcloud cloud --exec "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=140, name='tiny linux xenserver', display_text='tiny linux xenserver', hvm=1 where id=5;"
@@ -398,7 +385,7 @@ killall -9 java
 while timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /dev/null; do echo "Waiting for socket to close.."; sleep 10; done
 
 echo "Starting CloudStack"
-mvn -pl :cloud-client-ui jetty:run ${use_simulator} > jetty.log 2>&1 &
+mvn -pl :cloud-client-ui jetty:run -Dorg.eclipse.jetty.annotations.maxWait=120 ${use_simulator} > jetty.log 2>&1 &
 
 # Wait until it comes up
 echo "Waiting for CloudStack to start"
@@ -406,7 +393,7 @@ while ! timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8096' 2>&1 > /de
 
 # Systemvm template for hypervisor type
 if [[ "${hypervisor}" == "kvm" ]]; then
-  systemtemplate="/data/templates/systemvm64template-master-4.6.0-kvm.qcow2"
+  systemtemplate="/data/templates/systemvm64template-4.10-kvm.qcow2"
   imagetype="qcow2"
  elif [[ "${hypervisor}" == "xenserver" ]]; then
   systemtemplate="/data/templates/systemvm64template-master-4.6.0-xen.vhd"

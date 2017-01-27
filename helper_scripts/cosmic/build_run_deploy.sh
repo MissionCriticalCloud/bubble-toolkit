@@ -306,7 +306,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       cspass=
       eval csuser="\${cs${i}user}"
       eval csip="\${cs${i}ip}"
-      eval cspass="\${cs${i}ip}"
+      eval cspass="\${cs${i}pass}"
       # Cleanup CS in case of re-deploy
       say "Cleanup ${csip}"
       cleanup_cs ${csip} ${csuser} ${cspass}

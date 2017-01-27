@@ -16,6 +16,7 @@ function usage {
   printf "\t-T:\tPass 'mvn -T ...' flags\n" >&2
   printf "\t-W:\tOverride workspace folder\n" >&2
   printf "\t-V:\tVerbose logging\n" >&2
+  printf "\t-D:\tShell debugging\n" >&2
   printf "\t-o:\tSuspend management server on startup (DEBUG)\n" >&2
   printf "\t-p:\tSuspend kvm hypervisor on startup (DEBUG)" >&2
   printf "\nFeature flags:\n" >&2
@@ -40,6 +41,8 @@ function usage {
 scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
+shell_debugging="false"
+shell_debugging_flag=""
 disable_maven_unit_tests=0
 gitssh=1
 run_tests=0
@@ -56,7 +59,7 @@ skip_setup_infra=0
 WORKSPACE_OVERRIDE=
 skip_deploy_dc=0
 
-while getopts 'abCEHIkKm:opStT:vVwW:x' OPTION
+while getopts 'abCDEHIkKm:opStT:vVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -64,6 +67,10 @@ do
   b)    scenario_redeploy_cosmic=1
         ;;
   C)    disable_maven_clean=1
+        ;;
+  D)    shell_debugging="true"
+        set -x
+        shell_debugging_flag="-x"
         ;;
   E)    disable_maven_unit_tests=1
         ;;
@@ -105,6 +112,7 @@ if [ ${verbose} -eq 1 ]; then
   echo "disable_maven_clean           (-C) = ${disable_maven_clean}"
   echo "disable_maven_unit_tests      (-E) = ${disable_maven_unit_tests}"
   echo "WORKSPACE_OVERRIDE            (-W) = ${WORKSPACE_OVERRIDE}"
+  echo "shell_debugging               (-D) = ${shell_debugging}"
   echo "gitssh                        (-H) = ${gitssh}"
   echo ""
   echo "skip_maven_build              (-t) = ${skip_maven_build}"
@@ -192,7 +200,7 @@ if [ ${skip_prepare_infra} -eq 0 ]; then
   PREP_INFRA_LOG=/tmp/prep_infra_${$}.log
   echo "Executing prepare-infra in background, logging: ${PREP_INFRA_LOG}"
   # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
-  "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"  2>&1 > ${PREP_INFRA_LOG}    &
+  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"  2>&1 > ${PREP_INFRA_LOG}    &
   PREP_INFRA_PID=$!
 else
   echo "Skipped prepare infra"
@@ -203,7 +211,7 @@ if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     PREP_MINIKUBE_LOG=/tmp/prep_minikube_${$}.log
     echo "Executing prepare-minikube in background, logging: ${PREP_MINIKUBE_LOG}"
-    "${CI_SCRIPTS}/ci-prepare-minikube.sh" ${remove_minikube_infra} 2>&1 > ${PREP_MINIKUBE_LOG}    &
+    sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-prepare-minikube.sh" ${remove_minikube_infra} 2>&1 > ${PREP_MINIKUBE_LOG}    &
     PREP_MINIKUBE_PID=$!
   else
     echo "Skipped prepare minikube."
@@ -254,7 +262,7 @@ fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     say "Setting up minikube."
-    "${CI_SCRIPTS}/ci-setup-minikube.sh"
+    sh ${shell_debugging_flag}  "${CI_SCRIPTS}/ci-setup-minikube.sh"
   else
     echo "Skipped setup minikube"
   fi
@@ -322,7 +330,7 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -rf ${primarystorage}/*
 
   # JENKINS: setupInfraForIntegrationTests: no change
-  "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
+  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
 else
   echo "Skipped setup infra"
 fi
@@ -356,7 +364,7 @@ if [ ${skip_deploy_dc} -eq 0 ]; then
   rm -rf "$primarystorage/*"
 
   # JENKINS: deployDatacenterForIntegrationTests: no change other then moving log files around for archiveArtifacts
-  "${CI_SCRIPTS}/ci-deploy-data-center.sh" -m "${marvinCfg}"
+  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-deploy-data-center.sh" -m "${marvinCfg}"
 
 else
   echo "Skipped deployDC"
@@ -367,7 +375,7 @@ if [ ${run_tests} -eq 1 ]; then
   cd "${COSMIC_BUILD_PATH}"
 
   # JENKINS: runIntegrationTests: no change, tests inserted from injectJobVariable(flattenLines(TESTS_PARAM))
-  "${CI_SCRIPTS}/ci-run-marvin-tests.sh" -m "${marvinCfg}" -h true smoke/test_network.py smoke/test_routers_iptables_default_policy.py smoke/test_password_server.py smoke/test_vpc_redundant.py smoke/test_routers_network_ops.py smoke/test_vpc_router_nics.py smoke/test_router_dhcphosts.py smoke/test_loadbalance.py smoke/test_privategw_acl.py smoke/test_ssvm.py smoke/test_vpc_vpn.py
+  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-run-marvin-tests.sh" -m "${marvinCfg}" -h true smoke/test_network.py smoke/test_routers_iptables_default_policy.py smoke/test_password_server.py smoke/test_vpc_redundant.py smoke/test_routers_network_ops.py smoke/test_vpc_router_nics.py smoke/test_router_dhcphosts.py smoke/test_loadbalance.py smoke/test_privategw_acl.py smoke/test_ssvm.py smoke/test_vpc_vpn.py
 else
   echo "Skipped tests"
 fi

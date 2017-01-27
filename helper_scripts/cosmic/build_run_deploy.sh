@@ -4,17 +4,6 @@ set -e
 # This script builds and runs Cosmic and deploys a data center using the supplied Marvin config.
 # When KVM is used Cosmic Agent is installed on the hypervisor.
 
-# As building is now done locally, packages which were installed in CS1
-# now need to be installed "locally":
-#
-# yum -y install maven tomcat mkisofs python-paramiko jakarta-commons-daemon-jsvc jsvc ws-commons-util genisoimage gcc python MySQL-python openssh-clients wget git python-ecdsa bzip2 python-setuptools mariadb-server mariadb python-devel vim nfs-utils screen setroubleshoot openssh-askpass java-1.8.0-openjdk-devel.x86_64 rpm-build rubygems nc libffi-devel openssl-devel
-# yum -y install http://mirror.karneval.cz/pub/linux/fedora/epel/epel-release-latest-7.noarch.rpm
-# yum --enablerepo=epel -y install sshpass mariadb mysql-connector-python
-# yum -y install nmap
-#
-# If agreed, this needs to be moved to the bubble-cookbook
-#
-
 # Source the helper functions
 . `dirname $0`/helperlib.sh
 
@@ -48,26 +37,26 @@ function usage {
   printf "\n" >&2
 }
 # Options
-skip_maven_build=0
-skip_prepare_infra=0
-skip_setup_infra=0
-skip_deploy_dc=0
-skip_deploy_minikube=0
-run_tests=0
-debug_war_startup=0
-debug_kvm_startup=0
-compile_threads=
 scenario_build_deploy_new_war=0
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 disable_maven_unit_tests=0
-enable_cosmic_microservices=0
-remove_minikube_infra="true"
 gitssh=1
+run_tests=0
+skip_deploy_minikube=0
+remove_minikube_infra="true"
+debug_war_startup=0
+debug_kvm_startup=0
+enable_cosmic_microservices=0
+skip_maven_build=0
+compile_threads=
+skip_prepare_infra=0
 verbose=0
+skip_setup_infra=0
 WORKSPACE_OVERRIDE=
+skip_deploy_dc=0
 
-while getopts 'abopCEHIm:ST:tvVwW:xkK' OPTION
+while getopts 'abCEHIkKm:opStT:vVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war=1
@@ -80,9 +69,11 @@ do
         ;;
   H)    gitssh=0
         ;;
-  V)    verbose=1
+  I)    run_tests=1
         ;;
-  W)    WORKSPACE_OVERRIDE="$OPTARG"
+  k)    skip_deploy_minikube=1
+        ;;
+  K)    remove_minikube_infra="false"
         ;;
   m)    marvinCfg="$OPTARG"
         ;;
@@ -94,19 +85,17 @@ do
         ;;
   t)    skip_maven_build=1
         ;;
+  T)    compile_threads="-T $OPTARG"
+        ;;
   v)    skip_prepare_infra=1
+        ;;
+  V)    verbose=1
         ;;
   w)    skip_setup_infra=1
         ;;
+  W)    WORKSPACE_OVERRIDE="$OPTARG"
+        ;;
   x)    skip_deploy_dc=1
-        ;;
-  k)    skip_deploy_minikube=1
-        ;;
-  K)    remove_minikube_infra="false"
-        ;;
-  I)    run_tests=1
-        ;;
-  T)    compile_threads="-T $OPTARG"
         ;;
   esac
 done

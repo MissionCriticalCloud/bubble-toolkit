@@ -536,7 +536,7 @@ function cosmic_docker_registry {
         minikube ssh "sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081"
         cat /tmp/registry/certs/domain.crt | minikube ssh "sudo cat > ca.crt"
         minikube ssh "sudo mv ca.crt /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt"
-        minikube ssh "sudo /etc/init.d/docker restart"
+        minikube ssh "sudo systemctl restart docker"
 
         say "Uploading certificates as secrets"
         kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=internal
@@ -549,7 +549,7 @@ function cosmic_docker_registry {
     fi
 
     say "Waiting for registry service to be available."
-    until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
+    until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.availableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }
 
 

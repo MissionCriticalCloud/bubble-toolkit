@@ -17,7 +17,7 @@ function collect_files_from_vm {
   destination=$5
 
   # SCP helpers
-  scp_base="sshpass -p ${vmpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${vmpass}
 
   ${scp_base} ${vmuser}@${vmip}:${file_pattern} ${destination}
 }

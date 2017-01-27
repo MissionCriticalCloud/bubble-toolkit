@@ -35,8 +35,7 @@ function install_kvm_packages {
   hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # Cleanup
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
@@ -96,8 +95,7 @@ function deploy_cosmic_db {
   wait_for_mysql_server ${csip}
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${cspass}
 
   ${ssh_base} ${csuser}@${csip} "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
   mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database.sql
@@ -140,9 +138,7 @@ function install_systemvm_templates {
   imagetype=$7
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
-
+  set_ssh_base_and_scp_base ${cspass}
 
   if [ -d ./cosmic-core/scripts/src/main/resources/scripts ]; then
     ${scp_base} -r ./cosmic-core/scripts/src/main/resources/scripts ${csuser}@${csip}:./
@@ -161,8 +157,7 @@ function configure_tomcat_to_load_jacoco_agent {
   cspass=$3
 
   # SSH/SCP helpers
-  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${cspass}
 
   ${scp_base} target/jacoco-agent.jar ${csuser}@${csip}:/tmp
   ${ssh_base} ${csuser}@${csip} "echo \"JAVA_OPTS=\\\"-javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec\\\"\" >> /etc/sysconfig/tomcat"
@@ -177,8 +172,7 @@ function configure_agent_to_load_jacococ_agent {
   hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # Enable Java Code Coverage
   ${scp_base} target/jacoco-agent.jar ${hvuser}@${hvip}:/tmp
@@ -195,8 +189,7 @@ function deploy_cosmic_war {
   war_file="$4"
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${cspass}
 
   # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
   ${scp_base} ${scripts_dir}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
@@ -215,7 +208,7 @@ function deploy_cosmic_war {
 }
 
 function create_nsx_cluster {
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${cspass}
 
   nsx_user='admin'
   nsx_pass='admin'
@@ -282,7 +275,7 @@ function configure_nsx_controller_node {
   nsx_user=$3
   nsx_pass=$4
 
-  ssh_base="sshpass -p ${nsx_pass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${nsx_pass}
 
   ${ssh_base} ${nsx_user}@${nsx_controller_node_ip} join control-cluster ${nsx_master_controller_node_ip}
 }
@@ -295,7 +288,8 @@ function configure_nsx_service_node {
   nsx_pass=$4
   nsx_cookie=$5
 
-  ssh_base="sshpass -p ${nsx_pass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${nsx_pass}
+
 
   ${ssh_base} ${nsx_user}@${nsx_service_node_ip} set switch manager-cluster ${nsx_master_controller_node_ip}
 
@@ -369,7 +363,7 @@ function configure_kvm_host_in_nsx {
   kvm_user=$4
   kvm_pass=$5
 
-  SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
+  SSH_OPTIONS="-o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
 
   say "Generate OVS certificates on ${kvm_host}"
   sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} "cd /etc/openvswitch; ovs-pki req ovsclient; ovs-pki self-sign ovsclient; ovs-vsctl -- --bootstrap set-ssl /etc/openvswitch/ovsclient-privkey.pem /etc/openvswitch/ovsclient-cert.pem /etc/openvswitch/vswitchd.cacert"

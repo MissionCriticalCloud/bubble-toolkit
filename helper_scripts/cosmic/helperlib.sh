@@ -115,6 +115,11 @@ function maven_build {
   date
 }
 
+function set_ssh_base_and_scp_base {
+  ssh_base="sshpass -p $1 ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p $1 scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+}
+
 # deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
 # so should be moved to a "library" sh script which can be sourced
 function deploy_cloudstack_war {
@@ -124,8 +129,7 @@ function deploy_cloudstack_war {
   local war_file="$4"
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${cspass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${cspass}
   # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
   ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
 
@@ -146,7 +150,7 @@ function undeploy_cloudstack_war {
   local cspass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${cspass}
   ${ssh_base} ${csuser}@${csip} killall -9 java &> /dev/null || true
   ${ssh_base} ${csuser}@${csip} service tomcat stop &> /dev/null
   ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
@@ -168,7 +172,7 @@ function enable_remote_debug_war {
   fi
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${cspass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${cspass}
   ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\'"CATALINA_OPTS=\"-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=${suspend}\""\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; fi'
 }
 
@@ -185,7 +189,8 @@ function enable_remote_debug_kvm {
   fi
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${hvpass}
+
   ${ssh_base} ${hvuser}@${hvip}  "if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf \"[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=${suspend},address=8000\" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi"
 }
 
@@ -206,7 +211,7 @@ function cleanup_kvm {
   local hvuser=$2
   local hvpass=$3
 
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # Remove running (System) VMs
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
@@ -230,8 +235,7 @@ function install_kvm_packages {
   say "Dist dir is ${distdir}"
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # scp packages to hypervisor, remove existing, then install new ones
   ${ssh_base} ${hvuser}@${hvip} rm cosmic-*
@@ -261,8 +265,7 @@ function clean_kvm {
   hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # Clean KVM in case it has been used before
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload

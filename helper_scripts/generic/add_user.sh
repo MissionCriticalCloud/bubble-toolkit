@@ -42,9 +42,9 @@ echo "${LOGNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RSCRIPT
 
 sudo yum install -y sshpass
-sshpass -p $RPASS scp -o StrictHostKeyChecking=no $TMPFILE root@${HNAME}:adduser.sh
+sshpass -p $RPASS scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no $TMPFILE root@${HNAME}:adduser.sh
 if [ "$?" -ne "0" ]
 then
 	echo "Could not connect to $HNAME" >&2
 fi
-sshpass -p $RPASS ssh -o StrictHostKeyChecking=no root@${HNAME} "sh ./adduser.sh"
+sshpass -p $RPASS ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no root@${HNAME} "sh ./adduser.sh"

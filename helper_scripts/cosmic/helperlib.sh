@@ -76,6 +76,148 @@ function config_maven {
   fi
 }
 
+function maven_build {
+  cwd=$(pwd)
+  build_dir=$1
+  compile_threads=$2
+  disable_maven_clean=$3
+  # Compile Cosmic
+  cd "${build_dir}"
+  echo "Compiling Cosmic"
+  date
+  maven_unit_tests=""
+  if [ "${disable_maven_unit_tests}" = "1" ]; then
+    maven_unit_tests=" -DskipTests "
+  fi
+  maven_clean="clean"
+  if [ "${disable_maven_clean}" = "1" ]; then
+    maven_clean=""
+  fi
+
+  management_server_log_file="/var/log/cosmic/management/management.log"
+  management_server_log_rotation="/var/log/cosmic/management/management-%d{yyyy-MM-dd}.log.gz"
+  mvn_cmd="mvn ${maven_clean} install -P systemvm,sonar-ci-cosmic ${compile_threads} "
+  mvn_cmd="${mvn_cmd} -Dcosmic.dir=${build_dir} "
+  mvn_cmd="${mvn_cmd} -Dlog.file.management.server=${management_server_log_file} "
+  mvn_cmd="${mvn_cmd} -Dlog.rotation.management.server=${management_server_log_rotation} "
+  mvn_cmd="${mvn_cmd} ${maven_unit_tests}"
+
+  echo ${mvn_cmd}
+  # JENKINS: mavenBuild: maven job with goals: clean install deploy -U -Psystemvm -Psonar-ci-cosmic -Dcosmic.dir=\"${injectJobVariable(CUSTOM_WORKSPACE_PARAM)}\"
+  # Leaving out deploy and -U (Forces a check for updated releases and snapshots on remote repositories)
+  eval "${mvn_cmd}"
+  if [ $? -ne 0 ]; then
+    date
+    echo "Build failed, please investigate!"
+    exit 1
+  fi
+  cd "${cwd}"
+  date
+}
+
+function set_ssh_base_and_scp_base {
+  ssh_base="sshpass -p $1 ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p $1 scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+}
+
+# deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
+# so should be moved to a "library" sh script which can be sourced
+function deploy_cloudstack_war {
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+  local war_file="$4"
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${cspass}
+  # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
+  ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
+
+  # Extra configuration for Cosmic application
+  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
+  ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=.*\$/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
+
+  ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
+  ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
+  ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
+  ${ssh_base} ${csuser}@${csip} service tomcat start
+}
+# If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
+function undeploy_cloudstack_war {
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${cspass}
+  ${ssh_base} ${csuser}@${csip} killall -9 java &> /dev/null || true
+  ${ssh_base} ${csuser}@${csip} service tomcat stop &> /dev/null
+  ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/db
+  ${ssh_base} ${csuser}@${csip} rm -rf ~tomcat/webapps/client*
+  ${ssh_base} ${csuser}@${csip} rm -rf /var/log/cosmic/
+  ${ssh_base} ${csuser}@${csip} rm -rf /etc/cosmic/management
+}
+
+function enable_remote_debug_war {
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+  local suspend=$4
+
+  if [ ${suspend} -eq 1 ]; then
+    suspend='y'
+  else
+    suspend='n'
+  fi
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${cspass}
+  ${ssh_base} ${csuser}@${csip}  'if ! grep -q CATALINA_OPTS /etc/tomcat/tomcat.conf; then echo '\'"CATALINA_OPTS=\"-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=${suspend}\""\'' >> /etc/tomcat/tomcat.conf; echo Configuring DEBUG access for management server; fi'
+}
+
+function enable_remote_debug_kvm {
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
+  local suspend=$4
+
+  if [ ${suspend} -eq 1 ]; then
+    suspend='y'
+  else
+    suspend='n'
+  fi
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${hvpass}
+
+  ${ssh_base} ${hvuser}@${hvip}  "if [ ! -f /etc/systemd/system/cosmic-agent.service.d/debug.conf ]; then echo Configuring DEBUG access for KVM server; mkdir -p /etc/systemd/system/cosmic-agent.service.d/; printf \"[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=${suspend},address=8000\" > /etc/systemd/system/cosmic-agent.service.d/debug.conf; systemctl daemon-reload; fi"
+}
+
+function cleanup_cs {
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+
+  undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+  # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" &>/dev/null || true
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" &>/dev/null || true
+  mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud_usage\`;" &>/dev/null || true
+}
+
+function cleanup_kvm {
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
+
+  set_ssh_base_and_scp_base ${hvpass}
+
+  # Remove running (System) VMs
+  ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh destroy ${vm}; done'
+  ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'
+}
+
 function install_kvm_packages {
   # Parameters
   hvip=$1
@@ -93,8 +235,7 @@ function install_kvm_packages {
   say "Dist dir is ${distdir}"
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # scp packages to hypervisor, remove existing, then install new ones
   ${ssh_base} ${hvuser}@${hvip} rm cosmic-*
@@ -124,8 +265,7 @@ function clean_kvm {
   hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${hvpass}
 
   # Clean KVM in case it has been used before
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
@@ -399,7 +539,7 @@ function cosmic_docker_registry {
         minikube ssh "sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081"
         cat /tmp/registry/certs/domain.crt | minikube ssh "sudo cat > ca.crt"
         minikube ssh "sudo mv ca.crt /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt"
-        minikube ssh "sudo /etc/init.d/docker restart"
+        minikube ssh "sudo systemctl restart docker"
 
         say "Uploading certificates as secrets"
         kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=internal
@@ -412,7 +552,7 @@ function cosmic_docker_registry {
     fi
 
     say "Waiting for registry service to be available."
-    until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.AvailableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
+    until [[ $(kubectl get deployment --namespace=internal registry -o custom-columns=:.status.availableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 }
 
 

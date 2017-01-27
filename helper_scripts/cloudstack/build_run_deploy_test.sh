@@ -195,8 +195,8 @@ function install_kvm_packages {
   hasNsxDevice=$4
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  ssh_base="sshpass -p ${hvpass} ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${hvpass} scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # scp packages to hypervisor, remove existing, then install new ones
   ${ssh_base} ${hvuser}@${hvip} rm cloudstack-*
@@ -218,8 +218,8 @@ function clean_kvm {
   hvpass=$3
 
   # SSH/SCP helpers
-  ssh_base="sshpass -p ${hvpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
-  scp_base="sshpass -p ${hvpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  ssh_base="sshpass -p ${hvpass} ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  scp_base="sshpass -p ${hvpass} scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 
   # Clean KVM in case it has been used before
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload

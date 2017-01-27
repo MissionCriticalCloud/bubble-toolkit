@@ -15,7 +15,7 @@ while ! ping -c3 ${NSX_CONTROLLER} &>/dev/null; do
   sleep 2
 done
 
-SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
+SSH_OPTIONS="-o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
 
 # Create cluster
 echo "Note: Creating NSX cluster"

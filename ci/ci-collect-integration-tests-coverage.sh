@@ -18,7 +18,8 @@ function collect_files_from_vm {
   destination=$5
 
   # SCP helpers
-  scp_base="sshpass -p ${vmpass} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
+  set_ssh_base_and_scp_base ${vmpass}
+
 
   ${scp_base} ${vmuser}@${vmip}:${file_pattern} ${destination}
 }
@@ -28,7 +29,8 @@ function stop_tomcat {
   vmuser=$2
   vmpass=$3
 
-  ssh_base="sshpass -p ${vmpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${vmpass}
+
 
   ${ssh_base} ${vmuser}@${vmip} systemctl stop tomcat
 }
@@ -38,7 +40,7 @@ function stop_agent {
   vmuser=$2
   vmpass=$3
 
-  ssh_base="sshpass -p ${vmpass} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet -t "
+  set_ssh_base_and_scp_base ${vmpass}
 
   ${ssh_base} ${vmuser}@${vmip} systemctl stop cosmic-agent
 }

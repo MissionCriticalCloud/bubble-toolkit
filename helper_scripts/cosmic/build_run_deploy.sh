@@ -343,11 +343,12 @@ for i in 1 2 3 4 5 6 7 8 9; do
     cspass=
     eval csuser="\${cs${i}user}"
     eval csip="\${cs${i}ip}"
-    eval cspass="\${cs${i}ip}"
+    eval cspass="\${cs${i}pass}"
 
     if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
       # 00510 Setup only war deploy
       # Jenkins: war deploy is part of setupInfraForIntegrationTests
+      say "Deploy new war to ${csip}"
 
       # Cleanup CS in case of re-deploy
       undeploy_cloudstack_war ${csip} ${csuser} ${cspass}

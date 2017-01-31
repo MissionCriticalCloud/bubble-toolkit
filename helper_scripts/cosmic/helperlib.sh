@@ -135,7 +135,7 @@ function deploy_cloudstack_war {
 
   # Extra configuration for Cosmic application
   ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
-  ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${scp_base} ${CI_SCRIPTS}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
   ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=.*\$/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
 
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management

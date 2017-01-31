@@ -55,3 +55,27 @@ kubectl create secret generic logstash-files --from-file=/data/shared/ci/setup_f
 
 say "Starting deployment: logstash"
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/logstash.yml
+
+say "Starting deployment: cosmic-vault"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-vault.yml
+
+say "Starting service: cosmic-vault"
+kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-vault.yml
+
+say "Waiting for cosmic-vault to be available."
+until curl -m 5 -sD - http://${MINIKUBE_IP}:30131/v1/sys/health | grep "HTTP/1.1 200" &>/dev/null
+do echo -n .; sleep 1; done; echo ""
+
+curl \
+    -H "X-Vault-Token: cosmic-vault-token" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d @/data/shared/ci/setup_files/cosmic-metrics-collector-config.json \
+    http://${MINIKUBE_IP}:30131/v1/secret/cosmic-metrics-collector
+
+curl \
+    -H "X-Vault-Token: cosmic-vault-token" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d @/data/shared/ci/setup_files/cosmic-usage-api-config.json \
+    http://${MINIKUBE_IP}:30131/v1/secret/cosmic-usage-api

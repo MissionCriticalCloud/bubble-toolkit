@@ -77,7 +77,8 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-ssh
 
   # Configure properties
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=host-passthrough" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=custom" >> /etc/cosmic/agent/agent.properties'
+  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.model=kvm64" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
   ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'

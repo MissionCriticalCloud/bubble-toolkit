@@ -80,7 +80,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     cspass=
     eval csuser="\${cs${i}user}"
     eval csip="\${cs${i}ip}"
-    eval cspass="\${cs${i}ip}"
+    eval cspass="\${cs${i}pass}"
     say "Stopping Tomcat"
     stop_tomcat ${csip} ${csuser} ${cspass}
 

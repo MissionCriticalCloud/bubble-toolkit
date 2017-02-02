@@ -18,7 +18,7 @@ cat /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-config-server.yml |
 kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-config-server.yml
 
 say "Waiting for cosmic-config-server to be available."
-until curl -m 5 -sD - http://${MINIKUBE_IP}:31001/cosmic-usage-api/development | grep "HTTP/1.1 200" &>/dev/null
+until curl -m 5 -sD - http://${MINIKUBE_IP}:31001/cosmic-usage-api/development -H "X-Config-Token: cosmic-vault-token" | grep "HTTP/1.1 200" &>/dev/null
 do echo -n .; sleep 1; done; echo ""
 
 say "Starting deployment: cosmic-metrics-collector"

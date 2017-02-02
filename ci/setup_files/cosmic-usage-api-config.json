@@ -1,0 +1,14 @@
+{
+  "spring": {
+    "data": {
+      "elasticsearch": {
+        "cluster-nodes": "elasticsearch:9300"
+      }
+    }
+  },
+  "cosmic": {
+    "usage-api": {
+      "scan-interval": "* */15 * * * *"
+    }
+  }
+}

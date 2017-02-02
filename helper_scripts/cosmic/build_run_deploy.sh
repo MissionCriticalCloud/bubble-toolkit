@@ -38,7 +38,7 @@ function usage {
   printf "\n" >&2
 }
 # Options
-scenario_build_deploy_new_war=0
+scenario_build_deploy_new_war="false"
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
 shell_debugging="false"
@@ -62,7 +62,7 @@ skip_deploy_dc=0
 while getopts 'abCDEHIkKm:opStT:vVwW:x' OPTION
 do
   case $OPTION in
-  a)    scenario_build_deploy_new_war=1
+  a)    scenario_build_deploy_new_war="true"
         ;;
   b)    scenario_redeploy_cosmic=1
         ;;
@@ -147,7 +147,7 @@ fi
 
 echo "Started!"
 date
-if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
+if [ ${scenario_build_deploy_new_war} == "true" ]; then
   skip_prepare_infra=1
   skip_setup_infra=1
   skip_deploy_dc=1
@@ -332,6 +332,8 @@ else
 fi
 
 cd "${COSMIC_BUILD_PATH}"
+if [ ${scenario_build_deploy_new_war} == "true" ]; then
+
 for i in 1 2 3 4 5 6 7 8 9; do
   if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
     csuser=
@@ -341,19 +343,29 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval csip="\${cs${i}ip}"
     eval cspass="\${cs${i}pass}"
 
-    if [ ${scenario_build_deploy_new_war} -eq 1 ]; then
-      # 00510 Setup only war deploy
-      # Jenkins: war deploy is part of setupInfraForIntegrationTests
-      say "Deploy new war to ${csip}"
+    # 00510 Setup only war deploy
+    # Jenkins: war deploy is part of setupInfraForIntegrationTests
+    say "Deploy new war to ${csip}"
 
-      # Cleanup CS in case of re-deploy
-      undeploy_cosmic_war ${csip} ${csuser} ${cspass}
-      enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
-      deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
-    fi
+    # Cleanup CS in case of re-deploy
+    undeploy_cosmic_war ${csip} ${csuser} ${cspass}
+    enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
+    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
+  fi
+
+  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+    hvuser=
+    hvip=
+    hvpass=
+    eval hvuser="\${hvuser${i}}"
+    eval hvip="\${hvip${i}}"
+    eval hvpass="\${hvpass${i}}"
+    say "Installing Cosmic KVM Agent on host ${hvip}"
+    install_kvm_packages ${hvip} ${hvuser} ${hvpass} ${scenario_build_deploy_new_war}
   fi
 done
 
+fi
 
 # 00600 Deploy DC
 if [ ${skip_deploy_dc} -eq 0 ]; then

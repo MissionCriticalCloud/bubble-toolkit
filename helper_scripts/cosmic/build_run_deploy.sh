@@ -347,9 +347,9 @@ for i in 1 2 3 4 5 6 7 8 9; do
       say "Deploy new war to ${csip}"
 
       # Cleanup CS in case of re-deploy
-      undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+      undeploy_cosmic_war ${csip} ${csuser} ${cspass}
       enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
-      deploy_cloudstack_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
+      deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
     fi
   fi
 done

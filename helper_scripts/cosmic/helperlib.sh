@@ -120,9 +120,9 @@ function set_ssh_base_and_scp_base {
   scp_base="sshpass -p $1 scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 }
 
-# deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
+# deploy_cosmic_war should be sourced from ci-deploy-infra.sh, but contains executing code
 # so should be moved to a "library" sh script which can be sourced
-function deploy_cloudstack_war {
+function deploy_cosmic_war {
   local csip=$1
   local csuser=$2
   local cspass=$3
@@ -144,7 +144,7 @@ function deploy_cloudstack_war {
   ${ssh_base} ${csuser}@${csip} service tomcat start
 }
 # If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
-function undeploy_cloudstack_war {
+function undeploy_cosmic_war {
   local csip=$1
   local csuser=$2
   local cspass=$3
@@ -199,7 +199,7 @@ function cleanup_cs {
   local csuser=$2
   local cspass=$3
 
-  undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+  undeploy_cosmic_war ${csip} ${csuser} ${cspass}
   # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
   mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" &>/dev/null || true
   mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" &>/dev/null || true

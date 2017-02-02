@@ -123,6 +123,7 @@ function deploy_cosmic_war {
 
   # SSH/SCP helpers
   set_ssh_base_and_scp_base ${cspass}
+
   # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
   ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
 
@@ -134,7 +135,9 @@ function deploy_cosmic_war {
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
-  ${ssh_base} ${csuser}@${csip} service tomcat start
+  ${ssh_base} ${csuser}@${csip} service tomcat start &> /dev/null
+
+  say "WAR deployed"
 }
 # If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
 function undeploy_cosmic_war {

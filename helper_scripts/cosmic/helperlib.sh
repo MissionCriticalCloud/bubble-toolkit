@@ -536,11 +536,17 @@ function cosmic_docker_registry {
         # Add certificate to local trust store
         sudo cp /tmp/registry/certs/domain.crt /etc/pki/ca-trust/source/anchors/
         sudo update-ca-trust
-        # Add certificate to the docker deamon (to trust)
+
+        # Add certificate to the minikube docker deamon (to trust)
         minikube ssh "sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081"
         cat /tmp/registry/certs/domain.crt | minikube ssh "sudo cat > ca.crt"
         minikube ssh "sudo mv ca.crt /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt"
         minikube ssh "sudo systemctl restart docker"
+
+        # Add certificate to the local bubble docker deamon (to trust)
+        sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081
+        sudo cp /tmp/registry/certs/domain.crt  /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt
+        sudo systemctl restart docker
 
         say "Uploading certificates as secrets"
         kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=internal

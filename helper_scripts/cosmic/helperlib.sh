@@ -592,3 +592,24 @@ function d_show_elasticsearch_aggr_by_vm {
   sed "s/ENDDATE/${ENDDATE}/g" | \
   curl -s -X POST http://${MINIKUBE_IP}:30121/_search -d@- | python -m json.tool
 }
+
+function show_vault_list {
+  curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://${MINIKUBE_IP}:30131/v1/secret?list=true" | python -c "
+try:
+  import sys, json
+  for x in json.load(sys.stdin)['data']['keys']:
+    print x
+except:
+ print 'could not retrieve entries (none present?)'
+  "
+}
+function d_show_vault_secret {
+  if [ -z "$1" ]; then
+    echo "Pass name of secret the retrieve from vault:"
+    show_vault_list
+  else
+    echo "Retrieving $1"
+    curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://${MINIKUBE_IP}:30131/v1/secret/$1" | python -m json.tool
+  fi
+}
+

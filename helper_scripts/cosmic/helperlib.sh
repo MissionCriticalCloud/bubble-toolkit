@@ -60,13 +60,6 @@ function gitclone {
   fi
 }
 
-function wget_fetch {
-  if [ ! -f "$2" ]; then
-    say "Fetching $1"
-    wget "$1" -O "$2"
-  fi
-}
-
 function config_maven {
   if [ ! -f ~/.m2/settings.xml ]; then
     if [ ! -d ~/.m2 ]; then

@@ -536,11 +536,17 @@ function cosmic_docker_registry {
         # Add certificate to local trust store
         sudo cp /tmp/registry/certs/domain.crt /etc/pki/ca-trust/source/anchors/
         sudo update-ca-trust
-        # Add certificate to the docker deamon (to trust)
+
+        # Add certificate to the minikube docker deamon (to trust)
         minikube ssh "sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081"
         cat /tmp/registry/certs/domain.crt | minikube ssh "sudo cat > ca.crt"
         minikube ssh "sudo mv ca.crt /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt"
         minikube ssh "sudo systemctl restart docker"
+
+        # Add certificate to the local bubble docker deamon (to trust)
+        sudo mkdir -p /etc/docker/certs.d/${MINIKUBE_HOST}:30081
+        sudo cp /tmp/registry/certs/domain.crt  /etc/docker/certs.d/${MINIKUBE_HOST}:30081/ca.crt
+        sudo systemctl restart docker
 
         say "Uploading certificates as secrets"
         kubectl create secret generic registry-certs --from-file=/tmp/registry/certs/domain.crt --from-file=/tmp/registry/certs/domain.key --namespace=internal
@@ -586,3 +592,24 @@ function d_show_elasticsearch_aggr_by_vm {
   sed "s/ENDDATE/${ENDDATE}/g" | \
   curl -s -X POST http://${MINIKUBE_IP}:30121/_search -d@- | python -m json.tool
 }
+
+function show_vault_list {
+  curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://${MINIKUBE_IP}:30131/v1/secret?list=true" | python -c "
+try:
+  import sys, json
+  for x in json.load(sys.stdin)['data']['keys']:
+    print x
+except:
+ print 'could not retrieve entries (none present?)'
+  "
+}
+function d_show_vault_secret {
+  if [ -z "$1" ]; then
+    echo "Pass name of secret the retrieve from vault:"
+    show_vault_list
+  else
+    echo "Retrieving $1"
+    curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://${MINIKUBE_IP}:30131/v1/secret/$1" | python -m json.tool
+  fi
+}
+

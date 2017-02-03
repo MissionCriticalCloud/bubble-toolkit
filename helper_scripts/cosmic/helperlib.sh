@@ -60,13 +60,6 @@ function gitclone {
   fi
 }
 
-function wget_fetch {
-  if [ ! -f "$2" ]; then
-    say "Fetching $1"
-    wget "$1" -O "$2"
-  fi
-}
-
 function config_maven {
   if [ ! -f ~/.m2/settings.xml ]; then
     if [ ! -d ~/.m2 ]; then
@@ -120,9 +113,9 @@ function set_ssh_base_and_scp_base {
   scp_base="sshpass -p $1 scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 }
 
-# deploy_cloudstack_war should be sourced from ci-deploy-infra.sh, but contains executing code
+# deploy_cosmic_war should be sourced from ci-deploy-infra.sh, but contains executing code
 # so should be moved to a "library" sh script which can be sourced
-function deploy_cloudstack_war {
+function deploy_cosmic_war {
   local csip=$1
   local csuser=$2
   local cspass=$3
@@ -130,6 +123,7 @@ function deploy_cloudstack_war {
 
   # SSH/SCP helpers
   set_ssh_base_and_scp_base ${cspass}
+
   # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
   ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
 
@@ -141,10 +135,12 @@ function deploy_cloudstack_war {
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
   ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
   ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
-  ${ssh_base} ${csuser}@${csip} service tomcat start
+  ${ssh_base} ${csuser}@${csip} service tomcat start &> /dev/null
+
+  say "WAR deployed"
 }
 # If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
-function undeploy_cloudstack_war {
+function undeploy_cosmic_war {
   local csip=$1
   local csuser=$2
   local cspass=$3
@@ -199,7 +195,7 @@ function cleanup_cs {
   local csuser=$2
   local cspass=$3
 
-  undeploy_cloudstack_war ${csip} ${csuser} ${cspass}
+  undeploy_cosmic_war ${csip} ${csuser} ${cspass}
   # Clean DB in case of a re-deploy. Should be done with the sql scripts, apparently doesnt work
   mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`billing\`;" &>/dev/null || true
   mysql -h ${csip} -u root -e "DROP DATABASE IF EXISTS \`cloud\`;" &>/dev/null || true
@@ -218,63 +214,92 @@ function cleanup_kvm {
   ${ssh_base} ${hvuser}@${hvip} 'vms=`virsh list --all --name`; for vm in `virsh list --all --name`; do virsh undefine ${vm}; done'
 }
 
-function install_kvm_packages {
-  # Parameters
-  hvip=$1
-  hvuser=$2
-  hvpass=$3
-
-  if [  -d /data/git/$HOSTNAME/packaging/dist/rpmbuild/RPMS/x86_64 ]; then
-    distdir=/data/git/$HOSTNAME/packaging/dist/rpmbuild/RPMS/x86_64
-  else
-    if [  -d ../dist/rpmbuild/RPMS/x86_64 ]; then
-      distdir=../dist/rpmbuild/RPMS/x86_64
-    fi
-  fi
-
-  say "Dist dir is ${distdir}"
-
-  # SSH/SCP helpers
-  set_ssh_base_and_scp_base ${hvpass}
-
-  # scp packages to hypervisor, remove existing, then install new ones
-  ${ssh_base} ${hvuser}@${hvip} rm cosmic-*
-  ${scp_base} ${distdir}/* ${hvuser}@${hvip}:
-  ${ssh_base} ${hvuser}@${hvip} yum -y remove cosmic-common
-  ${ssh_base} ${hvuser}@${hvip} rm -f /etc/cosmic/agent/agent.properties
-  ${ssh_base} ${hvuser}@${hvip} yum -y localinstall cosmic-agent* cosmic-common*
-  # Use OVS networking
-  ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=custom" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.model=kvm64" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
-  # Enable debug logging
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
-  # Enable remote debugging
-  ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/systemd/system/cosmic-agent.service.d/
-  ${ssh_base} ${hvuser}@${hvip} 'printf "[Service]\nEnvironment=JAVA_REMOTE_DEBUG=-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000" > /etc/systemd/system/cosmic-agent.service.d/debug.conf'
-  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-}
-
 function clean_kvm {
   # Parameters
-  hvip=$1
-  hvuser=$2
-  hvpass=$3
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
+  local war_upgrade="false"
+  war_upgrade=$4
 
   # SSH/SCP helpers
   set_ssh_base_and_scp_base ${hvpass}
 
-  # Clean KVM in case it has been used before
+  # Cosmic Cleanup
   ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
-  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent
-  ${ssh_base} ${hvuser}@${hvip} systemctl disable cosmic-agent
-  ${ssh_base} ${hvuser}@${hvip} systemctl restart libvirtd
-  ${ssh_base} ${hvuser}@${hvip} sed -i 's/INFO/DEBUG/g' /etc/cosmic/agent/log4j-cloud.xml
-  ${ssh_base} ${hvuser}@${hvip} "for host in \$(virsh list | awk '{print \$2;}' | grep -v Name |egrep -v '^\$'); do virsh destroy \$host; done"
+  ${ssh_base} ${hvuser}@${hvip} systemctl stop cosmic-agent 2>&1 >/dev/null || true
+  if [ ${war_upgrade} == "false" ]; then
+    ${ssh_base} ${hvuser}@${hvip} systemctl disable cosmic-agent 2>&1 >/dev/null || true
+    ${ssh_base} ${hvuser}@${hvip} rm -rf /etc/cosmic/
+    ${ssh_base} ${hvuser}@${hvip} rm -rf /var/log/cosmic/
+  fi
+
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /opt/cosmic/
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib/systemd/system/cosmic-agent.service
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/bin/cosmic-setup-agent
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/bin/cosmic-ssh
+  ${ssh_base} ${hvuser}@${hvip} rm -rf /usr/lib64/python2.7/site-packages/cloudutils
+  ${ssh_base} ${hvuser}@${hvip} rm -f /usr/lib64/python2.7/site-packages/cloud_utils.py
+
+  if [ ${war_upgrade} == "false" ]; then
+    # Remove any running VMs
+    cleanup_kvm ${hvip} ${hvuser} ${hvpass}
+  fi
+}
+
+function install_kvm_packages {
+  # Parameters
+  local hvip=$1
+  local hvuser=$2
+  local hvpass=$3
+  local war_upgrade="false"
+  war_upgrade=$4
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${hvpass}
+
+  # Clean KVM of Cosmic and VMs
+  clean_kvm ${hvip} ${hvuser} ${hvpass} ${war_upgrade}
+
+  # Copy Agent files to hypervisor
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /opt/cosmic/agent/vms/
+  ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/cosmic/agent/
+  ${scp_base} cosmic-agent/target/cloud-agent-*.jar ${hvuser}@${hvip}:/opt/cosmic/agent/
+  if [ ${war_upgrade} == "false" ]; then
+    ${scp_base} cosmic-agent/conf/agent.properties ${hvuser}@${hvip}:/etc/cosmic/agent/
+  fi
+  ${scp_base} -r cosmic-core/scripts/src/main/resources/scripts ${hvuser}@${hvip}:/opt/cosmic/agent/
+  ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
+  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
+
+  ${scp_base} cosmic-core/scripts/src/main/resources/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+  ${scp_base} -r cosmic-core/scripts/src/main/resources/python/lib/cloudutils ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
+
+  ${scp_base} cosmic-agent/conf/cosmic-agent.service ${hvuser}@${hvip}:/usr/lib/systemd/system/
+  ${ssh_base} ${hvuser}@${hvip} systemctl daemon-reload
+
+  # Set permissions on scripts
+  ${ssh_base} ${hvuser}@${hvip} chmod -R 0755 /opt/cosmic/agent/scripts/
+  ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-setup-agent
+  ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-ssh
+
+  if [ ${war_upgrade} == "false" ]; then
+    # Configure properties
+    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=custom" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.model=kvm64" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
+    ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
+  fi
+
+  if [ ${war_upgrade} == "true" ]; then
+    ${ssh_base} ${hvuser}@${hvip} systemctl start cosmic-agent 2>&1 >/dev/null
+  fi
+
+  say "Cosmic KVM Agent installed in ${hvip}"
 }
 
 function clean_xenserver {

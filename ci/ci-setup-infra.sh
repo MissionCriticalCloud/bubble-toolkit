@@ -264,7 +264,7 @@ function setup_nsx_cosmic {
   echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> /tmp/nsx_cosmic.sh
   echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> /tmp/nsx_cosmic.sh
 
-  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '192.168.22.83'), (\${next_host_id}, 'name', 'Nicira Controller - 192.168.22.83'), (\${next_host_id}, 'transportzoneisotype', 'stt'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '192.168.22.83'), (\${next_host_id}, 'name', 'Nicira Controller - 192.168.22.83'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> /tmp/nsx_cosmic.sh
   echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> /tmp/nsx_cosmic.sh
 
   echo "rm /tmp/nsx_cosmic.sh" >> /tmp/nsx_cosmic.sh
@@ -304,7 +304,7 @@ function configure_nsx_service_node {
     "transport_connectors": [
         {
             "ip_address": "'"${nsx_service_node_ip}"'",
-            "type": "STTConnector",
+            "type": "VXLANConnector",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'"
         }
     ],
@@ -386,7 +386,7 @@ function configure_kvm_host_in_nsx {
         {
             "ip_address": "'"${kvm_host_ip}"'",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
-            "type": "STTConnector"
+            "type": "VXLANConnector"
         }
     ]
 }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null

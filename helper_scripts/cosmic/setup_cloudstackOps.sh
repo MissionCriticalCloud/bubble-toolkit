@@ -19,6 +19,12 @@ if [ ! -d "${BASEDIR}/python_cloud" ]; then
   virtualenv ${BASEDIR}/python_cloud
   source ${BASEDIR}/python_cloud/bin/activate
   pip install --extra-index-url https://pypi.python.org/pypi/mysql-connector-python/2.0.4 mysql-connector-python
+  pip install slackweb
+  pip install six
+  pip install packaging
+  pip install setuptools
+  pip install appdirs
+  pip install fabric
   pip install ${BASEDIR}/cloudstackOps/marvin/Marvin-0.1.0.tar.gz
   pip install prettytable clint
   pip install fabric

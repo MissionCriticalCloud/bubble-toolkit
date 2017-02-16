@@ -2,6 +2,9 @@
 # Configure KVM Hypervisor with openvswitch and VXLAN (CentOS 7)
 # Fred Neubauer / Remi Bergsma
 
+# Set hostname to FQDN
+hostnamectl set-hostname $(HOSTNAME).cloud.lan
+
 # Disable mirrorlist in yum
 sed -i '/mirrorlist/s/^/#/' /etc/yum.repos.d/*.repo
 sed -i 's/#baseurl/baseurl/' /etc/yum.repos.d/*.repo

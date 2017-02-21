@@ -84,7 +84,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     say "Stopping Tomcat"
     stop_tomcat ${csip} ${csuser} ${cspass}
 
-    say "Collecting Integration Tests Coverage Data"
+    say "Collecting Integration Tests Coverage Data (Management Server)"
     collect_files_from_vm ${csip} ${csuser} ${cspass} "/tmp/jacoco-it.exec" "target/coverage-reports/jacoco-it-cs${i}.exec"
   fi
 done
@@ -98,6 +98,9 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval hvip="\${hvip${i}}"
     eval hvpass="\${hvpass${i}}"
     say "Stopping Cosmic KVM Agent on host ${hvip}"
+    stop_agent ${hvip} ${hvuser} ${hvpass}
+
+    say "Collecting Integration Tests Coverage Data (Agent)"
     collect_files_from_vm ${hvip} ${hvuser} ${hvpass} "/tmp/jacoco-it.exec" "target/coverage-reports/jacoco-it-kvm${i}.exec"
   fi
 done

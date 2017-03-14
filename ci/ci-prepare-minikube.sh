@@ -13,6 +13,13 @@ else
   minikube_destroy=$1
 fi
 
+# Create local docker network for microservices unit tests
+# Make sure docker is not redirected to e.g. minikube
+unset DOCKER_HOST
+unset DOCKER_TLS_VERIFY
+if ! docker network ls | grep cosmic-network &>/dev/null; then
+  docker network create cosmic-network
+fi
 
 until minikube_start ${minikube_destroy}
 do

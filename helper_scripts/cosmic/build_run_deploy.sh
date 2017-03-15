@@ -43,9 +43,11 @@ function usage {
 scenario_build_deploy_new_war="false"
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
+maven_clean="clean"
 shell_debugging="false"
 shell_debugging_flag=""
 disable_maven_unit_tests=0
+maven_unit_tests=""
 gitssh=1
 run_tests=0
 skip_deploy_minikube=0
@@ -70,12 +72,14 @@ do
   b)    scenario_redeploy_cosmic=1
         ;;
   C)    disable_maven_clean=1
+        maven_clean=""
         ;;
   D)    shell_debugging="true"
         set -x
         shell_debugging_flag="-x"
         ;;
   E)    disable_maven_unit_tests=1
+        maven_unit_tests=" -DskipTests "
         ;;
   H)    gitssh=0
         ;;
@@ -192,7 +196,7 @@ CI_SCRIPTS=/data/shared/ci
 # Cosmic Microservices Build Path
 COSMIC_MS_BUILD_PATH=${WORKSPACE}/cosmic-microservices
 
-# 00060 We work from here
+# 00060 We (not Jenkins) work from here
 cd ${WORKSPACE}
 
 # 00100 Checkout the code
@@ -261,7 +265,7 @@ fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   minikube_get_ip &> /dev/null
   cd "${COSMIC_MS_BUILD_PATH}"
-  mvn clean install -P development \
+  mvn ${maven_clean} install -P development ${maven_unit_tests}\
       -Ddocker.host=unix:/var/run/docker.sock
   mvn docker:push -P development \
       -Ddocker.host=unix:/var/run/docker.sock \

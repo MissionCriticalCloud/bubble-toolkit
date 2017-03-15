@@ -205,6 +205,7 @@ if [ ${skip_cosmic_entirely} == "false" ]; then
 fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   cosmic_microservices_sources_retrieve ${WORKSPACE} ${gitssh}
+  cosmic_microservices_charts_retrieve ${WORKSPACE} ${gitssh}
 fi
 
 # 00110 Config nexus for maven

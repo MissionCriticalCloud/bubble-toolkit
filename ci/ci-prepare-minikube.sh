@@ -37,9 +37,11 @@ if [ "${minikube_destroy}" == "true" ]; then
   # Create cosmic namespace
   kubectl create namespace cosmic
   kubectl create namespace internal
+  helm init
 else
   kubectl delete --all deployments  --namespace=cosmic
   kubectl delete --all services  --namespace=cosmic
+  helm init --upgrade
 fi
 
 # Setup docker registry with certificates

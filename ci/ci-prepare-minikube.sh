@@ -29,62 +29,23 @@ done
 minikube_get_ip
 
 say "Waiting for kubernetes to be available."
-until (echo > /dev/tcp/${MINIKUBE_IP}/8443) &> /dev/null; do
-    sleep 1 
-done
+until (echo > /dev/tcp/${MINIKUBE_IP}/8443) &> /dev/null;     do echo -n .; sleep 1; done; echo ""
 
 if [ "${minikube_destroy}" == "true" ]; then
-  # Create cosmic namespace
-  kubectl create namespace cosmic
+  # Create namespaces
   kubectl create namespace internal
-  helm init
-else
-  kubectl delete --all deployments  --namespace=cosmic
-  kubectl delete --all services  --namespace=cosmic
-  helm init --upgrade
+  kubectl create namespace cosmic
 fi
 
 # Setup docker registry with certificates
 cosmic_docker_registry ${minikube_destroy}
 
-say "Starting deployment: rabbitmq"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/rabbitmq.yml
+say "Initialize Helm."
+until [[ $(kubectl get namespace kube-system) =~ 'Active' ]]; do echo -n .; sleep 1; done; echo ""
+helm init --upgrade
+until [[ $(kubectl get deployment --namespace=kube-system tiller-deploy -o custom-columns=:.status.availableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
 
-say "Starting service: rabbitmq"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/rabbitmq.yml
+# Remove previous Helm cosmic-release deployment, if present
+if [[ $(helm ls) =~ cosmic-release ]]; then helm delete cosmic-release; fi
 
-say "Starting deployment: elasticsearch"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/elasticsearch.yml
-
-say "Starting service: elasticsearch"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/elasticsearch.yml
-
-say "Adding logstash.conf file"
-kubectl create secret generic logstash-files --from-file=/data/shared/ci/setup_files/logstash.conf --from-file=/data/shared/ci/setup_files/cosmic-metrics-template.json --namespace=cosmic
-
-say "Starting deployment: logstash"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/logstash.yml
-
-say "Starting deployment: cosmic-vault"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/deployments/cosmic-vault.yml
-
-say "Starting service: cosmic-vault"
-kubectl create -f /data/shared/deploy/cosmic/kubernetes/services/cosmic-vault.yml
-
-say "Waiting for cosmic-vault to be available."
-until curl -m 5 -sD - http://${MINIKUBE_IP}:30131/v1/sys/health | grep "HTTP/1.1 200" &>/dev/null
-do echo -n .; sleep 1; done; echo ""
-
-curl \
-    -H "X-Vault-Token: cosmic-vault-token" \
-    -H "Content-Type: application/json" \
-    -X POST \
-    -d @/data/shared/ci/setup_files/cosmic-metrics-collector-config.json \
-    http://${MINIKUBE_IP}:30131/v1/secret/cosmic-metrics-collector
-
-curl \
-    -H "X-Vault-Token: cosmic-vault-token" \
-    -H "Content-Type: application/json" \
-    -X POST \
-    -d @/data/shared/ci/setup_files/cosmic-usage-api-config.json \
-    http://${MINIKUBE_IP}:30131/v1/secret/cosmic-usage-api
+say "Done running script: $0"

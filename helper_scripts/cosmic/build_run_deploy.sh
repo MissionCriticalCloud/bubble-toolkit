@@ -196,6 +196,9 @@ CI_SCRIPTS=/data/shared/ci
 # Cosmic Microservices Build Path
 COSMIC_MS_BUILD_PATH=${WORKSPACE}/cosmic-microservices
 
+# Cosmic Microservices Charts Path
+COSMIC_MS_CHART_PATH=${WORKSPACE}/cosmic-microservices-chart
+
 # 00060 We (not Jenkins) work from here
 cd ${WORKSPACE}
 
@@ -249,7 +252,7 @@ if [ ${skip_maven_build} -eq 0 ]; then
 
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else
-  echo "Skipped maven build"
+  echo "Skipped Cosmic maven build"
 fi
 
 # ----- Wait for minikube
@@ -278,6 +281,7 @@ fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     say "Setting up minikube."
+    cd "${COSMIC_MS_CHART_PATH}"
     sh ${shell_debugging_flag}  "${CI_SCRIPTS}/ci-setup-minikube.sh"
   else
     echo "Skipped setup minikube"

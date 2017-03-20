@@ -276,17 +276,19 @@ if [ ${skip_prepare_infra} -eq 0 ]; then
   if [ "${PREP_INFRA_RETURN}" -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
 fi
 
-for i in 1 2 3 4 5 6 7 8 9; do
-  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
-    hvuser=
-    hvip=
-    hvpass=
-    eval hvuser="\${hvuser${i}}"
-    eval hvip="\${hvip${i}}"
-    eval hvpass="\${hvpass${i}}"
-    enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass} ${debug_kvm_startup}
-  fi
-done
+if [[ "${hypervisor}" == "kvm" ]]; then
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
+      enable_remote_debug_kvm ${hvip} ${hvuser} ${hvpass} ${debug_kvm_startup}
+    fi
+  done
+fi
 
 
 # 00500 Setup Infra
@@ -309,16 +311,18 @@ if [ ${skip_setup_infra} -eq 0 ]; then
       enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
     fi
 
-    # Clean KVMs in case of re-deploy
-    if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
-      hvuser=
-      hvip=
-      hvpass=
-      eval hvuser="\${hvuser${i}}"
-      eval hvip="\${hvip${i}}"
-      eval hvpass="\${hvpass${i}}"
-      say "Cleanup ${hvip}"
-      cleanup_kvm ${hvip} ${hvuser} ${hvpass}
+    if [[ "${hypervisor}" == "kvm" ]]; then
+      # Clean KVMs in case of re-deploy
+      if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+        hvuser=
+        hvip=
+        hvpass=
+        eval hvuser="\${hvuser${i}}"
+        eval hvip="\${hvip${i}}"
+        eval hvpass="\${hvpass${i}}"
+        say "Cleanup ${hvip}"
+        cleanup_kvm ${hvip} ${hvuser} ${hvpass}
+      fi
     fi
   done
 
@@ -353,15 +357,17 @@ for i in 1 2 3 4 5 6 7 8 9; do
     deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
   fi
 
-  if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
-    hvuser=
-    hvip=
-    hvpass=
-    eval hvuser="\${hvuser${i}}"
-    eval hvip="\${hvip${i}}"
-    eval hvpass="\${hvpass${i}}"
-    say "Installing Cosmic KVM Agent on host ${hvip}"
-    install_kvm_packages ${hvip} ${hvuser} ${hvpass} ${scenario_build_deploy_new_war}
+  if [[ "${hypervisor}" == "kvm" ]]; then
+    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+      hvuser=
+      hvip=
+      hvpass=
+      eval hvuser="\${hvuser${i}}"
+      eval hvip="\${hvip${i}}"
+      eval hvpass="\${hvpass${i}}"
+      say "Installing Cosmic KVM Agent on host ${hvip}"
+      install_kvm_packages ${hvip} ${hvuser} ${hvpass} ${scenario_build_deploy_new_war}
+    fi
   fi
 done
 

@@ -109,8 +109,8 @@ function deploy_cosmic_db {
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
 
-  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE cloud.vm_template SET url='http://jenkins.buildacloud.org/job/build-systemvm64-master/lastSuccessfulBuild/artifact/tools/appliance/dist/systemvm64template-master-4.6.0-kvm.qcow2.bz2' where id=3;"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, unique_name='tiny linux kvm', name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, unique_name='tiny linux xen', name='tiny linux xen', display_text='tiny linux xen' where id=5;"
 
   mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE service_offering SET ha_enabled = 1;"
   mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE vm_instance SET ha_enabled = 1;"
@@ -429,8 +429,13 @@ say "Deploying Cosmic DB"
 deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
 say "Installing SystemVM templates"
-systemtemplate="/data/templates/cosmic-systemvm.qcow2"
-imagetype="qcow2"
+if [[ "${hypervisor}" == "kvm" ]]; then
+  systemtemplate="/data/templates/cosmic-systemvm.qcow2"
+  imagetype="qcow2"
+ elif [[ "${hypervisor}" == "xenserver" ]]; then
+  systemtemplate="/data/templates/cosmic-systemvm-xenserver-16.12.1.2.vhd"
+  imagetype="vhd"
+fi
 install_systemvm_templates ${cs1ip} ${cs1user} ${cs1pass} ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
 
 if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
@@ -453,6 +458,10 @@ for i in 1 2 3 4 5 6 7 8 9; do
   fi
 done
 
+host_count=0
+master_address=0
+master_username=0
+master_password=0
 for i in 1 2 3 4 5 6 7 8 9; do
   if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
     hvuser=
@@ -461,14 +470,31 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval hvuser="\${hvuser${i}}"
     eval hvip="\${hvip${i}}"
     eval hvpass="\${hvpass${i}}"
-    say "Installing Cosmic KVM Agent on host ${hvip}"
-    install_kvm_packages ${hvip} ${hvuser} ${hvpass}
 
-    say "Configuring agent to load JaCoCo Agent on host ${hvip}"
-    configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
+    if [[ "${hypervisor}" == "kvm" ]]; then
+      say "Installing Cosmic KVM Agent on host ${hvip}"
+      install_kvm_packages ${hvip} ${hvuser} ${hvpass}
 
-    if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
-      configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
+      say "Configuring agent to load JaCoCo Agent on host ${hvip}"
+      configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
+
+      if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+        configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
+      fi
+    elif [[ "${hypervisor}" == "xenserver" ]]; then
+      ${ssh_base} ${hvuser}@${hvip} sed -i "s/HOSTNAME=.*/HOSTNAME=${hvip}/g" /etc/sysconfig/network
+      ((host_count++))
+      if [[ host_count -eq 1 ]]; then
+        master_address=${hvip}
+        master_username=${hvuser}
+        master_password=${hvpass}
+      elif [[ host_count -gt 1 ]]; then
+        say "More than one XenServer host detected, waiting for ${hvip} host to be ready..."
+        wait_for_port ${master_address} 443 tcp
+        wait_for_port ${hvip} 443 tcp
+        say "Setting ${master_address} as the master XenServer of ${hvip}"
+        ${ssh_base} ${hvuser}@${hvip} xe pool-join master-address=${master_address} master-username=${master_username} master-password=${master_password}
+      fi
     fi
   fi
 done

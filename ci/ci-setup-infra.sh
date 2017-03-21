@@ -309,7 +309,7 @@ function configure_nsx_service_node {
         }
     ],
     "zone_forwarding": true
-}' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+    }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
 }
 
 function authenticate_nsx {
@@ -320,21 +320,21 @@ function authenticate_nsx {
 
   say "Authenticating against NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
+  nsx_master_controller_node_ip_new=${nsx_master_controller_node_ip}
 
   is_still_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
   if [ $? -gt 0 ]; then
      echo "Not master, look for the new one"
       nsx_master_controller_node_ip_new=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 301|Location' | grep 'Location' | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}')
-
-      if [ ! -v "${nsx_master_controller_node_ip_new}" ]; then
-        curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip_new}/ws.v1/login
-        echo "New master ip ${nsx_master_controller_node_ip_new}"
-        echo "Old master ip ${nsx_master_controller_node_ip}"
+      if [ ! -z "${nsx_master_controller_node_ip_new}" ]; then
+        say "Found new master ${nsx_master_controller_node_ip_new}"
         export nsx_master_controller_node_ip=${nsx_master_controller_node_ip_new}
       fi
-  else
-    export nsx_master_controller_node_ip=${nsx_master_controller_node_ip}
   fi
+  say "Authenticating against NSX controller"
+  curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
+  echo "New master ip ${nsx_master_controller_node_ip_new}"
+  echo "Old master ip ${nsx_master_controller_node_ip}"
 }
 
 function check_nsx_cluster_health {
@@ -389,9 +389,45 @@ function configure_kvm_host_in_nsx {
             "type": "VXLANConnector"
         }
     ]
-}' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+    }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
 }
 
+
+function configure_xenserver_host_in_nsx {
+  nsx_master_controller_node_ip=$1
+  nsx_cookie=$2
+  xen_host=$3
+  xen_host_ip=$(getent hosts $3 | awk '{ print $1 }')
+  xen_user=$4
+  xen_pass=$5
+
+  say "Waiting for Xapi to be ready"
+  wait_for_port ${xen_host} 443 tcp
+  wait_for_port ${xen_host} 22 tcp
+  xen_integration_bridge_uuid=$(${ssh_base} ${xen_user}@${xen_host} "/opt/xensource/bin/xe network-list name-label=br-int --minimal | tr -d '\n'")
+
+  if [ -z "${xen_integration_bridge_uuid}" ]; then
+    say "Error: No integration bridge UUID found: ${xen_integration_bridge_uuid}"
+    exit 1
+  fi
+
+  echo "Note: Creating XenServer host (${xen_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
+  curl -L -k -b ${nsx_cookie} -X POST -d '{
+    "credential": {
+      "mgmt_address": "'"${xen_host_ip}"'",
+      "type": "MgmtAddrCredential"
+    },
+    "display_name": "'"${xen_host}"'",
+    "integration_bridge_id": "'"${xen_integration_bridge_uuid}"'",
+    "transport_connectors": [
+        {
+            "ip_address": "'"${xen_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "VXLANConnector"
+        }
+    ]
+    }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node
+}
 
 # Options
 while getopts ':m:' OPTION
@@ -478,7 +514,8 @@ for i in 1 2 3 4 5 6 7 8 9; do
       say "Configuring agent to load JaCoCo Agent on host ${hvip}"
       configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
 
-      if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+      if [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+        say "Adding KVM ${hvip} to NSX"
         configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
       fi
     elif [[ "${hypervisor}" == "xenserver" ]]; then
@@ -488,12 +525,29 @@ for i in 1 2 3 4 5 6 7 8 9; do
         master_address=${hvip}
         master_username=${hvuser}
         master_password=${hvpass}
+
+        say "Creating networks on XenServer on poolmaster ${master_address}"
+        NETUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe network-create name-label=\"br-int\" --minimal | tr -d '\n'")
+        STTUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe network-list bridge=\"xenbr0\" --minimal | tr -d '\n'")
+        PIFUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe pif-list network-uuid=${STTUUID} host-name-label=${hvip} --minimal | tr -d '\n'")
+        TUNUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe tunnel-create pif-uuid=${PIFUUID} network-uuid=${NETUUID} | tr -d '\n'")
+        ${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe network-param-set uuid=${NETUUID} other-config:vswitch-disable-in-band=true other-config:vswitch-controller-failmode=secure"
+
       elif [[ host_count -gt 1 ]]; then
         say "More than one XenServer host detected, waiting for ${hvip} host to be ready..."
         wait_for_port ${master_address} 443 tcp
         wait_for_port ${hvip} 443 tcp
+        say "Waiting for SSH to be up at ${hvip}"
+        wait_for_port ${hvip} 22 tcp
         say "Setting ${master_address} as the master XenServer of ${hvip}"
-        ${ssh_base} ${hvuser}@${hvip} xe pool-join master-address=${master_address} master-username=${master_username} master-password=${master_password}
+        ${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe pool-join master-address=${master_address} master-username=${master_username} master-password=${master_password}"
+        say "Allowing the XenServers to connect"
+        sleep 10
+      fi
+      if [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+        say "Adding XenServer ${hvip} to NSX"
+        configure_xenserver_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
+        ${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe pool-set-vswitch-controller address=${nsx_master_controller_node_ip}"
       fi
     fi
   fi

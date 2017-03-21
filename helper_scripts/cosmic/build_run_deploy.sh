@@ -25,11 +25,13 @@ function usage {
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
   printf "\t-S:\t(Experimental) make use of cosmic-microservices"
-  printf "\nSkip flags:\n" >&2
+  printf "\nSkip flags Cosmic:\n" >&2
+  printf "\t-s:\tSkip Cosmic build and deploy entirely\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
   printf "\t-v:\tSkip prepare infra (VM creation)\n" >&2
   printf "\t-w:\tSkip setup infra (DB creation, war deploy, agent-rpm installs)\n" >&2
   printf "\t-x:\tSkip deploy DC\n" >&2
+  printf "\nSkip flags Cosmic Microservices:\n" >&2
   printf "\t-k:\tSkip deploy minikube\n" >&2
   printf "\t-K:\tKeep previous minikube infra\n" >&2
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
@@ -41,9 +43,11 @@ function usage {
 scenario_build_deploy_new_war="false"
 scenario_redeploy_cosmic=0
 disable_maven_clean=0
+maven_clean="clean"
 shell_debugging="false"
 shell_debugging_flag=""
 disable_maven_unit_tests=0
+maven_unit_tests=""
 gitssh=1
 run_tests=0
 skip_deploy_minikube=0
@@ -51,6 +55,7 @@ remove_minikube_infra="true"
 debug_war_startup=0
 debug_kvm_startup=0
 enable_cosmic_microservices=0
+skip_cosmic_entirely="false"
 skip_maven_build=0
 compile_threads=
 skip_prepare_infra=0
@@ -59,7 +64,7 @@ skip_setup_infra=0
 WORKSPACE_OVERRIDE=
 skip_deploy_dc=0
 
-while getopts 'abCDEHIkKm:opStT:vVwW:x' OPTION
+while getopts 'abCDEHIkKm:opsStT:vVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war="true"
@@ -67,12 +72,14 @@ do
   b)    scenario_redeploy_cosmic=1
         ;;
   C)    disable_maven_clean=1
+        maven_clean=""
         ;;
   D)    shell_debugging="true"
         set -x
         shell_debugging_flag="-x"
         ;;
   E)    disable_maven_unit_tests=1
+        maven_unit_tests=" -DskipTests "
         ;;
   H)    gitssh=0
         ;;
@@ -87,6 +94,8 @@ do
   o)    debug_war_startup=1
         ;;
   p)    debug_kvm_startup=1
+        ;;
+  s)    skip_cosmic_entirely="true"
         ;;
   S)    enable_cosmic_microservices=1
         ;;
@@ -115,6 +124,7 @@ if [ ${verbose} -eq 1 ]; then
   echo "shell_debugging               (-D) = ${shell_debugging}"
   echo "gitssh                        (-H) = ${gitssh}"
   echo ""
+  echo "skip_cosmic_entirely          (-s) = ${skip_cosmic_entirely}"
   echo "skip_maven_build              (-t) = ${skip_maven_build}"
   echo "skip_prepare_infra            (-v) = ${skip_prepare_infra}"
   echo "skip_setup_infra              (-w) = ${skip_setup_infra}"
@@ -158,6 +168,13 @@ if [ ${scenario_redeploy_cosmic} -eq 1 ]; then
   skip_setup_infra=0
   skip_deploy_dc=0
 fi
+if [ ${skip_cosmic_entirely} == "true" ]; then
+  skip_maven_build=1
+  skip_prepare_infra=1
+  skip_prepare_infra=1
+  skip_setup_infra=1
+  skip_deploy_dc=1
+fi
 
 # 00080 Parse marvin config
 parse_marvin_config ${marvinCfg}
@@ -179,13 +196,19 @@ CI_SCRIPTS=/data/shared/ci
 # Cosmic Microservices Build Path
 COSMIC_MS_BUILD_PATH=${WORKSPACE}/cosmic-microservices
 
-# 00060 We work from here
+# Cosmic Microservices Charts Path
+COSMIC_MS_CHART_PATH=${WORKSPACE}/cosmic-microservices-chart
+
+# 00060 We (not Jenkins) work from here
 cd ${WORKSPACE}
 
 # 00100 Checkout the code
-cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
+if [ ${skip_cosmic_entirely} == "false" ]; then
+  cosmic_sources_retrieve ${WORKSPACE} ${gitssh}
+fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   cosmic_microservices_sources_retrieve ${WORKSPACE} ${gitssh}
+  cosmic_microservices_charts_retrieve ${WORKSPACE} ${gitssh}
 fi
 
 # 00110 Config nexus for maven
@@ -229,7 +252,7 @@ if [ ${skip_maven_build} -eq 0 ]; then
 
   if [ $? -ne 0 ]; then echo "Maven build failed!"; exit;  fi
 else
-  echo "Skipped maven build"
+  echo "Skipped Cosmic maven build"
 fi
 
 # ----- Wait for minikube
@@ -246,7 +269,7 @@ fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   minikube_get_ip &> /dev/null
   cd "${COSMIC_MS_BUILD_PATH}"
-  mvn clean install -P development \
+  mvn ${maven_clean} install -P development ${maven_unit_tests}\
       -Ddocker.host=unix:/var/run/docker.sock
   mvn docker:push -P development \
       -Ddocker.host=unix:/var/run/docker.sock \
@@ -258,6 +281,7 @@ fi
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
     say "Setting up minikube."
+    cd "${COSMIC_MS_CHART_PATH}"
     sh ${shell_debugging_flag}  "${CI_SCRIPTS}/ci-setup-minikube.sh"
   else
     echo "Skipped setup minikube"
@@ -338,39 +362,38 @@ fi
 cd "${COSMIC_BUILD_PATH}"
 if [ ${scenario_build_deploy_new_war} == "true" ]; then
 
-for i in 1 2 3 4 5 6 7 8 9; do
-  if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
-    csuser=
-    csip=
-    cspass=
-    eval csuser="\${cs${i}user}"
-    eval csip="\${cs${i}ip}"
-    eval cspass="\${cs${i}pass}"
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+      csuser=
+      csip=
+      cspass=
+      eval csuser="\${cs${i}user}"
+      eval csip="\${cs${i}ip}"
+      eval cspass="\${cs${i}pass}"
 
-    # 00510 Setup only war deploy
-    # Jenkins: war deploy is part of setupInfraForIntegrationTests
-    say "Deploy new war to ${csip}"
+      # 00510 Setup only war deploy
+      # Jenkins: war deploy is part of setupInfraForIntegrationTests
+      say "Deploy new war to ${csip}"
 
-    # Cleanup CS in case of re-deploy
-    undeploy_cosmic_war ${csip} ${csuser} ${cspass}
-    enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
-    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
-  fi
-
-  if [[ "${hypervisor}" == "kvm" ]]; then
-    if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
-      hvuser=
-      hvip=
-      hvpass=
-      eval hvuser="\${hvuser${i}}"
-      eval hvip="\${hvip${i}}"
-      eval hvpass="\${hvpass${i}}"
-      say "Installing Cosmic KVM Agent on host ${hvip}"
-      install_kvm_packages ${hvip} ${hvuser} ${hvpass} ${scenario_build_deploy_new_war}
+      # Cleanup CS in case of re-deploy
+      undeploy_cosmic_war ${csip} ${csuser} ${cspass}
+      enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
+      deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
     fi
-  fi
-done
 
+    if [[ "${hypervisor}" == "kvm" ]]; then
+      if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+        hvuser=
+        hvip=
+        hvpass=
+        eval hvuser="\${hvuser${i}}"
+        eval hvip="\${hvip${i}}"
+        eval hvpass="\${hvpass${i}}"
+        say "Installing Cosmic KVM Agent on host ${hvip}"
+        install_kvm_packages ${hvip} ${hvuser} ${hvpass} ${scenario_build_deploy_new_war}
+      fi
+    fi
+  done
 fi
 
 # 00600 Deploy DC

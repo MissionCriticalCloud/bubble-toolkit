@@ -17,6 +17,12 @@ function cosmic_microservices_sources_retrieve {
   gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic-microservices.git' "${BASEDIR}/cosmic-microservices"  ${GITSSH}
 }
 
+function cosmic_microservices_charts_retrieve {
+  BASEDIR=$1
+  GITSSH=$2
+  gitclone_recursive 'git@github.com:MissionCriticalCloud/cosmic-microservices-chart.git' "${BASEDIR}/cosmic-microservices-chart"  ${GITSSH}
+}
+
 function gitclone_recursive {
   REPO_URL=$1
   CHECKOUT_PATH=$2

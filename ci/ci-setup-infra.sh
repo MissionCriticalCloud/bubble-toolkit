@@ -230,9 +230,8 @@ function create_nsx_cluster {
     fi
   done
 
-  echo "TOP Old master ip ${nsx_master_controller_node_ip}"
   authenticate_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${nsx_user} ${nsx_pass}
-  echo "TOP New master ip ${nsx_master_controller_node_ip}"
+  echo "New master ip after authenticating ${nsx_master_controller_node_ip}"
 
   check_nsx_cluster_health ${nsx_master_controller_node_ip} ${nsx_cookie}
 
@@ -320,23 +319,32 @@ function authenticate_nsx {
   nsx_user=$3
   nsx_pass=$4
 
-  say "Authenticating against NSX controller"
-  curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
-  nsx_master_controller_node_ip_new=${nsx_master_controller_node_ip}
+  say "Master ip before we start: ${nsx_master_controller_node_ip}"
+  say "Testing all controllers.."
 
-  is_still_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
-  if [ $? -gt 0 ]; then
-     echo "Not master, look for the new one"
-      nsx_master_controller_node_ip_new=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 301|Location' | grep 'Location' | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}')
-      if [ ! -z "${nsx_master_controller_node_ip_new}" ]; then
-        say "Found new master ${nsx_master_controller_node_ip_new}"
-        export nsx_master_controller_node_ip=${nsx_master_controller_node_ip_new}
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if  [ ! -v $( eval "echo \${nsx_controller_node_ip${i}}" ) ]; then
+      nsx_controller_node_ip=
+      eval nsx_controller_node_ip="\${nsx_controller_node_ip${i}}"
+      say "Checking to see if ${nsx_controller_node_ip} is master"
+      say "Authenticating against NSX controller ${nsx_controller_node_ip}"
+      curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_controller_node_ip}/ws.v1/login
+      is_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
+      if [ $? -gt 0 ]; then
+        say "Controller ${nsx_controller_node_ip} DOES NOT respond with 200 so this is NOT our master!"
+        say "Output: ${is_master}"
+      else
+        say "Controller ${nsx_controller_node_ip} responds with 200 so this is our master!"
+        say "Output: ${is_master}"
+        export nsx_master_controller_node_ip=$(getent hosts ${nsx_controller_node_ip} | awk '{ print $1 }')
+        say "New master ip is ${nsx_master_controller_node_ip}"
       fi
-  fi
+    fi
+  done
+
   say "Authenticating against NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
-  echo "New master ip ${nsx_master_controller_node_ip_new}"
-  echo "Old master ip ${nsx_master_controller_node_ip}"
+  echo "New master ip ${nsx_master_controller_node_ip}"
 }
 
 function check_nsx_cluster_health {

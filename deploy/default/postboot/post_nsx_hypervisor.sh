@@ -15,6 +15,9 @@ while ! ping -c3 ${NSX_CONTROLLER} &>/dev/null; do
   sleep 2
 done
 
+echo "Note: wait until we can SSH to the controller node."
+while ! nmap -Pn -p22 ${NSX_CONTROLLER} | grep "22/tcp open" 2>&1 > /dev/null; do sleep 1; done
+
 SSH_OPTIONS="-o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -q"
 
 echo "Note: Authenticating against controller"

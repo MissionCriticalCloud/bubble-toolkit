@@ -373,6 +373,7 @@ class kvm_local_deploy:
                 command = "virt-customize -d " + vm_name + " --firstboot " + file_name
                 print "Note: " + vm_name + ": Running pre_boot script: " + command
                 return_code = subprocess.call(command, shell=True)
+                print "Note: virt-customize result code: " + str(return_code)
             else:
                 return_code = 0
                 print "WARNING: " + vm_name + ": No firstboot script defined."
@@ -496,13 +497,15 @@ class kvm_local_deploy:
             # Define the vm in Qemu
             self.define_vm(role_name, vm_name)
             # Exec firstboot action
-            self.firstboot_action(role_name, vm_name)
+            if self.firstboot_action(role_name, vm_name) > 0:
+                print "Error: First boot action failed"
+                return False
             # Start domain
             self.start_vm(vm_name)
             # Exec postboot action
             self.postboot_action(role_name, vm_name)
         except:
-            return None
+            return False
         return vm_name
 
     # Generate a name for the VM
@@ -563,8 +566,9 @@ class kvm_local_deploy:
             return 4
 
     def deploy_cloud_roles(self, roles):
-        pool = ThreadPool(4)
+        pool = ThreadPool(10)
         results = pool.map(self.deploy_role, roles)
+        print "Note: Deployment results: " + str(results)
         pool.close()
         pool.join()
         return results
@@ -642,6 +646,7 @@ class kvm_local_deploy:
         hosts = self.get_management_hosts() + self.get_hosts() + self.get_nsx_nodes()
         pool = ThreadPool(10)
         results = pool.map(self.deploy_host, hosts)
+        print "Note: Deployment results: " + str(results)
         pool.close()
         pool.join()
         return True
@@ -652,8 +657,9 @@ class kvm_local_deploy:
             return False
         print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
         hosts = self.get_hosts()
-        pool = ThreadPool(4)
+        pool = ThreadPool(10)
         results = pool.map(self.delete_host, hosts)
+        print "Note: Deployment results: " + str(results)
         pool.close()
         pool.join()
         return True
@@ -707,7 +713,8 @@ if len(deploy_role) > 0:
     if not d.get_role(deploy_role):
         print "Error: the role does not exist."
         sys.exit(1)
-    if d.deploy_role(deploy_role, digit) is None:
+    if not d.deploy_role(deploy_role, digit):
+        print "Error: deploying the role failed"
         sys.exit(1)
     sys.exit(0)
 

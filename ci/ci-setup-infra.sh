@@ -249,26 +249,27 @@ function create_nsx_cluster {
 }
 
 function setup_nsx_cosmic {
-
+  csip=$1
+  export NSX_COSMIC_SCRIPT=/tmp/nsx_cosmic_${csip}.sh
   say "Generating script for setting up NSX controller in Cosmic"
-  echo "#!/usr/bin/env bash" > /tmp/nsx_cosmic.sh
-  echo "" >> /tmp/nsx_cosmic.sh
-  echo "set -x" >> /tmp/nsx_cosmic.sh
-  echo "next_host_id=\$(mysql -h ${csip} -u cloud -pcloud cloud -e \"SELECT MAX(id) +1 FROM host;\" -s)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_cosmic_uuid=$(uuidgen)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_cosmic_controller_uuid=$(uuidgen)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_cosmic_controller_guid=$(uuidgen)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_transzone_uuid=${nsx_transport_zone_uuid}" >> /tmp/nsx_cosmic.sh
-  echo "nsx_master_controller_node_ip=${nsx_master_controller_node_ip}" >> /tmp/nsx_cosmic.sh
+  echo "#!/usr/bin/env bash" > ${NSX_COSMIC_SCRIPT}
+  echo "" >> ${NSX_COSMIC_SCRIPT}
+  echo "set -x" >> ${NSX_COSMIC_SCRIPT}
+  echo "next_host_id=\$(mysql -h ${csip} -u cloud -pcloud cloud -e \"SELECT MAX(id) +1 FROM host;\" -s)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_cosmic_uuid=$(uuidgen)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_cosmic_controller_uuid=$(uuidgen)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_cosmic_controller_guid=$(uuidgen)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_transzone_uuid=${nsx_transport_zone_uuid}" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_master_controller_node_ip=${nsx_master_controller_node_ip}" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query1=\"INSERT INTO host (id, name, uuid, status, type, private_ip_address, private_netmask, private_mac_address, storage_ip_address, storage_netmask, storage_mac_address, storage_ip_address_2, storage_mac_address_2, storage_netmask_2, cluster_id, public_ip_address, public_netmask, public_mac_address, proxy_port, data_center_id, pod_id, cpu_sockets, cpus, speed, url, fs_type, hypervisor_type, hypervisor_version, ram, resource, version, parent, total_size, capabilities, guid, available, setup, dom0_memory, last_ping, mgmt_server_id, disconnected, created, removed, update_count, resource_state, owner, lastUpdated, engine_state) VALUES	(\${next_host_id}, 'Nicira Controller - \${nsx_master_controller_node_ip}', '\${nsx_cosmic_controller_uuid}', 'Down', 'L2Networking', '', NULL, NULL, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'com.cloud.network.resource.NiciraNvpResource', '5.2.0.1-SNAPSHOT', NULL, NULL, NULL, '\${nsx_cosmic_controller_guid}', 1, 0, 0, 0, NULL, NULL, NOW(), NULL, 0, 'Enabled', NULL, NULL, 'Disabled');\" " >> /tmp/nsx_cosmic.sh
-  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query1}\"" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query1=\"INSERT INTO host (id, name, uuid, status, type, private_ip_address, private_netmask, private_mac_address, storage_ip_address, storage_netmask, storage_mac_address, storage_ip_address_2, storage_mac_address_2, storage_netmask_2, cluster_id, public_ip_address, public_netmask, public_mac_address, proxy_port, data_center_id, pod_id, cpu_sockets, cpus, speed, url, fs_type, hypervisor_type, hypervisor_version, ram, resource, version, parent, total_size, capabilities, guid, available, setup, dom0_memory, last_ping, mgmt_server_id, disconnected, created, removed, update_count, resource_state, owner, lastUpdated, engine_state) VALUES	(\${next_host_id}, 'Nicira Controller - \${nsx_master_controller_node_ip}', '\${nsx_cosmic_controller_uuid}', 'Down', 'L2Networking', '', NULL, NULL, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'com.cloud.network.resource.NiciraNvpResource', '5.2.0.1-SNAPSHOT', NULL, NULL, NULL, '\${nsx_cosmic_controller_guid}', 1, 0, 0, 0, NULL, NULL, NOW(), NULL, 0, 'Enabled', NULL, NULL, 'Disabled');\" " >> ${NSX_COSMIC_SCRIPT}
+  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query1}\"" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> /tmp/nsx_cosmic.sh
-  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> ${NSX_COSMIC_SCRIPT}
+  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> /tmp/nsx_cosmic.sh
-  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> ${NSX_COSMIC_SCRIPT}
+  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> ${NSX_COSMIC_SCRIPT}
 }
 
 function configure_nsx_controller_node {
@@ -572,5 +573,5 @@ for i in 1 2 3 4 5 6 7 8 9; do
 done
 
 if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
-  setup_nsx_cosmic
+  setup_nsx_cosmic ${csip}
 fi

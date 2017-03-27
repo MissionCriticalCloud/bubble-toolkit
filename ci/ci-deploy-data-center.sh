@@ -56,7 +56,8 @@ function add_nsx_connectivy_to_offerings {
 }
 
 function add_nsx_controller_to_cosmic {
-  bash -x /tmp/nsx_cosmic.sh
+  csip=$1
+  bash -x /tmp/nsx_cosmic_${csip}.sh
 }
 
 # Options
@@ -104,7 +105,7 @@ deploy_data_center ${marvin_configCopy}
 
 if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
   add_nsx_connectivy_to_offerings ${cs1ip}
-  add_nsx_controller_to_cosmic
+  add_nsx_controller_to_cosmic ${cs1ip}
 fi
 
 wait_for_systemvm_templates ${cs1ip}

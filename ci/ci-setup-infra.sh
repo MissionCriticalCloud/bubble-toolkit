@@ -479,7 +479,7 @@ if [[ "${hypervisor}" == "kvm" ]]; then
   systemtemplate="/data/templates/cosmic-systemvm.qcow2"
   imagetype="qcow2"
  elif [[ "${hypervisor}" == "xenserver" ]]; then
-  systemtemplate="/data/templates/cosmic-systemvm-xenserver-16.12.1.2.vhd"
+  systemtemplate="/data/templates/cosmic-systemvm.vhd"
   imagetype="vhd"
 fi
 install_systemvm_templates ${cs1ip} ${cs1user} ${cs1pass} ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}

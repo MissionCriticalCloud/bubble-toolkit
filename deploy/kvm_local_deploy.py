@@ -566,7 +566,10 @@ class kvm_local_deploy:
             return 4
 
     def deploy_cloud_roles(self, roles):
-        pool = ThreadPool(10)
+        thread_number = 10
+        if self.running_on_vm:
+            thread_number = 4
+        pool = ThreadPool(thread_number)
         results = pool.map(self.deploy_role, roles)
         print "Note: Deployment results: " + str(results)
         pool.close()
@@ -644,7 +647,10 @@ class kvm_local_deploy:
             return False
         print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
         hosts = self.get_management_hosts() + self.get_hosts() + self.get_nsx_nodes()
-        pool = ThreadPool(10)
+        thread_number = 10
+        if self.running_on_vm:
+            thread_number = 4
+        pool = ThreadPool(thread_number)
         results = pool.map(self.deploy_host, hosts)
         print "Note: Deployment results: " + str(results)
         pool.close()
@@ -657,12 +663,31 @@ class kvm_local_deploy:
             return False
         print "Note: Found hypervisor type '" + self.get_hypervisor_type() + "'"
         hosts = self.get_hosts()
-        pool = ThreadPool(10)
+        thread_number = 10
+        if self.running_on_vm:
+            thread_number = 4
+        pool = ThreadPool(thread_number)
         results = pool.map(self.delete_host, hosts)
         print "Note: Deployment results: " + str(results)
         pool.close()
         pool.join()
         return True
+
+    # VM or not?
+    def running_on_vm(self):
+        print "Note: Running virt-what to see if we are a VM or not"
+
+        try:
+            virtwhat_output = subprocess.check_output(["sudo", "/usr/sbin/virt-what"])
+        except subprocess.CalledProcessError, e:
+            # If it goes wrong, assume a VM
+            return True
+
+        if len(virtwhat_output) > 0:
+            # If it returns 'KVM' or another string, it's a vm
+            return True
+        # Here we have hardware
+        return False
 
 
 # Init our class

@@ -1,13 +1,9 @@
 #!/bin/bash
 # Configure KVM Hypervisor with openvswitch and VXLAN (CentOS 7)
-# Fred Neubauer / Remi Bergsma
 
-# Set hostname to FQDN
-hostnamectl set-hostname $(HOSTNAME).cloud.lan
-
-# Disable mirrorlist in yum
-sed -i '/mirrorlist/s/^/#/' /etc/yum.repos.d/*.repo
-sed -i 's/#baseurl/baseurl/' /etc/yum.repos.d/*.repo
+#
+# Please install packages with the packer build: https://github.com/MissionCriticalCloud/bubble-templates-packer
+#
 
 # Bring the second nic down to avoid routing problems
 ip link set dev eth1 down
@@ -19,12 +15,6 @@ sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/selinux/config
 # Disable firewall (for now..)
 systemctl stop firewall
 systemctl disable firewalld
-
-# Install dependencies for KVM
-sleep 5
-yum -y update
-yum -y install epel-release python qemu-kvm qemu-img libvirt libvirt-python net-tools bridge-utils vconfig setroubleshoot virt-top virt-manager openssh-askpass openssh-clients wget vim socat java ebtables iptables ethtool iproute ipset perl
-yum --enablerepo=epel -y install sshpass
 
 # Enable rpbind for NFS
 systemctl enable rpcbind

@@ -382,7 +382,7 @@ function configure_kvm_host_in_nsx {
   say "Note: Getting KVM host certificate from ${kvm_host}"
   kvm_ovs_certificate=$(sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} cat /etc/openvswitch/ovsclient-cert.pem | sed -z "s/\n/\\\\n/g")
 
-  echo "Note: Creating KVM host (${kvm_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
+  say "Note: Creating KVM host (${kvm_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
   curl -L -k -b ${nsx_cookie} -X POST -d '{
     "credential": {
         "client_certificate": {
@@ -400,6 +400,9 @@ function configure_kvm_host_in_nsx {
         }
     ]
     }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+
+   say "Setting NSX manager of ${kvm_host} to ${nsx_master_controller_node_ip}"
+   sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host}  "ovs-vsctl set-manager ssl:${nsx_master_controller_node_ip}:6632"
 }
 
 

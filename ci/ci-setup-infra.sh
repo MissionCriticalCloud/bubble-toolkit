@@ -322,27 +322,32 @@ function authenticate_nsx {
   say "Master ip before we start: ${nsx_master_controller_node_ip}"
   say "Testing all controllers.."
 
-  for i in 1 2 3 4 5 6 7 8 9; do
-    if  [ ! -v $( eval "echo \${nsx_controller_node_ip${i}}" ) ]; then
-      nsx_controller_node_ip=
-      eval nsx_controller_node_ip="\${nsx_controller_node_ip${i}}"
-      say "Checking to see if ${nsx_controller_node_ip} is master"
-      say "Authenticating against NSX controller ${nsx_controller_node_ip}"
-      curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_controller_node_ip}/ws.v1/login
-      is_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
-      if [ $? -gt 0 ]; then
-        say "Controller ${nsx_controller_node_ip} DOES NOT respond with 200 so this is NOT our master!"
-        say "Output: ${is_master}"
-      else
-        say "Controller ${nsx_controller_node_ip} responds with 200 so this is our master!"
-        say "Output: ${is_master}"
-        export nsx_master_controller_node_ip=$(getent hosts ${nsx_controller_node_ip} | awk '{ print $1 }')
-        say "New master ip is ${nsx_master_controller_node_ip}"
-      fi
-    fi
+  while :; do
+      for i in 1 2 3 4 5 6 7 8 9; do
+        if  [ ! -v $( eval "echo \${nsx_controller_node_ip${i}}" ) ]; then
+          nsx_controller_node_ip=
+          eval nsx_controller_node_ip="\${nsx_controller_node_ip${i}}"
+          say "Checking to see if ${nsx_controller_node_ip} is master"
+          say "Authenticating against NSX controller ${nsx_controller_node_ip}"
+          curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_controller_node_ip}/ws.v1/login
+          is_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
+          if [ $? -gt 0 ]; then
+            say "Controller ${nsx_controller_node_ip} DOES NOT respond with 200 so this is NOT our master!"
+            say "Output: ${is_master}"
+          else
+            say "Controller ${nsx_controller_node_ip} responds with 200 so this is our master!"
+            say "Output: ${is_master}"
+            export nsx_master_controller_node_ip=$(getent hosts ${nsx_controller_node_ip} | awk '{ print $1 }')
+            say "New master ip is ${nsx_master_controller_node_ip}"
+            break 2
+          fi
+        fi
+      done
+      say "Master not yet found, sleeping 10 sec and trying again.."
+      sleep 10
   done
 
-  say "Authenticating against NSX controller"
+  say "Authenticating against master NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
   echo "New master ip ${nsx_master_controller_node_ip}"
 }

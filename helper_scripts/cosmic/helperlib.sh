@@ -477,6 +477,7 @@ function marvin_build_and_install {
 
   # Pre-requirement: nose
   sudo pip install nose --upgrade --force &> /dev/null
+  sudo pip install mock &> /dev/null
 
   # Generate Cosmic API commands
   say "[MARVIN] Generating API commands..."

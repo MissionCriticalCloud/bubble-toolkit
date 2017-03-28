@@ -607,7 +607,7 @@ function d_show_usage {
   local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months")
 
   echo "Show usage (unfiltered) from ${STARTDATE} till ${ENDDATE}"
-  curl http://${MINIKUBE_IP}:31011\?\from\=${STARTDATE}\&to\=${ENDDATE}
+  curl http://${MINIKUBE_IP}:31011\?\from\=${STARTDATE}\&to\=${ENDDATE}\&path=\/
   echo ""
 }
 

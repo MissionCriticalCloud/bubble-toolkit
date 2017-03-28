@@ -475,6 +475,10 @@ function marvin_build_and_install {
 
   say "[MARVIN] Installing..."
 
+  # Pre-requirement: nose
+  sudo pip install nose --upgrade --force &> /dev/null
+  sudo pip install mock &> /dev/null
+
   # Generate Cosmic API commands
   say "[MARVIN] Generating API commands..."
   cd "${build_dir}/marvin"
@@ -500,7 +504,6 @@ function marvin_build_and_install {
   # Locally install Marvin distribution package
   say "[MARVIN] Locally installing distribution package..."
   sudo pip install --upgrade ${marvin_dist} &> /dev/null
-  sudo pip install nose --upgrade --force &> /dev/null
 
   say "[MARVIN] Successfully installed"
   cd "${cwd}"
@@ -607,7 +610,7 @@ function d_show_usage {
   local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months")
 
   echo "Show usage (unfiltered) from ${STARTDATE} till ${ENDDATE}"
-  curl http://${MINIKUBE_IP}:31011\?\from\=${STARTDATE}\&to\=${ENDDATE}
+  curl http://${MINIKUBE_IP}:31011\?\from\=${STARTDATE}\&to\=${ENDDATE}\&path=\/
   echo ""
 }
 

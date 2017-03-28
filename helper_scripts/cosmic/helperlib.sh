@@ -475,6 +475,9 @@ function marvin_build_and_install {
 
   say "[MARVIN] Installing..."
 
+  # Pre-requirement: nose
+  sudo pip install nose --upgrade --force &> /dev/null
+
   # Generate Cosmic API commands
   say "[MARVIN] Generating API commands..."
   cd "${build_dir}/marvin"
@@ -500,7 +503,6 @@ function marvin_build_and_install {
   # Locally install Marvin distribution package
   say "[MARVIN] Locally installing distribution package..."
   sudo pip install --upgrade ${marvin_dist} &> /dev/null
-  sudo pip install nose --upgrade --force &> /dev/null
 
   say "[MARVIN] Successfully installed"
   cd "${cwd}"

@@ -275,6 +275,10 @@ if [ ${enable_cosmic_microservices} -eq 1 ]; then
       -Ddocker.host=unix:/var/run/docker.sock \
       -Ddocker.push.registry=${MINIKUBE_HOST}:30081 \
       -Ddocker.filter=cosmic-config-server,cosmic-metrics-collector,cosmic-usage-api
+  cd "${COSMIC_MS_BUILD_PATH}/cosmic-usage-ui"
+  docker build -t ${MINIKUBE_HOST}:30081/missioncriticalcloud/cosmic-usage-ui .
+  docker push ${MINIKUBE_HOST}:30081/missioncriticalcloud/cosmic-usage-ui
+  cd "${COSMIC_MS_BUILD_PATH}"
 fi
 
 # 00550 Setup minikube

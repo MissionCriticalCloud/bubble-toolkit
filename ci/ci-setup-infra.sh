@@ -3,7 +3,7 @@
 scripts_dir=$(dirname $0)
 . ${scripts_dir}/../helper_scripts/cosmic/helperlib.sh
 
-set -e
+set -x
 
 function usage {
   printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
@@ -230,9 +230,8 @@ function create_nsx_cluster {
     fi
   done
 
-  echo "TOP Old master ip ${nsx_master_controller_node_ip}"
   authenticate_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${nsx_user} ${nsx_pass}
-  echo "TOP New master ip ${nsx_master_controller_node_ip}"
+  echo "New master ip after authenticating ${nsx_master_controller_node_ip}"
 
   check_nsx_cluster_health ${nsx_master_controller_node_ip} ${nsx_cookie}
 
@@ -250,24 +249,27 @@ function create_nsx_cluster {
 }
 
 function setup_nsx_cosmic {
-
+  csip=$1
+  export NSX_COSMIC_SCRIPT=/tmp/nsx_cosmic_${csip}.sh
   say "Generating script for setting up NSX controller in Cosmic"
-  echo "next_host_id=\$(mysql -h ${csip} -u cloud -pcloud cloud -e \"SELECT MAX(id) +1 FROM host;\" -s)" > /tmp/nsx_cosmic.sh
-  echo "nsx_cosmic_uuid=$(uuidgen)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_cosmic_controller_uuid=$(uuidgen)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_cosmic_controller_guid=$(uuidgen)" >> /tmp/nsx_cosmic.sh
-  echo "nsx_transzone_uuid=${nsx_transport_zone_uuid}" >> /tmp/nsx_cosmic.sh
+  echo "#!/usr/bin/env bash" > ${NSX_COSMIC_SCRIPT}
+  echo "" >> ${NSX_COSMIC_SCRIPT}
+  echo "set -x" >> ${NSX_COSMIC_SCRIPT}
+  echo "next_host_id=\$(mysql -h ${csip} -u cloud -pcloud cloud -e \"SELECT MAX(id) +1 FROM host;\" -s)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_cosmic_uuid=$(uuidgen)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_cosmic_controller_uuid=$(uuidgen)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_cosmic_controller_guid=$(uuidgen)" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_transzone_uuid=${nsx_transport_zone_uuid}" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_master_controller_node_ip=${nsx_master_controller_node_ip}" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query1=\"INSERT INTO host (id, name, uuid, status, type, private_ip_address, private_netmask, private_mac_address, storage_ip_address, storage_netmask, storage_mac_address, storage_ip_address_2, storage_mac_address_2, storage_netmask_2, cluster_id, public_ip_address, public_netmask, public_mac_address, proxy_port, data_center_id, pod_id, cpu_sockets, cpus, speed, url, fs_type, hypervisor_type, hypervisor_version, ram, resource, version, parent, total_size, capabilities, guid, available, setup, dom0_memory, last_ping, mgmt_server_id, disconnected, created, removed, update_count, resource_state, owner, lastUpdated, engine_state) VALUES	(\${next_host_id}, 'Nicira Controller - 192.168.22.83', '\${nsx_cosmic_controller_uuid}', 'Down', 'L2Networking', '', NULL, NULL, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'com.cloud.network.resource.NiciraNvpResource', '5.2.0.1-SNAPSHOT', NULL, NULL, NULL, '\${nsx_cosmic_controller_guid}', 1, 0, 0, 0, NULL, NULL, NOW(), NULL, 0, 'Enabled', NULL, NULL, 'Disabled');\" " >> /tmp/nsx_cosmic.sh
-  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query1}\"" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query1=\"INSERT INTO host (id, name, uuid, status, type, private_ip_address, private_netmask, private_mac_address, storage_ip_address, storage_netmask, storage_mac_address, storage_ip_address_2, storage_mac_address_2, storage_netmask_2, cluster_id, public_ip_address, public_netmask, public_mac_address, proxy_port, data_center_id, pod_id, cpu_sockets, cpus, speed, url, fs_type, hypervisor_type, hypervisor_version, ram, resource, version, parent, total_size, capabilities, guid, available, setup, dom0_memory, last_ping, mgmt_server_id, disconnected, created, removed, update_count, resource_state, owner, lastUpdated, engine_state) VALUES	(\${next_host_id}, 'Nicira Controller - \${nsx_master_controller_node_ip}', '\${nsx_cosmic_controller_uuid}', 'Down', 'L2Networking', '', NULL, NULL, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'com.cloud.network.resource.NiciraNvpResource', '5.2.0.1-SNAPSHOT', NULL, NULL, NULL, '\${nsx_cosmic_controller_guid}', 1, 0, 0, 0, NULL, NULL, NOW(), NULL, 0, 'Enabled', NULL, NULL, 'Disabled');\" " >> ${NSX_COSMIC_SCRIPT}
+  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query1}\"" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> /tmp/nsx_cosmic.sh
-  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> ${NSX_COSMIC_SCRIPT}
+  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '192.168.22.83'), (\${next_host_id}, 'name', 'Nicira Controller - 192.168.22.83'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> /tmp/nsx_cosmic.sh
-  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> /tmp/nsx_cosmic.sh
-
-  echo "rm /tmp/nsx_cosmic.sh" >> /tmp/nsx_cosmic.sh
+  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> ${NSX_COSMIC_SCRIPT}
+  echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> ${NSX_COSMIC_SCRIPT}
 }
 
 function configure_nsx_controller_node {
@@ -309,7 +311,7 @@ function configure_nsx_service_node {
         }
     ],
     "zone_forwarding": true
-}' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+    }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
 }
 
 function authenticate_nsx {
@@ -318,23 +320,37 @@ function authenticate_nsx {
   nsx_user=$3
   nsx_pass=$4
 
-  say "Authenticating against NSX controller"
+  say "Master ip before we start: ${nsx_master_controller_node_ip}"
+  say "Testing all controllers.."
+
+  while :; do
+      for i in 1 2 3 4 5 6 7 8 9; do
+        if  [ ! -v $( eval "echo \${nsx_controller_node_ip${i}}" ) ]; then
+          nsx_controller_node_ip=
+          eval nsx_controller_node_ip="\${nsx_controller_node_ip${i}}"
+          say "Checking to see if ${nsx_controller_node_ip} is master"
+          say "Authenticating against NSX controller ${nsx_controller_node_ip}"
+          curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_controller_node_ip}/ws.v1/login
+          is_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
+          if [ $? -gt 0 ]; then
+            say "Controller ${nsx_controller_node_ip} DOES NOT respond with 200 so this is NOT our master!"
+            say "Output: ${is_master}"
+          else
+            say "Controller ${nsx_controller_node_ip} responds with 200 so this is our master!"
+            say "Output: ${is_master}"
+            export nsx_master_controller_node_ip=$(getent hosts ${nsx_controller_node_ip} | awk '{ print $1 }')
+            say "New master ip is ${nsx_master_controller_node_ip}"
+            break 2
+          fi
+        fi
+      done
+      say "Master not yet found, sleeping 10 sec and trying again.."
+      sleep 10
+  done
+
+  say "Authenticating against master NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login
-
-  is_still_master=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 200')
-  if [ $? -gt 0 ]; then
-     echo "Not master, look for the new one"
-      nsx_master_controller_node_ip_new=$(curl -L -sD - -k -b ${nsx_cookie}  https://${nsx_master_controller_node_ip}/ws.v1/control-cluster | egrep 'HTTP/1.1 301|Location' | grep 'Location' | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}')
-
-      if [ ! -v "${nsx_master_controller_node_ip_new}" ]; then
-        curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip_new}/ws.v1/login
-        echo "New master ip ${nsx_master_controller_node_ip_new}"
-        echo "Old master ip ${nsx_master_controller_node_ip}"
-        export nsx_master_controller_node_ip=${nsx_master_controller_node_ip_new}
-      fi
-  else
-    export nsx_master_controller_node_ip=${nsx_master_controller_node_ip}
-  fi
+  echo "New master ip ${nsx_master_controller_node_ip}"
 }
 
 function check_nsx_cluster_health {
@@ -372,7 +388,7 @@ function configure_kvm_host_in_nsx {
   say "Note: Getting KVM host certificate from ${kvm_host}"
   kvm_ovs_certificate=$(sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} cat /etc/openvswitch/ovsclient-cert.pem | sed -z "s/\n/\\\\n/g")
 
-  echo "Note: Creating KVM host (${kvm_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
+  say "Note: Creating KVM host (${kvm_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
   curl -L -k -b ${nsx_cookie} -X POST -d '{
     "credential": {
         "client_certificate": {
@@ -389,9 +405,48 @@ function configure_kvm_host_in_nsx {
             "type": "VXLANConnector"
         }
     ]
-}' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+    }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
+
+   say "Setting NSX manager of ${kvm_host} to ${nsx_master_controller_node_ip}"
+   sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host}  "ovs-vsctl set-manager ssl:${nsx_master_controller_node_ip}:6632"
 }
 
+
+function configure_xenserver_host_in_nsx {
+  nsx_master_controller_node_ip=$1
+  nsx_cookie=$2
+  xen_host=$3
+  xen_host_ip=$(getent hosts $3 | awk '{ print $1 }')
+  xen_user=$4
+  xen_pass=$5
+
+  say "Waiting for Xapi to be ready"
+  wait_for_port ${xen_host} 443 tcp
+  wait_for_port ${xen_host} 22 tcp
+  xen_integration_bridge_uuid=$(${ssh_base} ${xen_user}@${xen_host} "/opt/xensource/bin/xe network-list name-label=br-int --minimal | tr -d '\n'")
+
+  if [ -z "${xen_integration_bridge_uuid}" ]; then
+    say "Error: No integration bridge UUID found: ${xen_integration_bridge_uuid}"
+    exit 1
+  fi
+
+  echo "Note: Creating XenServer host (${xen_host}) Transport Connector in Zone with UUID = ${nsx_transport_zone_uuid} "
+  curl -L -k -b ${nsx_cookie} -X POST -d '{
+    "credential": {
+      "mgmt_address": "'"${xen_host_ip}"'",
+      "type": "MgmtAddrCredential"
+    },
+    "display_name": "'"${xen_host}"'",
+    "integration_bridge_id": "'"${xen_integration_bridge_uuid}"'",
+    "transport_connectors": [
+        {
+            "ip_address": "'"${xen_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "VXLANConnector"
+        }
+    ]
+    }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node
+}
 
 # Options
 while getopts ':m:' OPTION
@@ -433,7 +488,7 @@ if [[ "${hypervisor}" == "kvm" ]]; then
   systemtemplate="/data/templates/cosmic-systemvm.qcow2"
   imagetype="qcow2"
  elif [[ "${hypervisor}" == "xenserver" ]]; then
-  systemtemplate="/data/templates/cosmic-systemvm-xenserver-16.12.1.2.vhd"
+  systemtemplate="/data/templates/cosmic-systemvm.vhd"
   imagetype="vhd"
 fi
 install_systemvm_templates ${cs1ip} ${cs1user} ${cs1pass} ${secondarystorage} ${systemtemplate} ${hypervisor} ${imagetype}
@@ -478,7 +533,8 @@ for i in 1 2 3 4 5 6 7 8 9; do
       say "Configuring agent to load JaCoCo Agent on host ${hvip}"
       configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
 
-      if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+      if [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+        say "Adding KVM ${hvip} to NSX"
         configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
       fi
     elif [[ "${hypervisor}" == "xenserver" ]]; then
@@ -488,17 +544,34 @@ for i in 1 2 3 4 5 6 7 8 9; do
         master_address=${hvip}
         master_username=${hvuser}
         master_password=${hvpass}
+
+        say "Creating networks on XenServer on poolmaster ${master_address}"
+        NETUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe network-create name-label=\"br-int\" --minimal | tr -d '\n'")
+        STTUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe network-list bridge=\"xenbr0\" --minimal | tr -d '\n'")
+        PIFUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe pif-list network-uuid=${STTUUID} host-name-label=${hvip} --minimal | tr -d '\n'")
+        TUNUUID=$(${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe tunnel-create pif-uuid=${PIFUUID} network-uuid=${NETUUID} | tr -d '\n'")
+        ${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe network-param-set uuid=${NETUUID} other-config:vswitch-disable-in-band=true other-config:vswitch-controller-failmode=secure"
+
       elif [[ host_count -gt 1 ]]; then
         say "More than one XenServer host detected, waiting for ${hvip} host to be ready..."
         wait_for_port ${master_address} 443 tcp
         wait_for_port ${hvip} 443 tcp
+        say "Waiting for SSH to be up at ${hvip}"
+        wait_for_port ${hvip} 22 tcp
         say "Setting ${master_address} as the master XenServer of ${hvip}"
-        ${ssh_base} ${hvuser}@${hvip} xe pool-join master-address=${master_address} master-username=${master_username} master-password=${master_password}
+        ${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe pool-join master-address=${master_address} master-username=${master_username} master-password=${master_password}"
+        say "Allowing the XenServers to connect"
+        sleep 10
+      fi
+      if [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+        say "Adding XenServer ${hvip} to NSX"
+        configure_xenserver_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
+        ${ssh_base} ${hvuser}@${hvip} "/opt/xensource/bin/xe pool-set-vswitch-controller address=${nsx_master_controller_node_ip}"
       fi
     fi
   fi
 done
 
 if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
-  setup_nsx_cosmic
+  setup_nsx_cosmic ${csip}
 fi

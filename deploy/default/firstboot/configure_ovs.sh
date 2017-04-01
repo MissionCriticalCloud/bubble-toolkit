@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Bubble NSX Ctrl
-NSXMANAGER="192.168.22.83"
-
 # PUBLIC VLAN
 VLANPUB=50
 
@@ -92,9 +89,4 @@ BOND_IFACES=\"$IFACES\"
 HOTPLUG=no
 " > /etc/sysconfig/network-scripts/ifcfg-bond0
 
-# NSX
-echo "Point manager to NSX controller"
-ovs-vsctl set-manager ssl:$NSXMANAGER:6632
-
 ### End OVS ###
-

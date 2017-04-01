@@ -16,6 +16,9 @@ sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/selinux/config
 systemctl stop firewall
 systemctl disable firewalld
 
+# FIXME
+sleep 5
+
 # Enable rpbind for NFS
 systemctl enable rpcbind
 systemctl start rpcbind

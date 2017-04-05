@@ -274,7 +274,8 @@ if [ ${enable_cosmic_microservices} -eq 1 ]; then
   mvn docker:push -P development \
       -Ddocker.host=unix:/var/run/docker.sock \
       -Ddocker.push.registry=${MINIKUBE_HOST}:30081 \
-      -Ddocker.filter=cosmic-config-server,cosmic-metrics-collector,cosmic-usage-api,cosmic-usage-ui
+      -Ddocker.filter=cosmic-config-server,cosmic-metrics-collector,cosmic-usage-api,cosmic-usage-ui \
+      -Ddocker.verbose=true
 fi
 
 # 00550 Setup minikube

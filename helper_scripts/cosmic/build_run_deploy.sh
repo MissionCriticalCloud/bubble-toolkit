@@ -267,13 +267,12 @@ fi
 
 # Build cosmic-microservices
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
-  minikube_get_ip &> /dev/null
   cd "${COSMIC_MS_BUILD_PATH}"
   mvn ${maven_clean} install -P development ${maven_unit_tests}\
       -Ddocker.host=unix:/var/run/docker.sock
   mvn docker:push -P development \
       -Ddocker.host=unix:/var/run/docker.sock \
-      -Ddocker.push.registry=${MINIKUBE_HOST}:30081 \
+      -Ddocker.push.registry=minikube:30081 \
       -Ddocker.filter=cosmic-config-server,cosmic-metrics-collector,cosmic-usage-api,cosmic-usage-ui \
       -Ddocker.verbose=true
 fi

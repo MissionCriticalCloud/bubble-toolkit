@@ -26,10 +26,8 @@ do
   say "minikube failed to start, retrying."
 done
 
-minikube_get_ip
-
 say "Waiting for kubernetes to be available."
-until (echo > /dev/tcp/${MINIKUBE_IP}/8443) &> /dev/null;     do echo -n .; sleep 1; done; echo ""
+until (echo > /dev/tcp/minikube/8443) &> /dev/null;     do echo -n .; sleep 1; done; echo ""
 
 if [ "${minikube_destroy}" == "true" ]; then
   # Create namespaces
@@ -41,9 +39,9 @@ fi
 cosmic_docker_registry ${minikube_destroy}
 
 say "Initialize Helm."
-until [[ $(kubectl get namespace kube-system) =~ 'Active' ]]; do echo -n .; sleep 1; done; echo ""
+until [[ $(kubectl get namespace kube-system) =~ 'Active' ]] &> /dev/null; do echo -n .; sleep 1; done; echo ""
 helm init --upgrade
-until [[ $(kubectl get deployment --namespace=kube-system tiller-deploy -o custom-columns=:.status.availableReplicas) =~ 1 ]]; do echo -n .; sleep 1; done; echo ""
+until [[ $(kubectl get deployment --namespace=kube-system tiller-deploy -o custom-columns=:.status.availableReplicas) =~ 1 ]] &> /dev/null; do echo -n .; sleep 1; done; echo ""
 
 # Remove previous Helm cosmic-release deployment, if present
 if [[ $(helm ls) =~ cosmic-release ]]; then helm delete cosmic-release; fi

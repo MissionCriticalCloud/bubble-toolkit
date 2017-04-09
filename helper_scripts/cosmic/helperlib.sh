@@ -647,3 +647,19 @@ function d_show_vault_secret {
   fi
 }
 
+function configure_cloudstack_mgt_server {
+  csip=$1
+  csuser=$2
+  cspass=$3
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${cspass}
+
+  # Setup CloudStack management config
+  ${ssh_base} ${csuser}@${csip} "/usr/bin/cloudstack-setup-management"
+
+  # Start CloudStack management server
+  ${ssh_base} ${csuser}@${csip} "/etc/init.d/cloudstack-management start"
+
+  say "CloudStack management configured and started"
+}

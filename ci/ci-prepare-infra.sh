@@ -11,10 +11,13 @@ function usage {
 say "Running script: $0"
 
 # Options
-while getopts ':m:' OPTION
+cloudstack_deploy_mode=0
+while getopts 'cm:' OPTION
 do
   case $OPTION in
   m)    marvin_config="$OPTARG"
+        ;;
+  c)    cloudstack_deploy_mode=1
         ;;
   esac
 done
@@ -40,5 +43,11 @@ parse_marvin_config ${marvin_config}
 
 mkdir -p ${primarystorage}
 
+# CloudStack flag
+CLOUDSTACKFLAG=""
+if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+  CLOUDSTACKFLAG="--cloudstack"
+fi
+
 say "Creating hosts"
-/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force 2>&1
+/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force ${CLOUDSTACKFLAG} 2>&1

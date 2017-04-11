@@ -16,8 +16,8 @@ say "Deploying containers using Helm"
 helm install . \
 --name=cosmic-release \
 --set namespace=cosmic \
---set registry="minikube:30081/" \
---set cosmic_usage_ui.usage_api_base_url="http://minikube:31001/" \
+--set registry="minikube.cloud.lan:30081/" \
+--set cosmic_usage_ui.usage_api_base_url="http://minikube.cloud.lan:31001/" \
 --set dev_mode=true \
 --replace \
 --wait

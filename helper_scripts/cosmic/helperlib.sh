@@ -558,20 +558,20 @@ function cosmic_docker_registry {
         mkdir -p /tmp/registry/certs
         rm -f /tmp/registry/certs/*
         # Generate self-signed certificate
-        openssl req -x509 -sha256 -nodes -newkey rsa:4096 -keyout /tmp/registry/certs/domain.key -out /tmp/registry/certs/domain.crt -days 365 -subj "/C=NL/ST=NH/L=AMS/O=SBP/OU=cosmic/CN=minikube" &> /dev/null
+        openssl req -x509 -sha256 -nodes -newkey rsa:4096 -keyout /tmp/registry/certs/domain.key -out /tmp/registry/certs/domain.crt -days 365 -subj "/C=NL/ST=NH/L=AMS/O=SBP/OU=cosmic/CN=minikube.cloud.lan" &> /dev/null
         # Add certificate to local trust store
         sudo cp /tmp/registry/certs/domain.crt /etc/pki/ca-trust/source/anchors/
         sudo update-ca-trust
 
         # Add certificate to the minikube docker deamon (to trust)
-        minikube ssh "sudo mkdir -p /etc/docker/certs.d/minikube:30081"
+        minikube ssh "sudo mkdir -p /etc/docker/certs.d/minikube.cloud.lan:30081"
         cat /tmp/registry/certs/domain.crt | minikube ssh "sudo cat > ca.crt"
-        minikube ssh "sudo mv ca.crt /etc/docker/certs.d/minikube:30081/ca.crt"
+        minikube ssh "sudo mv ca.crt /etc/docker/certs.d/minikube.cloud.lan:30081/ca.crt"
         minikube ssh "sudo systemctl restart docker"
 
         # Add certificate to the local bubble docker deamon (to trust)
-        sudo mkdir -p /etc/docker/certs.d/minikube:30081
-        sudo cp /tmp/registry/certs/domain.crt  /etc/docker/certs.d/minikube:30081/ca.crt
+        sudo mkdir -p /etc/docker/certs.d/minikube.cloud.lan:30081
+        sudo cp /tmp/registry/certs/domain.crt  /etc/docker/certs.d/minikube.cloud.lan:30081/ca.crt
         sudo systemctl restart docker
 
         say "Uploading certificates as secrets"
@@ -591,7 +591,7 @@ function cosmic_docker_registry {
 
 # Some convenient helper methods for container troubleshooting
 function d_show_message_queue {
-  curl -s -u root:password "http://minikube:31103/api/queues?columns=name,messages,message_stats.publish,message_stats.deliver" | python -m json.tool
+  curl -s -u root:password "http://minikube.cloud.lan:31103/api/queues?columns=name,messages,message_stats.publish,message_stats.deliver" | python -m json.tool
 }
 
 function d_show_usage {
@@ -599,7 +599,7 @@ function d_show_usage {
   local ENDDATE=$(date +'%Y-%m-01' -d "${STARTDATE} +1 months")
 
   echo "Show usage (unfiltered) from ${STARTDATE} till ${ENDDATE}"
-  curl http://minikube:31001\?\from\=${STARTDATE}\&to\=${ENDDATE}\&path=\/
+  curl http://minikube.cloud.lan:31001\?\from\=${STARTDATE}\&to\=${ENDDATE}\&path=\/
   echo ""
 }
 
@@ -611,11 +611,11 @@ function d_show_elasticsearch_aggr_by_vm {
   echo '{"query":{"bool":{"must":[{"range":{"@timestamp":{"gte":"STARTDATE","lt":"ENDDATE"}}},{"term":{"resourceType":"VirtualMachine"}}]}},"from":0,"size":0,"aggs":{"domains":{"terms":{"field":"domainUuid"},"aggs":{"virtualMachines":{"terms":{"field":"resourceUuid"},"aggs":{"states":{"terms":{"field":"payload.state"},"aggs":{"cpu":{"avg":{"field":"payload.cpu"}},"memory":{"avg":{"field":"payload.memory"}}}}}}}}}}' | \
   sed "s/STARTDATE/${STARTDATE}/g" | \
   sed "s/ENDDATE/${ENDDATE}/g" | \
-  curl -s -X POST http://minikube:31102/_search -d@- | python -m json.tool
+  curl -s -X POST http://minikube.cloud.lan:31102/_search -d@- | python -m json.tool
 }
 
 function show_vault_list {
-  curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://minikube:31101/v1/secret?list=true" | python -c "
+  curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://minikube.cloud.lan:31101/v1/secret?list=true" | python -c "
 try:
   import sys, json
   for x in json.load(sys.stdin)['data']['keys']:
@@ -630,7 +630,7 @@ function d_show_vault_secret {
     show_vault_list
   else
     echo "Retrieving $1"
-    curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://minikube:31101/v1/secret/$1" | python -m json.tool
+    curl -s -H "X-Vault-Token: cosmic-vault-token" -X GET "http://minikube.cloud.lan:31101/v1/secret/$1" | python -m json.tool
   fi
 }
 

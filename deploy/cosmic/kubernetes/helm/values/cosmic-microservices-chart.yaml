@@ -1,0 +1,13 @@
+#
+# Values for a complete working setup in the Cosmic Bubble
+#
+cosmic-vault:
+  cosmicScanInterval: "0 * * * * *"
+
+cosmic-usage-ui:
+  usageApiBaseUrl: http://minikube.cloud.lan:31001/
+
+global:
+  devMode: true
+  namespace: cosmic
+  registry: minikube.cloud.lan:30081/

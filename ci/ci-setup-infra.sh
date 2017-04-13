@@ -308,6 +308,11 @@ function configure_nsx_service_node {
             "ip_address": "'"${nsx_service_node_ip}"'",
             "type": "VXLANConnector",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'"
+        },
+        {
+            "ip_address": "'"${nsx_service_node_ip}"'",
+            "type": "STTConnector",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'"
         }
     ],
     "zone_forwarding": true
@@ -403,6 +408,11 @@ function configure_kvm_host_in_nsx {
             "ip_address": "'"${kvm_host_ip}"'",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
             "type": "VXLANConnector"
+        },
+        {
+            "ip_address": "'"${kvm_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "STTConnector"
         }
     ]
     }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
@@ -443,6 +453,11 @@ function configure_xenserver_host_in_nsx {
             "ip_address": "'"${xen_host_ip}"'",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
             "type": "VXLANConnector"
+        },
+        {
+            "ip_address": "'"${xen_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "STTConnector"
         }
     ]
     }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node

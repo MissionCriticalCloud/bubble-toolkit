@@ -250,6 +250,7 @@ function create_nsx_cluster {
 
 function setup_nsx_cosmic {
   csip=$1
+  isolationmethod=$2
   export NSX_COSMIC_SCRIPT=/tmp/nsx_cosmic_${csip}.sh
   say "Generating script for setting up NSX controller in Cosmic"
   echo "#!/usr/bin/env bash" > ${NSX_COSMIC_SCRIPT}
@@ -268,7 +269,7 @@ function setup_nsx_cosmic {
   echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> ${NSX_COSMIC_SCRIPT}
   echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', '${isolationmethod}'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> ${NSX_COSMIC_SCRIPT}
   echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> ${NSX_COSMIC_SCRIPT}
 }
 
@@ -605,5 +606,11 @@ for i in 1 2 3 4 5 6 7 8 9; do
 done
 
 if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
-  setup_nsx_cosmic ${csip}
+
+  isolationmethod="vxlan"
+  if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+     isolationmethod="stt"
+  fi
+
+  setup_nsx_cosmic ${csip} ${isolationmethod}
 fi

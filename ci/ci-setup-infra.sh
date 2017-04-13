@@ -6,7 +6,7 @@ scripts_dir=$(dirname $0)
 set -x
 
 function usage {
-  printf "Usage: %s: -m marvin_config \n" $(basename $0) >&2
+  printf "Usage: %s: -m marvin_config -c to inform we're configuring CloudStack instead of Cosmic\n" $(basename $0) >&2
 }
 
 say "Running script: $0"
@@ -250,6 +250,7 @@ function create_nsx_cluster {
 
 function setup_nsx_cosmic {
   csip=$1
+  isolationmethod=$2
   export NSX_COSMIC_SCRIPT=/tmp/nsx_cosmic_${csip}.sh
   say "Generating script for setting up NSX controller in Cosmic"
   echo "#!/usr/bin/env bash" > ${NSX_COSMIC_SCRIPT}
@@ -268,7 +269,7 @@ function setup_nsx_cosmic {
   echo "nsx_query2=\"INSERT INTO external_nicira_nvp_devices (uuid, physical_network_id, provider_name, device_name, host_id) VALUES ('\${nsx_cosmic_controller_uuid}', 201, 'NiciraNvp', 'NiciraNvp', \${next_host_id});\"" >> ${NSX_COSMIC_SCRIPT}
   echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query2}\"" >> ${NSX_COSMIC_SCRIPT}
 
-  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', 'vxlan'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> ${NSX_COSMIC_SCRIPT}
+  echo "nsx_query3=\"INSERT INTO host_details (host_id, name, value) VALUES (\${next_host_id}, 'transportzoneuuid', '\${nsx_transzone_uuid}'), (\${next_host_id}, 'physicalNetworkId', '201'), (\${next_host_id}, 'adminuser', 'admin'), (\${next_host_id}, 'ip', '\${nsx_master_controller_node_ip}'), (\${next_host_id}, 'name', 'Nicira Controller - \${nsx_master_controller_node_ip}'), (\${next_host_id}, 'transportzoneisotype', '${isolationmethod}'), (\${next_host_id}, 'guid', '\${nsx_cosmic_controller_guid}'),(\${next_host_id}, 'zoneId', '1'), (\${next_host_id}, 'adminpass', 'admin'),(\${next_host_id}, 'niciranvpdeviceid', '1');\"" >> ${NSX_COSMIC_SCRIPT}
   echo "mysql -h ${csip} -u cloud -pcloud cloud -e \"\${nsx_query3}\"" >> ${NSX_COSMIC_SCRIPT}
 }
 
@@ -307,6 +308,11 @@ function configure_nsx_service_node {
         {
             "ip_address": "'"${nsx_service_node_ip}"'",
             "type": "VXLANConnector",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'"
+        },
+        {
+            "ip_address": "'"${nsx_service_node_ip}"'",
+            "type": "STTConnector",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'"
         }
     ],
@@ -403,6 +409,11 @@ function configure_kvm_host_in_nsx {
             "ip_address": "'"${kvm_host_ip}"'",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
             "type": "VXLANConnector"
+        },
+        {
+            "ip_address": "'"${kvm_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "STTConnector"
         }
     ]
     }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node 2>&1 > /dev/null
@@ -443,16 +454,24 @@ function configure_xenserver_host_in_nsx {
             "ip_address": "'"${xen_host_ip}"'",
             "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
             "type": "VXLANConnector"
+        },
+        {
+            "ip_address": "'"${xen_host_ip}"'",
+            "transport_zone_uuid": "'"${nsx_transport_zone_uuid}"'",
+            "type": "STTConnector"
         }
     ]
     }' https://${nsx_master_controller_node_ip}/ws.v1/transport-node
 }
 
 # Options
-while getopts ':m:' OPTION
+cloudstack_deploy_mode=0
+while getopts 'cm:' OPTION
 do
   case $OPTION in
   m)    marvin_config="$OPTARG"
+        ;;
+  c)    cloudstack_deploy_mode=1
         ;;
   esac
 done
@@ -481,9 +500,12 @@ marvin_build_and_install "$PWD/cosmic-marvin"
 mkdir -p ${secondarystorage}
 
 say "Deploying Cosmic DB"
+if [ ${cloudstack_deploy_mode} -eq 0 ]; then
+    say "Cosmic DB that is build here is also compatible with CloudStack, as the base is CloudStack 4.0"
+fi
 deploy_cosmic_db ${cs1ip} ${cs1user} ${cs1pass}
 
-say "Installing SystemVM templates"
+say "Installing Cosmic SystemVM templates"
 if [[ "${hypervisor}" == "kvm" ]]; then
   systemtemplate="/data/templates/cosmic-systemvm.qcow2"
   imagetype="qcow2"
@@ -497,22 +519,23 @@ if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
   create_nsx_cluster
 fi
 
-for i in 1 2 3 4 5 6 7 8 9; do
-  if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
-    csuser=
-    csip=
-    cspass=
-    eval csuser="\${cs${i}user}"
-    eval csip="\${cs${i}ip}"
-    eval cspass="\${cs${i}pass}"
-    say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
-    configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
+if [ ${cloudstack_deploy_mode} -eq 0 ]; then
+    for i in 1 2 3 4 5 6 7 8 9; do
+      if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+        csuser=
+        csip=
+        cspass=
+        eval csuser="\${cs${i}user}"
+        eval csip="\${cs${i}ip}"
+        eval cspass="\${cs${i}pass}"
+        say "Configuring tomcat to load JaCoCo Agent on host ${csip}"
+        configure_tomcat_to_load_jacoco_agent ${csip} ${csuser} ${cspass}
 
-    say "Deploying Cosmic WAR on host ${csip}"
-    deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
-  fi
-done
-
+        say "Deploying Cosmic WAR on host ${csip}"
+        deploy_cosmic_war ${csip} ${csuser} ${cspass} 'cosmic-client/target/cloud-client-ui-*.war'
+      fi
+    done
+fi
 host_count=0
 master_address=0
 master_username=0
@@ -525,20 +548,30 @@ for i in 1 2 3 4 5 6 7 8 9; do
     eval hvuser="\${hvuser${i}}"
     eval hvip="\${hvip${i}}"
     eval hvpass="\${hvpass${i}}"
+    # SSH/SCP helpers for xen password
+    set_ssh_base_and_scp_base ${hvpass}
 
     if [[ "${hypervisor}" == "kvm" ]]; then
-      say "Installing Cosmic KVM Agent on host ${hvip}"
-      install_kvm_packages ${hvip} ${hvuser} ${hvpass}
+        if [ ${cloudstack_deploy_mode} -eq 0 ]; then
+          say "Installing Cosmic KVM Agent on host ${hvip}"
+          install_kvm_packages ${hvip} ${hvuser} ${hvpass}
 
-      say "Configuring agent to load JaCoCo Agent on host ${hvip}"
-      configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
+          say "Configuring agent to load JaCoCo Agent on host ${hvip}"
+          configure_agent_to_load_jacococ_agent ${hvip} ${hvuser} ${hvpass}
 
-      if [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
-        say "Adding KVM ${hvip} to NSX"
-        configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
-      fi
+          if [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
+            say "Adding KVM ${hvip} to NSX"
+            configure_kvm_host_in_nsx ${nsx_master_controller_node_ip} ${nsx_cookie} ${hvip} ${hvuser} ${hvpass}
+          fi
+       else
+          say "Installing CloudStack KVM Agent on host ${hvip} is not yet implemented!"
+       fi
     elif [[ "${hypervisor}" == "xenserver" ]]; then
       ${ssh_base} ${hvuser}@${hvip} sed -i "s/HOSTNAME=.*/HOSTNAME=${hvip}/g" /etc/sysconfig/network
+      say "Creating .ssh folder for root"
+      wait_for_port ${hvip} 22 tcp
+      ${ssh_base} ${hvuser}@${hvip} "mkdir -p /root/.ssh"
+
       ((host_count++))
       if [[ host_count -eq 1 ]]; then
         master_address=${hvip}
@@ -573,5 +606,11 @@ for i in 1 2 3 4 5 6 7 8 9; do
 done
 
 if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
-  setup_nsx_cosmic ${csip}
+
+  isolationmethod="vxlan"
+  if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+     isolationmethod="stt"
+  fi
+
+  setup_nsx_cosmic ${csip} ${isolationmethod}
 fi

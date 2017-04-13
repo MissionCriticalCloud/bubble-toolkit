@@ -24,7 +24,8 @@ function usage {
   printf "\t-C:\tDon't use 'clean' target on maven build\n" >&2
   printf "\t-E:\tDon't use unit tests on maven build\n" >&2
   printf "\t-H:\tGit use HTTPS instead of SSH\n" >&2
-  printf "\t-S:\t(Experimental) make use of cosmic-microservices"
+  printf "\t-S:\t(Experimental) make use of cosmic-microservices\n"
+  printf "\t-c:\tDeploy CloudStack 4.4.4 artifacts instead of Cosmic build\n"
   printf "\nSkip flags Cosmic:\n" >&2
   printf "\t-s:\tSkip Cosmic build and deploy entirely\n" >&2
   printf "\t-t:\tSkip maven build\n" >&2
@@ -42,6 +43,7 @@ function usage {
 # Options
 scenario_build_deploy_new_war="false"
 scenario_redeploy_cosmic=0
+cloudstack_deploy_mode=0
 disable_maven_clean=0
 maven_clean="clean"
 shell_debugging="false"
@@ -64,12 +66,14 @@ skip_setup_infra=0
 WORKSPACE_OVERRIDE=
 skip_deploy_dc=0
 
-while getopts 'abCDEHIkKm:opsStT:vVwW:x' OPTION
+while getopts 'abCcDEHIkKm:opsStT:vVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war="true"
         ;;
   b)    scenario_redeploy_cosmic=1
+        ;;
+  c)    cloudstack_deploy_mode=1
         ;;
   C)    disable_maven_clean=1
         maven_clean=""
@@ -140,6 +144,8 @@ if [ ${verbose} -eq 1 ]; then
   echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
   echo "scenario_redeploy_cosmic      (-b) = ${scenario_redeploy_cosmic}"
   echo ""
+  echo "cloudstack_deploy_mode        (-c) = ${cloudstack_deploy_mode}"
+  echo ""
 fi
 # Check if a marvin dc file was specified
 if [ -z ${marvinCfg} ]; then
@@ -174,6 +180,10 @@ if [ ${skip_cosmic_entirely} == "true" ]; then
   skip_prepare_infra=1
   skip_setup_infra=1
   skip_deploy_dc=1
+fi
+if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+  skip_maven_build=1
+  skip_cosmic_entirely="true"
 fi
 
 # 00080 Parse marvin config
@@ -214,12 +224,18 @@ fi
 # 00110 Config nexus for maven
 config_maven
 
+# CloudStack flag
+CLOUDSTACKFLAG=""
+if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+    CLOUDSTACKFLAG="-c"
+fi
+
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
   PREP_INFRA_LOG=/tmp/prep_infra_${$}.log
   echo "Executing prepare-infra in background, logging: ${PREP_INFRA_LOG}"
   # JENKINS: prepareInfraForIntegrationTests: not implemented: shell('rm -rf ./*')
-  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-prepare-infra.sh" -m "${marvinCfg}"  2>&1 > ${PREP_INFRA_LOG}    &
+  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-prepare-infra.sh" ${CLOUDSTACKFLAG} -m "${marvinCfg}"  2>&1 > ${PREP_INFRA_LOG}    &
   PREP_INFRA_PID=$!
 else
   echo "Skipped prepare infra"
@@ -320,47 +336,55 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   cd "${COSMIC_BUILD_PATH}"
   rm -rf "$secondarystorage/*"
 
-  for i in 1 2 3 4 5 6 7 8 9; do
-    # Cleanup CS in case of re-deploy
-    if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
-      csuser=
-      csip=
-      cspass=
-      eval csuser="\${cs${i}user}"
-      eval csip="\${cs${i}ip}"
-      eval cspass="\${cs${i}pass}"
-      # Cleanup CS in case of re-deploy
-      say "Cleanup ${csip}"
-      cleanup_cs ${csip} ${csuser} ${cspass}
-      enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
-    fi
+  if [ ${cloudstack_deploy_mode} -eq 0 ]; then
+      for i in 1 2 3 4 5 6 7 8 9; do
+        # Cleanup CS in case of re-deploy
+        if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+          csuser=
+          csip=
+          cspass=
+          eval csuser="\${cs${i}user}"
+          eval csip="\${cs${i}ip}"
+          eval cspass="\${cs${i}pass}"
+          # Cleanup CS in case of re-deploy
+          say "Cleanup ${csip}"
+          cleanup_cs ${csip} ${csuser} ${cspass}
+          enable_remote_debug_war ${csip} ${csuser} ${cspass} ${debug_war_startup}
+        fi
 
-    if [[ "${hypervisor}" == "kvm" ]]; then
-      # Clean KVMs in case of re-deploy
-      if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
-        hvuser=
-        hvip=
-        hvpass=
-        eval hvuser="\${hvuser${i}}"
-        eval hvip="\${hvip${i}}"
-        eval hvpass="\${hvpass${i}}"
-        say "Cleanup ${hvip}"
-        cleanup_kvm ${hvip} ${hvuser} ${hvpass}
-      fi
-    fi
-  done
+        if [[ "${hypervisor}" == "kvm" ]]; then
+          # Clean KVMs in case of re-deploy
+          if [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+            hvuser=
+            hvip=
+            hvpass=
+            eval hvuser="\${hvuser${i}}"
+            eval hvip="\${hvip${i}}"
+            eval hvpass="\${hvpass${i}}"
+            say "Cleanup ${hvip}"
+            cleanup_kvm ${hvip} ${hvuser} ${hvpass}
+          fi
+        fi
+      done
+  fi
 
   # Remove images from primary storage
   [[ ${primarystorage} == '/data/storage/primary/'* ]] && [ -d ${primarystorage} ] && sudo rm -rf ${primarystorage}/*
 
+  # CloudStack flag
+  CLOUDSTACKFLAG=""
+  if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+    CLOUDSTACKFLAG="-c"
+  fi
+
   # JENKINS: setupInfraForIntegrationTests: no change
-  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-setup-infra.sh" -m "${marvinCfg}"
+  sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-setup-infra.sh" ${CLOUDSTACKFLAG} -m "${marvinCfg}"
 else
   echo "Skipped setup infra"
 fi
 
 cd "${COSMIC_BUILD_PATH}"
-if [ ${scenario_build_deploy_new_war} == "true" ]; then
+if [ ${scenario_build_deploy_new_war} == "true" ] && [ ${cloudstack_deploy_mode} -eq 0 ]; then
 
   for i in 1 2 3 4 5 6 7 8 9; do
     if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
@@ -391,6 +415,32 @@ if [ ${scenario_build_deploy_new_war} == "true" ]; then
         eval hvpass="\${hvpass${i}}"
         say "Installing Cosmic KVM Agent on host ${hvip}"
         install_kvm_packages ${hvip} ${hvuser} ${hvpass} ${scenario_build_deploy_new_war}
+      fi
+    fi
+  done
+fi
+
+if [ ${cloudstack_deploy_mode} -eq 1 ]; then
+
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+      csuser=
+      csip=
+      cspass=
+      eval csuser="\${cs${i}user}"
+      eval csip="\${cs${i}ip}"
+      eval cspass="\${cs${i}pass}"
+
+      say "Configuring CloudStack Management Server at ${csip}"
+
+      # Configure CloudStack Management
+      configure_cloudstack_mgt_server ${csip} ${csuser} ${cspass}
+
+    fi
+
+    if [[ "${hypervisor}" == "kvm" ]]; then
+      if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+        say "Installing CloudStack KVM Agent on host ${hvip} is not yet implemented!"
       fi
     fi
   done

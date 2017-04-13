@@ -67,6 +67,8 @@ def handleArguments(argv):
     digit = ''
     global delete
     delete = ''
+    global cloudstack
+    cloudstack = False
     global display_state
     display_state = False
 
@@ -78,7 +80,8 @@ def handleArguments(argv):
            '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
            '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
            '\n  --status -s \t\t\tDisplay status of your VMs' + \
-           '\n  --destroy -x \t\t\tDestroys a VM' + \
+           '\n  --status -s \t\t\tDisplay status of your VMs' + \
+           '\n  --cloudstack \t\t\tBuild CloudStack management server in CloudStack 4.4.4 compabile mode (CentOS6)' + \
            '\n  --delete \t\t\tOnly delete the specified VM (needs --digit) or Marvin config' + \
            '\n  --force \t\t\tDelete VMs when they already exist' + \
            '\n  --debug \t\t\tEnable debug mode'
@@ -86,7 +89,7 @@ def handleArguments(argv):
     try:
         opts, args = getopt.getopt(
             argv, "hr:c:d:m:x:n:s", [
-                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "destroy_vm=", "digit=", "delete", "status", "debug", "force"])
+                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "destroy_vm=", "digit=", "delete", "status", "cloudstack", "debug", "force"])
     except getopt.GetoptError as e:
         print "Error: " + str(e)
         print help
@@ -115,6 +118,8 @@ def handleArguments(argv):
             digit = arg
         elif opt in ("-s", "--status"):
             display_state = True
+        elif opt in ("--cloudstack"):
+            cloudstack = True
         elif opt in ("--debug"):
             DEBUG = 1
         elif opt in ("--force"):
@@ -449,6 +454,9 @@ class kvm_local_deploy:
         role = hostname[:-1]
         digit = hostname[-1:]
         print "Note: Found role '" + role + "' and digit '" + digit + "'"
+        if cloudstack and role == "cs":
+            print "Note: Deploying CS role in CloudStack 4.4.4 compatible mode"
+            role = "cloudstack-mgt-dev"
         result = self.deploy_role(role, digit)
         print "Note: Deployed role '" + role + "' and digit '" + digit + "'"
         return result
@@ -490,6 +498,10 @@ class kvm_local_deploy:
             print "Note: Exiting while deploying '" + role_name + digit + "'"
             return False
         try:
+            if cloudstack and role_name == "cs":
+                print "Note: Deploying CS role in CloudStack 4.4.4 compatible mode"
+                role_name = "cloudstack-mgt-dev"
+
             # Get role
             role_data = self.get_role(role_name)
             # Copy template to image
@@ -614,7 +626,7 @@ class kvm_local_deploy:
             hosts.append(url_split[2].split('.')[0])
         return hosts
 
-    # Get hypervisors from Marvin
+    # Get management servers from Marvin
     def get_management_hosts(self):
         hosts = []
         if not self.marvin_data:

@@ -53,6 +53,11 @@ curl -k -b cookie.txt -X POST -d '{
             "ip_address": "'"${NSX_SERVICE_IP}"'",
             "type": "VXLANConnector",
             "transport_zone_uuid": "'"${transportZoneUuid}"'"
+        },
+        {
+            "ip_address": "'"${NSX_SERVICE_IP}"'",
+            "type": "STTConnector",
+            "transport_zone_uuid": "'"${transportZoneUuid}"'"
         }
     ],
     "zone_forwarding": true
@@ -77,6 +82,11 @@ curl -k -b cookie.txt -X POST -d '{
             "ip_address": "'"${KVM_HOST_IP}"'",
             "transport_zone_uuid": "'"${transportZoneUuid}"'",
             "type": "VXLANConnector"
+        },
+        {
+            "ip_address": "'"${KVM_HOST_IP}"'",
+            "transport_zone_uuid": "'"${transportZoneUuid}"'",
+            "type": "STTConnector"
         }
     ]
 }' https://${NSX_CONTROLLER}/ws.v1/transport-node 2> /dev/null 1> transport-node-${KVM_HOST}.json

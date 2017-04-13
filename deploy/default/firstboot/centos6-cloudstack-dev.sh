@@ -13,7 +13,9 @@ mv apache-maven-3.3.9 /usr/local/maven
 echo "export M2_HOME=/usr/local/maven" > /etc/profile.d/maven.sh
 echo "export PATH=/usr/local/maven/bin:${PATH}" >> /etc/profile.d/maven.sh
 
+chkconfig mysqld on
 service mysqld start
+mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 
 mkdir -p /data
 mount -t nfs 192.168.22.1:/data /data
@@ -31,8 +33,6 @@ pip install cloudmonkey
 
 easy_install nose
 easy_install pycrypto
-
-timedatectl set-timezone CET
 
 # Reboot
 reboot

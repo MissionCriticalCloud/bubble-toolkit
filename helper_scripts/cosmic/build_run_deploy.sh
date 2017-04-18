@@ -274,7 +274,7 @@ fi
 # ----- Wait for minikube
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   if [ ${skip_deploy_minikube} -eq 0 ]; then
-    echo "Waiting for prepare-minikube to be ready."
+    echo "Waiting for prepare-minikube to be ready, logging: ${PREP_MINIKUBE_LOG}"
     wait ${PREP_MINIKUBE_PID}
     echo "Prepare-minikube console output:"
     cat  ${PREP_MINIKUBE_LOG}
@@ -293,17 +293,6 @@ if [ ${enable_cosmic_microservices} -eq 1 ]; then
       -Ddocker.verbose=true
 fi
 
-# 00550 Setup minikube
-if [ ${enable_cosmic_microservices} -eq 1 ]; then
-  if [ ${skip_deploy_minikube} -eq 0 ]; then
-    say "Setting up minikube."
-    cd "${COSMIC_MS_CHART_PATH}"
-    sh ${shell_debugging_flag}  "${CI_SCRIPTS}/ci-setup-minikube.sh"
-  else
-    echo "Skipped setup minikube"
-  fi
-fi
-
 # 00400 Prepare Infra, create VMs
 if [ ${skip_prepare_infra} -eq 0 ]; then
   echo "Waiting for prepare-infra to be ready, logging: ${PREP_INFRA_LOG}"
@@ -314,6 +303,7 @@ if [ ${skip_prepare_infra} -eq 0 ]; then
   cat  ${PREP_INFRA_LOG}
   rm ${PREP_INFRA_LOG}
   if [ "${PREP_INFRA_RETURN}" -ne 0 ]; then echo "Prepare-infra failed!"; exit;  fi
+  echo "Prepare-infra finished!"
 fi
 
 if [[ "${hypervisor}" == "kvm" ]]; then
@@ -456,6 +446,17 @@ if [ ${skip_deploy_dc} -eq 0 ]; then
 
 else
   echo "Skipped deployDC"
+fi
+
+# 00550 Setup minikube
+if [ ${enable_cosmic_microservices} -eq 1 ]; then
+  if [ ${skip_deploy_minikube} -eq 0 ]; then
+    say "Setting up minikube."
+    cd "${COSMIC_MS_CHART_PATH}"
+    sh ${shell_debugging_flag}  "${CI_SCRIPTS}/ci-setup-minikube.sh"
+  else
+    echo "Skipped setup minikube"
+  fi
 fi
 
 # 00700 Run tests

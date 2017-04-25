@@ -11,10 +11,16 @@ function usage {
 
 say "Running script: $0"
 
-say "Deploying containers using Helm"
+say "Build cosmic-usage-chart"
+make
 
-helm install . \
+wait_timeout=600
+say "Install Cosmic Usage using cosmic-usage-chart (will wait for ${wait_timeout} seconds to complete)"
+helm install cosmic/microservices/cosmic-usage-chart \
 --name=cosmic-release \
+--namespace=cosmic \
 --values=/data/shared/deploy/cosmic/kubernetes/helm/values/cosmic-microservices-chart.yaml \
 --replace \
---wait
+--wait \
+--timeout ${wait_timeout}
+

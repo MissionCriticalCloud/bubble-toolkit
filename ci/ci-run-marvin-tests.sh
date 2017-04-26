@@ -4,7 +4,7 @@
 set -e
 
 function usage {
-  printf "Usage: %s: -m marvin_config -h requires_hardware test1 test2 ... testN\n" $(basename $0) >&2
+  printf "Usage: %s: -m marvin_config test1 test2 ... testN\n" $(basename $0) >&2
 }
 
 say "Running script: $0"
@@ -20,23 +20,20 @@ function update_management_server_in_marvin_config {
 
 function run_marvin_tests {
   config_file=$1
-  require_hardware=$2
-  tests="$3"
+  tests="$2"
 
-  nose_tests_report_file=nosetests-required_hardware-${require_hardware}.xml
+  nose_tests_report_file=nosetests.xml
 
   cd cosmic-core/test/integration
-  nosetests --with-xunit --xunit-file=../../../${nose_tests_report_file} --with-marvin --marvin-config=../../../${config_file} -s -a tags=advanced,required_hardware=${require_hardware} ${tests}
+  nosetests --with-xunit --xunit-file=../../../${nose_tests_report_file} --with-marvin --marvin-config=../../../${config_file} -s -a tags=advanced ${tests}
   cd -
 }
 
 # Options
-while getopts ':m:h:' OPTION
+while getopts ':m:' OPTION
 do
   case $OPTION in
   m)    marvin_config="$OPTARG"
-        ;;
-  h)    require_hardware="$OPTARG"
         ;;
   esac
 done
@@ -79,4 +76,4 @@ say "Updating Marvin Config with Management Server IP"
 update_management_server_in_marvin_config ${marvin_config_copy} ${cs1ip}
 
 say "Running tests"
-run_marvin_tests ${marvin_config_copy} ${require_hardware} "${marvin_tests}"
+run_marvin_tests ${marvin_config_copy} "${marvin_tests}"

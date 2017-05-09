@@ -87,7 +87,7 @@ stores=(`mysql --defaults-file=~/.my.cnf --skip-column-names -U cloud -e "select
 for ((i=0;i<${#stores[*]};i++)) 
 do
 	echo "Executing: delete from template_store_ref where store_id = ${stores[i]}"
-	`mysql -defaults-file=~/.my.cnf --skip-column-names cloud -e "delete from cloud.template_store_ref where store_id = ${stores[i]}"`
+	`mysql --defaults-file=~/.my.cnf --skip-column-names cloud -e "delete from cloud.template_store_ref where store_id = ${stores[i]}"`
 	if [ "$?" != 0 ];then
 		echo "Error while removing template store ref entries: $zone"
 		exit 2

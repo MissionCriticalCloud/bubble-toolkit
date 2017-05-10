@@ -76,6 +76,8 @@ query[45]="update cloud.image_store_view set removed = now() where data_center_i
 query[46]="delete from cloud.snapshots where data_center_id IN (select id from data_center WHERE name is NULL)"
 query[47]="delete from cloud.snapshot_store_ref where snapshot_id NOT IN (select id from snapshots)"
 query[48]="delete from firewall_rules where network_id IN (select id from networks where removed is not null)"
+query[49]="DELETE FROM snapshot_schedule WHERE volume_id IN (SELECT id FROM volumes WHERE removed IS NOT NULL)"
+query[50]="DELETE FROM snapshot_policy WHERE volume_id IN (SELECT id FROM volumes WHERE removed IS NOT NULL)"
 
 zone_exits=(`mysql --defaults-file=~/.my.cnf --skip-column-names -U cloud -e "select id from data_center where id = $zone and removed is null"`)
 if [ "${#zone_exits[@]}" == "0" ];then

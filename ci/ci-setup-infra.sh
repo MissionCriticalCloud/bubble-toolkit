@@ -3,7 +3,7 @@
 scripts_dir=$(dirname $0)
 . ${scripts_dir}/../helper_scripts/cosmic/helperlib.sh
 
-set -e
+set -x
 
 function usage {
   printf "Usage: %s: -m marvin_config -c to inform we're configuring CloudStack instead of Cosmic\n" $(basename $0) >&2

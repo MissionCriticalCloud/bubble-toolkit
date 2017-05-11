@@ -576,7 +576,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
       wait_for_port ${hvip} 22 tcp
       ${ssh_base} ${hvuser}@${hvip} "mkdir -p /root/.ssh"
 
-      ((host_count++))
+      ((host_count++)) || true
       if [[ host_count -eq 1 ]]; then
         master_address=${hvip}
         master_username=${hvuser}

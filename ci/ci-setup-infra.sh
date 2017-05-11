@@ -329,6 +329,8 @@ function authenticate_nsx {
   say "Master ip before we start: ${nsx_master_controller_node_ip}"
   say "Testing all controllers.."
 
+  set +e
+
   while :; do
       for i in 1 2 3 4 5 6 7 8 9; do
         if  [ ! -v $( eval "echo \${nsx_controller_node_ip${i}}" ) ]; then
@@ -353,6 +355,8 @@ function authenticate_nsx {
       say "Master not yet found, sleeping 10 sec and trying again.."
       sleep 10
   done
+
+  set -e
 
   say "Authenticating against master NSX controller"
   curl -L -k -c ${nsx_cookie} -X POST -d "username=${nsx_user}&password=${nsx_pass}" https://${nsx_master_controller_node_ip}/ws.v1/login

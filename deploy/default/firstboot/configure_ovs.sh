@@ -39,6 +39,7 @@ NETBOOT=yes
 IPV6INIT=no
 BOOTPROTO=none
 NM_CONTROLLED=no
+MTU=1600
 " > /etc/sysconfig/network-scripts/ifcfg-$i
 done
 
@@ -51,6 +52,7 @@ TYPE=OVSBridge
 BOOTPROTO=dhcp
 HOTPLUG=no
 MACADDR=$BRMAC
+MTU=1600
 " > /etc/sysconfig/network-scripts/ifcfg-cloudbr0
 
 # Config cloud0
@@ -74,6 +76,7 @@ TYPE=OVSIntPort
 BOOTPROTO=dhcp
 HOTPLUG=no
 #MACADDR=$BRMAC
+MTU=1600
 " > /etc/sysconfig/network-scripts/ifcfg-trans0
 
 # Config bond0
@@ -87,6 +90,7 @@ BOOTPROTO=none
 BOND_IFACES=\"$IFACES\"
 #OVS_OPTIONS="bond_mode=balance-tcp lacp=active other_config:lacp-time=fast"
 HOTPLUG=no
+MTU=1600
 " > /etc/sysconfig/network-scripts/ifcfg-bond0
 
 ### End OVS ###

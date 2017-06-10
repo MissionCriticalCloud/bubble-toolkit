@@ -472,6 +472,11 @@ function marvin_build_and_install {
 
   # Marvin's root path
   build_dir=$1
+  if [ -z $2 ]; then
+    skip_tests="false";
+  else
+    skip_tests=$2;
+  fi;
 
   say "[MARVIN] Installing..."
 
@@ -489,9 +494,13 @@ function marvin_build_and_install {
   # Back to Marvin's root path
   cd "${build_dir}"
 
-  # Test Marvin
-  say "[MARVIN] Starting tests..."
-  nosetests -v --with-xunit tests
+  if [ "${skip_tests}" == "false" ]; then
+    # Test Marvin
+    say "[MARVIN] Starting tests..."
+    nosetests -v --with-xunit tests
+  else
+    say "[MARVIN] Skipping tests...";
+  fi
 
   # Create Marvin distribution package
   say "[MARVIN] Creating distribution package..."

@@ -51,15 +51,15 @@ fi
 
 if [ ${hypervisor} = "kvm" ]; then
   say "Found hypervisor: ${hypervisor}; changing MTU to 1600"
-  for h in `ls /sys/devices/virtual/net/virbr0/brif/`; do sudo ip link set dev ${h} mtu 1600; done
-  sudo ip link set dev virbr0 mtu 1600
-  sudo ip link set dev virbr0.50 mtu 1600
+  for h in `ls /sys/devices/virtual/net/virbr0/brif/`; do sudo /usr/sbin/ip link set dev ${h} mtu 1600; done
+  sudo /usr/sbin/ip link set dev virbr0 mtu 1600
+  sudo /usr/sbin/ip link set dev virbr0.50 mtu 1600
 fi
 if [ ${hypervisor} = "xenserver" ]; then
   say "Found hypervisor: ${hypervisor}; changing MTU to 1500"
-  for h in `ls /sys/devices/virtual/net/virbr0/brif/`; do sudo  ip link set dev ${h} mtu 1500; done
-  sudo ip link set dev virbr0 mtu 1500
-  sudo ip link set dev virbr0.50 mtu 1500
+  for h in `ls /sys/devices/virtual/net/virbr0/brif/`; do sudo /usr/sbin/ip link set dev ${h} mtu 1500; done
+  sudo /usr/sbin/ip link set dev virbr0 mtu 1500
+  sudo /usr/sbin/ip link set dev virbr0.50 mtu 1500
 fi
 
 say "Creating hosts"

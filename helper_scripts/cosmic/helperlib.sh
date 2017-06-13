@@ -337,7 +337,7 @@ print json.load(sys.stdin)['zones'][0]['name']
   ")
 
   # Hypervisor type
-  hypervisor=$(cat ${marvinCfg} | grep -v "#" | python -c "
+  export hypervisor=$(cat ${marvinCfg} | grep -v "#" | python -c "
 import sys, json
 print json.load(sys.stdin)['zones'][0]['pods'][0]['clusters'][0]['hypervisor'].lower()
   ")

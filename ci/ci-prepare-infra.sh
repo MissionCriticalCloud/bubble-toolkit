@@ -49,5 +49,18 @@ if [ ${cloudstack_deploy_mode} -eq 1 ]; then
   CLOUDSTACKFLAG="--cloudstack"
 fi
 
+if [ ${hypervisor} = "kvm" ]; then
+  say "Found hypervisor: ${hypervisor}; changing MTU to 1600"
+  for h in `ls /sys/devices/virtual/net/virbr0/brif/`; do sudo ip link set dev ${h} mtu 1600; done
+  sudo ip link set dev virbr0 mtu 1600
+  sudo ip link set dev virbr0.50 mtu 1600
+fi
+if [ ${hypervisor} = "xenserver" ]; then
+  say "Found hypervisor: ${hypervisor}; changing MTU to 1500"
+  for h in `ls /sys/devices/virtual/net/virbr0/brif/`; do sudo  ip link set dev ${h} mtu 1500; done
+  sudo ip link set dev virbr0 mtu 1500
+  sudo ip link set dev virbr0.50 mtu 1500
+fi
+
 say "Creating hosts"
 /data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force ${CLOUDSTACKFLAG} 2>&1

@@ -4,6 +4,22 @@
 cosmic-vault:
   cosmicScanInterval: "0 * * * * *"
 
+cosmic-bill-viewer:
+  image:
+    pullPolicy: Always
+
+cosmic-config-server:
+  image:
+    pullPolicy: Always
+
+cosmic-metrics-collector:
+  image:
+    pullPolicy: Always
+
+cosmic-usage-api:
+  image:
+    pullPolicy: Always
+
 global:
   devMode: true
   namespace: cosmic

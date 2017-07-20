@@ -4,9 +4,6 @@
 cosmic-vault:
   cosmicScanInterval: "0 * * * * *"
 
-cosmic-usage-ui:
-  usageApiBaseUrl: http://minikube.cloud.lan:31001/
-
 global:
   devMode: true
   namespace: cosmic

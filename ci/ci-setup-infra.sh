@@ -183,31 +183,6 @@ function configure_agent_to_load_jacococ_agent {
   say "Agent configured"
 }
 
-function deploy_cosmic_war {
-  csip=$1
-  csuser=$2
-  cspass=$3
-  war_file="$4"
-
-  # SSH/SCP helpers
-  set_ssh_base_and_scp_base ${cspass}
-
-  # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
-  ${scp_base} ${scripts_dir}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
-
-  # Extra configuration for Cosmic application
-  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
-  ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
-  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
-
-  ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
-  ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
-  ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
-  ${ssh_base} ${csuser}@${csip} service tomcat start &> /dev/null
-
-  say "WAR deployed"
-}
-
 function create_nsx_cluster {
   set_ssh_base_and_scp_base ${cspass}
 

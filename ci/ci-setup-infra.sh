@@ -193,11 +193,13 @@ function deploy_cosmic_war {
   set_ssh_base_and_scp_base ${cspass}
 
   # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
-  ${scp_base} ${scripts_dir}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
+  ${scp_base} ${scripts_dir}/setup_files/client.xml ${csuser}@${csip}:/etc/tomcat/Catalina/localhost/
 
   # Extra configuration for Cosmic application
   ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
   ${scp_base} ${scripts_dir}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${ssh_base} ${csuser}@${csip} 'curl -sL "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=RELEASE" -o /usr/share/java/tomcat/mariadb-java-client-latest.jar'
+  ${scp_base} ${scripts_dir}/setup_files/context.xml ${csuser}@${csip}:/etc/tomcat
   ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
 
   ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management

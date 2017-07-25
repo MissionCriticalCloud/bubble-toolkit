@@ -131,7 +131,7 @@ function deploy_cosmic_war {
   set_ssh_base_and_scp_base ${cspass}
 
   # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
-  ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:~tomcat/conf/Catalina/localhost/
+  ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:/etc/tomcat/Catalina/localhost/
 
   # Extra configuration for Cosmic application
   ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management

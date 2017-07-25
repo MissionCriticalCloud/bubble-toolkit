@@ -99,32 +99,15 @@ function deploy_cosmic_db {
   set_ssh_base_and_scp_base ${cspass}
 
   ${ssh_base} ${csuser}@${csip} "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
-  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database.sql
-  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-database-premium.sql
-  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-schema.sql
-  mysql -h ${csip} -u root < cosmic-core/db-scripts/src/main/resources/create-schema-premium.sql
-  mysql -h ${csip} -u cloud -pcloud < cosmic-core/db-scripts/src/main/resources/templates.sql
-  mysql -h ${csip} -u cloud -pcloud < cosmic-core/engine/schema/src/test/resources/developer-prefill.sql
+  mysql -h ${csip} -u root < ${scripts_dir}/setup_files/create-cloud-db.sql
 
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'host', '${csip}') ON DUPLICATE KEY UPDATE value = '${csip}';"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'sdn.ovs.controller.default.label', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
+  # Download Flyway
+  rm -rf /tmp/flyway*
+  curl -o /tmp/flyway.tar.gz https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/4.2.0/flyway-commandline-4.2.0-linux-x64.tar.gz
+  tar -xvf /tmp/flyway.tar.gz -C /tmp/
 
-  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-kvm.qcow2.bz2', guest_os_id=140, unique_name='tiny linux kvm', name='tiny linux kvm', display_text='tiny linux kvm', hvm=1 where id=4;"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE cloud.vm_template SET url='http://dl.openvm.eu/cloudstack/macchinina/x86_64/macchinina-xen.vhd.bz2', guest_os_id=103, unique_name='tiny linux xen', name='tiny linux xen', display_text='tiny linux xen' where id=5;"
-
-  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE service_offering SET ha_enabled = 1;"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "UPDATE vm_instance SET ha_enabled = 1;"
-
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.interval', '10') ON DUPLICATE KEY UPDATE value = '10';"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'network.gc.wait', '10') ON DUPLICATE KEY UPDATE value = '10';"
-
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vpc.max.networks', '4') ON DUPLICATE KEY UPDATE value = '4';"
-
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.private.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.public.network.device', 'pub0') ON DUPLICATE KEY UPDATE value = 'pub0';"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'kvm.guest.network.device', 'cloudbr0') ON DUPLICATE KEY UPDATE value = 'cloudbr0';"
-
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT INTO cloud.configuration (instance, name, value) VALUE('DEFAULT', 'vm.destroy.forcestop', 'true') ON DUPLICATE KEY UPDATE value = '4';"
+  # Do migration
+  /tmp/flyway-4.2.0/flyway -url=jdbc:mariadb://${csip}:3306/cloud -user=cloud -password=cloud -locations=filesystem:cosmic-core/cosmic-flyway/src migrate
 
   say "Cosmic DB deployed at ${csip}"
 }
@@ -141,13 +124,49 @@ function install_systemvm_templates {
   # SSH/SCP helpers
   set_ssh_base_and_scp_base ${cspass}
 
-  if [ -d ./cosmic-core/scripts/src/main/resources/scripts ]; then
-    ${scp_base} -r ./cosmic-core/scripts/src/main/resources/scripts ${csuser}@${csip}:./
-  else
-    ${scp_base} -r ./cosmic-core/scripts ${csuser}@${csip}:./
-  fi
+  tmpltsize=$(ls -l ${systemtemplate} | awk -F" " '{print $5}')
 
-  ${ssh_base} ${csuser}@${csip} ./scripts/storage/secondary/cloud-install-sys-tmplt -m ${secondarystorage} -f ${systemtemplate} -h ${hypervisor} -o localhost -r root -e ${imagetype} -F
+  if [[ "${hypervisor}" == "kvm" ]]; then
+    sudo mkdir -p ${secondarystorage}/template/tmpl/1/3/
+    sudo cp ${systemtemplate} ${secondarystorage}/template/tmpl/1/3/f327eecc-be53-4d80-9d43-adaf45467abd.qcow2
+
+    sudo bash -c "cat >> ${secondarystorage}/template/tmpl/1/3/template.properties" << EOL
+filename=f327eecc-be53-4d80-9d43-adaf45467abd.qcow2
+description=SystemVM Template
+checksum=
+hvm=false
+size=${tmpltsize}
+qcow2=true
+id=3
+public=true
+qcow2.filename=f327eecc-be53-4d80-9d43-adaf45467abd.qcow2
+uniquename=routing-3
+qcow2.virtualsize=${tmpltsize}
+virtualsize=${tmpltsize}
+qcow2.size=${tmpltsize}
+EOL
+
+   elif [[ "${hypervisor}" == "xenserver" ]]; then
+    sudo mkdir -p ${secondarystorage}/template/tmpl/1/1/
+    sudo cp ${systemtemplate} ${secondarystorage}/template/tmpl/1/1/9cc3c107-6d7b-11e7-8f09-5254001daa61.vhd
+
+    sudo bash -c "cat >> ${secondarystorage}/template/tmpl/1/1/template.properties" << EOL
+filename=9cc3c107-6d7b-11e7-8f09-5254001daa61.vhd
+description=SystemVM Template
+checksum=
+hvm=false
+size=${tmpltsize}
+vhd=true
+id=1
+public=true
+vhd.filename=9cc3c107-6d7b-11e7-8f09-5254001daa61.vhd
+uniquename=routing-1
+vhd.virtualsize=${tmpltsize}
+virtualsize=${tmpltsize}
+vhd.size=${tmpltsize}
+EOL
+
+  fi
 
   say "SystemVM templates installed"
 }

@@ -324,7 +324,7 @@ fi
 # 00500 Setup Infra
 if [ ${skip_setup_infra} -eq 0 ]; then
   cd "${COSMIC_BUILD_PATH}"
-  rm -rf "$secondarystorage/*"
+  [ -d ${secondarystorage} ] && sudo rm -rf ${secondarystorage}/*
 
   if [ ${cloudstack_deploy_mode} -eq 0 ]; then
       for i in 1 2 3 4 5 6 7 8 9; do

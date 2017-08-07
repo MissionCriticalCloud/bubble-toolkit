@@ -107,7 +107,7 @@ function deploy_cosmic_db {
   tar -xvf /tmp/flyway.tar.gz -C /tmp/
 
   # Do migration
-  /tmp/flyway-4.2.0/flyway -url=jdbc:mariadb://${csip}:3306/cloud -user=cloud -password=cloud -locations=filesystem:cosmic-core/cosmic-flyway/src migrate
+  /tmp/flyway-4.2.0/flyway -url=jdbc:mariadb://${csip}:3306/cloud -user=cloud -password=cloud -encoding=UTF-8 -locations=filesystem:cosmic-core/cosmic-flyway/src migrate
 
   say "Cosmic DB deployed at ${csip}"
 }

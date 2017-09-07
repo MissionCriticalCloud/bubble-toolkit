@@ -284,9 +284,9 @@ fi
 # Build cosmic-microservices
 if [ ${enable_cosmic_microservices} -eq 1 ]; then
   cd "${COSMIC_MS_BUILD_PATH}"
-  mvn ${maven_clean} install -P development ${maven_unit_tests}\
+  mvn ${maven_clean} install -P production ${maven_unit_tests}\
       -Ddocker.host=unix:/var/run/docker.sock
-  mvn docker:push -P development \
+  mvn docker:push -P production \
       -Ddocker.host=unix:/var/run/docker.sock \
       -Ddocker.push.registry=minikube.cloud.lan:30081 \
       -Ddocker.filter=cosmic-config-server,cosmic-metrics-collector,cosmic-usage-api,cosmic-bill-viewer \

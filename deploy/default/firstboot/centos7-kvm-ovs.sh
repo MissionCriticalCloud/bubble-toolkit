@@ -52,7 +52,7 @@ END
 
 yum install -y yum-utils
 yum-config-manager --enablerepo=extras
-yum install -y centos-release-openstack-mitaka
+yum install -y centos-release-openstack-pike
 yum install -y openvswitch
 
 # Start and enable OVS

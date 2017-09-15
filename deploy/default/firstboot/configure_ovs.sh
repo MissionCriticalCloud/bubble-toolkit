@@ -24,7 +24,6 @@ ovs-vsctl -- --may-exist add-br br-int\
 
 # Fake bridges
 echo "Create fake bridges"
-ovs-vsctl -- add-br trans0 cloudbr0
 ovs-vsctl -- add-br pub0 cloudbr0 $VLANPUB
 
 # Network configs
@@ -66,18 +65,6 @@ NETMASK=255.255.0.0
 BOOTPROTO=static
 HOTPLUG=no
 " > /etc/sysconfig/network-scripts/ifcfg-cloud0
-
-# Config trans0
-echo "Configuring trans0"
-echo "DEVICE=\"trans0\"
-ONBOOT=yes
-DEVICETYPE=ovs
-TYPE=OVSIntPort
-BOOTPROTO=dhcp
-HOTPLUG=no
-#MACADDR=$BRMAC
-MTU=1600
-" > /etc/sysconfig/network-scripts/ifcfg-trans0
 
 # Config bond0
 echo "Configuring bond0"

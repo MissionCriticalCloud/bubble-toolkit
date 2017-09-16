@@ -1,6 +1,6 @@
 #!/bin/bash
 # Prepare CentOS7 bare box to compile CloudStack and run management server
-
+set -x
 #
 # Please install packages with the packer build: https://github.com/MissionCriticalCloud/bubble-templates-packer
 #

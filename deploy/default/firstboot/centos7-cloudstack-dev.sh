@@ -1,9 +1,12 @@
 #!/bin/bash
 # Prepare CentOS7 bare box to compile CloudStack and run management server
-
+set -x
 #
 # Please install packages with the packer build: https://github.com/MissionCriticalCloud/bubble-templates-packer
 #
+
+# Centos 7.4 has stricter Selinux requirements
+sed -i s/^SELINUX=.*$/SELINUX=permissive/ /etc/selinux/config
 
 echo "JAVA_OPTS=\"-Djava.awt.headless=true -Dfile.encoding=UTF-8 -server -Xms1536m -Xmx3584m -XX:MaxPermSize=256M\"" >> ~tomcat/conf/tomcat.conf
 systemctl restart tomcat.service

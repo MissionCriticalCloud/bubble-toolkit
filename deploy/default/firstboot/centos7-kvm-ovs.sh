@@ -1,6 +1,6 @@
 #!/bin/bash
 # Configure KVM Hypervisor with openvswitch and VXLAN (CentOS 7)
-
+set -x
 #
 # Please install packages with the packer build: https://github.com/MissionCriticalCloud/bubble-templates-packer
 #

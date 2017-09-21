@@ -38,10 +38,14 @@ function usage {
   printf "\nScenario\'s (will combine/override skip flags):\n" >&2
   printf "\t-a:\tMaven build and WAR (only) deploy\n" >&2
   printf "\t-b:\tRe-deploy DataCenter, including war and kvm agents, no re-build VMs, no re-build maven, (= -t -v)\n" >&2
+  printf "\t-d:\tMaven build (full) and systemvm.iso (only) deploy\n" >&2
+  printf "\t-e:\tMaven build (cloud-systemvm) and systemvm.iso (only) deploy\n" >&2
   printf "\n" >&2
 }
 # Options
 scenario_build_deploy_new_war="false"
+scenario_build_deploy_full_systemvm_iso="false"
+scenario_build_deploy_partial_systemvm_iso="false"
 scenario_redeploy_cosmic=0
 cloudstack_deploy_mode=0
 disable_maven_clean=0
@@ -66,7 +70,8 @@ skip_setup_infra=0
 WORKSPACE_OVERRIDE=
 skip_deploy_dc=0
 
-while getopts 'abCcDEHIkKm:opsStT:vVwW:x' OPTION
+
+while getopts 'abCcdDeEHIkKm:opsStT:vVwW:x' OPTION
 do
   case $OPTION in
   a)    scenario_build_deploy_new_war="true"
@@ -78,9 +83,13 @@ do
   C)    disable_maven_clean=1
         maven_clean=""
         ;;
+  d)    scenario_build_deploy_full_systemvm_iso="true"
+        ;;
   D)    shell_debugging="true"
         set -x
         shell_debugging_flag="-x"
+        ;;
+  e)    scenario_build_deploy_partial_systemvm_iso="true"
         ;;
   E)    disable_maven_unit_tests=1
         maven_unit_tests=" -DskipTests "
@@ -122,29 +131,31 @@ done
 
 if [ ${verbose} -eq 1 ]; then
   echo "Received arguments:"
-  echo "disable_maven_clean           (-C) = ${disable_maven_clean}"
-  echo "disable_maven_unit_tests      (-E) = ${disable_maven_unit_tests}"
-  echo "WORKSPACE_OVERRIDE            (-W) = ${WORKSPACE_OVERRIDE}"
-  echo "shell_debugging               (-D) = ${shell_debugging}"
-  echo "gitssh                        (-H) = ${gitssh}"
+  echo "disable_maven_clean                        (-C) = ${disable_maven_clean}"
+  echo "disable_maven_unit_tests                   (-E) = ${disable_maven_unit_tests}"
+  echo "WORKSPACE_OVERRIDE                         (-W) = ${WORKSPACE_OVERRIDE}"
+  echo "shell_debugging                            (-D) = ${shell_debugging}"
+  echo "gitssh                                     (-H) = ${gitssh}"
   echo ""
-  echo "skip_cosmic_entirely          (-s) = ${skip_cosmic_entirely}"
-  echo "skip_maven_build              (-t) = ${skip_maven_build}"
-  echo "skip_prepare_infra            (-v) = ${skip_prepare_infra}"
-  echo "skip_setup_infra              (-w) = ${skip_setup_infra}"
-  echo "skip_deploy_dc                (-x) = ${skip_deploy_dc}"
-  echo "skip_deploy_minikube          (-k) = ${skip_deploy_minikube}"
-  echo "remove_minikube_infra         (-K) = ${remove_minikube_infra}"
-  echo "run_tests                     (-I) = ${run_tests}"
-  echo "marvinCfg                     (-m) = ${marvinCfg}"
-  echo "compile_threads               (-T) = ${compile_threads}"
-  echo "debug_war_startup             (-o) = ${debug_war_startup}"
-  echo "debug_kvm_startup             (-p) = ${debug_kvm_startup}"
+  echo "skip_cosmic_entirely                       (-s) = ${skip_cosmic_entirely}"
+  echo "skip_maven_build                           (-t) = ${skip_maven_build}"
+  echo "skip_prepare_infra                         (-v) = ${skip_prepare_infra}"
+  echo "skip_setup_infra                           (-w) = ${skip_setup_infra}"
+  echo "skip_deploy_dc                             (-x) = ${skip_deploy_dc}"
+  echo "skip_deploy_minikube                       (-k) = ${skip_deploy_minikube}"
+  echo "remove_minikube_infra                      (-K) = ${remove_minikube_infra}"
+  echo "run_tests                                  (-I) = ${run_tests}"
+  echo "marvinCfg                                  (-m) = ${marvinCfg}"
+  echo "compile_threads                            (-T) = ${compile_threads}"
+  echo "debug_war_startup                          (-o) = ${debug_war_startup}"
+  echo "debug_kvm_startup                          (-p) = ${debug_kvm_startup}"
   echo ""
-  echo "scenario_build_deploy_new_war (-a) = ${scenario_build_deploy_new_war}"
-  echo "scenario_redeploy_cosmic      (-b) = ${scenario_redeploy_cosmic}"
+  echo "scenario_build_deploy_new_war              (-a) = ${scenario_build_deploy_new_war}"
+  echo "scenario_redeploy_cosmic                   (-b) = ${scenario_redeploy_cosmic}"
+  echo "scenario_build_deploy_full_systemvm_iso    (-d) = ${scenario_build_deploy_full_systemvm_iso}"
+  echo "scenario_build_deploy_partial_systemvm_iso (-e) = ${scenario_build_deploy_partial_systemvm_iso}"
   echo ""
-  echo "cloudstack_deploy_mode        (-c) = ${cloudstack_deploy_mode}"
+  echo "cloudstack_deploy_mode                     (-c) = ${cloudstack_deploy_mode}"
   echo ""
 fi
 # Check if a marvin dc file was specified
@@ -168,6 +179,17 @@ if [ ${scenario_build_deploy_new_war} == "true" ]; then
   skip_setup_infra=1
   skip_deploy_dc=1
 fi
+if [ ${scenario_build_deploy_full_systemvm_iso} == "true" ]; then
+  skip_prepare_infra=1
+  skip_setup_infra=1
+  skip_deploy_dc=1
+fi
+if [ ${scenario_build_deploy_partial_systemvm_iso} == "true" ]; then
+  skip_maven_build=1
+  skip_prepare_infra=1
+  skip_setup_infra=1
+  skip_deploy_dc=1
+fi
 if [ ${scenario_redeploy_cosmic} -eq 1 ]; then
   skip_maven_build=1
   skip_prepare_infra=1
@@ -176,7 +198,6 @@ if [ ${scenario_redeploy_cosmic} -eq 1 ]; then
 fi
 if [ ${skip_cosmic_entirely} == "true" ]; then
   skip_maven_build=1
-  skip_prepare_infra=1
   skip_prepare_infra=1
   skip_setup_infra=1
   skip_deploy_dc=1
@@ -371,6 +392,47 @@ if [ ${skip_setup_infra} -eq 0 ]; then
   sh ${shell_debugging_flag} "${CI_SCRIPTS}/ci-setup-infra.sh" ${CLOUDSTACKFLAG} -m "${marvinCfg}"
 else
   echo "Skipped setup infra"
+fi
+
+if [ ${scenario_build_deploy_full_systemvm_iso} == "true" ] && [ ${cloudstack_deploy_mode} -eq 0 ]; then
+  cd "${COSMIC_BUILD_PATH}"
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if [[ "${hypervisor}" == "kvm" ]]; then
+      if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+        hvuser=
+        hvip=
+        hvpass=
+        eval hvuser="\${hvuser${i}}"
+        eval hvip="\${hvip${i}}"
+        eval hvpass="\${hvpass${i}}"
+        say "Installing Cosmic KVM Agent on host ${hvip}"
+        set_ssh_base_and_scp_base ${hvpass}
+        ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
+      fi
+    fi
+  done
+fi
+
+if [ ${scenario_build_deploy_partial_systemvm_iso} == "true" ] && [ ${cloudstack_deploy_mode} -eq 0 ]; then
+  cd "${COSMIC_BUILD_PATH}/cosmic-core/systemvm"
+
+  mvn clean package
+
+  for i in 1 2 3 4 5 6 7 8 9; do
+    if [[ "${hypervisor}" == "kvm" ]]; then
+      if  [ ! -v $( eval "echo \${hvip${i}}" ) ]; then
+        hvuser=
+        hvip=
+        hvpass=
+        eval hvuser="\${hvuser${i}}"
+        eval hvip="\${hvip${i}}"
+        eval hvpass="\${hvpass${i}}"
+        say "Installing Cosmic KVM Agent on host ${hvip}"
+        set_ssh_base_and_scp_base ${hvpass}
+        ${scp_base} dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
+      fi
+    fi
+  done
 fi
 
 cd "${COSMIC_BUILD_PATH}"

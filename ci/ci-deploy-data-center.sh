@@ -25,11 +25,26 @@ function wait_for_port {
   while ! nmap -Pn -p${port} ${hostname} | grep "${port}/${transport} open" 2>&1 > /dev/null; do sleep 1; done
 }
 
+function wait_for_port_offline {
+  hostname=$1
+  port=$2
+  transport=$3
+
+  while nmap -Pn -p${port} ${hostname} | grep "${port}/${transport} open" 2>&1 > /dev/null; do sleep 1; done
+}
+
 function wait_for_management_server {
   hostname=$1
 
   say "Waiting for Cosmic Management Server to be running on ${hostname}"
   wait_for_port ${hostname} 8096 tcp
+}
+
+function wait_for_management_server_offline {
+  hostname=$1
+
+  say "Waiting for Cosmic Management Server to be offline on ${hostname}"
+  wait_for_port_offline ${hostname} 8096 tcp
 }
 
 function wait_for_systemvm_templates {
@@ -109,3 +124,24 @@ if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
 fi
 
 wait_for_systemvm_templates ${cs1ip}
+
+for i in 1 2 3 4 5 6 7 8 9; do
+  if  [ ! -v $( eval "echo \${cs${i}ip}" ) ]; then
+    csuser=
+    csip=
+    cspass=
+    eval csuser="\${cs${i}user}"
+    eval csip="\${cs${i}ip}"
+    eval cspass="\${cs${i}pass}"
+
+    set_ssh_base_and_scp_base ${cspass}
+    say "Restart management server ${csip} to enable global settings that were deployed via Marvin file"
+    ${ssh_base} ${csuser}@${csip} systemctl restart tomcat &> /dev/null
+    say "Wait for management server ${csip} to be offline"
+    wait_for_management_server_offline ${csip}
+    sleep 2
+    say "Waiting for management server ${csip} to return"
+    wait_for_management_server ${csip}
+  fi
+done
+

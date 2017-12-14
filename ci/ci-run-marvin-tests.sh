@@ -13,7 +13,7 @@ function update_management_server_in_marvin_config {
   marvin_config=$1
   csip=$2
 
-  sed -i "s/\"mgtSvrIp\": \"localhost\"/\"mgtSvrIp\": \"${csip}\"/" ${marvin_config}
+  sed -i "s/\"mgtSvrIp\":.*/\"mgtSvrIp\": \"${csip}\",/" ${marvin_config}
 
   say "Management Server in Marvin Config updated to ${csip}"
 }

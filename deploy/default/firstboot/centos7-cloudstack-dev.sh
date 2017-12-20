@@ -36,5 +36,10 @@ easy_install pycrypto
 
 timedatectl set-timezone CET
 
+cat > /root/.bash_history <<EOL
+systemctl restart tomcat
+less /var/log/cosmic/management/management.log
+EOL
+
 # Reboot
 reboot

@@ -73,6 +73,11 @@ ifup cloudbr0
 
 timedatectl set-timezone CET
 
+cat > /root/.bash_history <<EOL
+systemctl restart cosmic-agent
+less /var/log/cosmic/agent/agent.log
+EOL
+
 # Reboot
 echo "Syncing filesystems, will reboot soon.."
 sync

@@ -14,10 +14,13 @@ sed -i "/SELINUX=enforcing/c\SELINUX=permissive" /etc/selinux/config
 
 # Disable firewall (for now..)
 systemctl stop firewall
-systemctl disable firewalld
+systemctl disable firewall
 
 # FIXME
 sleep 5
+
+# Work-around situation where there is no ip address during firstboot
+dhclient -v eth0
 
 # Enable rpbind for NFS
 systemctl enable rpcbind

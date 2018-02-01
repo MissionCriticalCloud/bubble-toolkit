@@ -81,6 +81,14 @@ systemctl restart cosmic-agent
 less /var/log/cosmic/agent/agent.log
 EOL
 
+cat > /root/.ssh/config <<EOL
+Host 169.254.*
+    Port 3922
+    IdentityFile /root/.ssh/id_rsa.cloud
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+EOL
+
 # Reboot
 echo "Syncing filesystems, will reboot soon.."
 sync

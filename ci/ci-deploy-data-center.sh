@@ -50,9 +50,9 @@ function deploy_data_center {
 function add_nsx_connectivy_to_offerings {
   csip=$1
 
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT IGNORE INTO cloud.ntwk_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.network_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.ntwk_offering_service_map X);"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT IGNORE INTO cloud.network_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.network_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.network_offering_service_map X);"
   mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT IGNORE INTO cloud.vpc_offering_service_map (vpc_offering_id, service, provider, created) (SELECT DISTINCT X.vpc_offering_id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.vpc_offering_service_map X);"
-  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT IGNORE INTO cloud.ntwk_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.network_offerings X WHERE name IN ('DefaultPrivateGatewayNetworkOffering', 'DefaultPrivateGatewayNetworkOfferingSpecifyVlan', 'DefaultSyncNetworkOffering'));"
+  mysql -h ${csip} -u cloud -pcloud cloud -e "INSERT IGNORE INTO cloud.network_offering_service_map (network_offering_id, service, provider, created) (SELECT DISTINCT X.id, 'Connectivity', 'NiciraNvp', X.created FROM cloud.network_offerings X WHERE name IN ('DefaultPrivateGatewayNetworkOffering', 'DefaultPrivateGatewayNetworkOfferingSpecifyVlan', 'DefaultSyncNetworkOffering'));"
 }
 
 function add_nsx_controller_to_cosmic {

@@ -62,5 +62,9 @@ if [ ${hypervisor} = "xenserver" ]; then
   sudo /usr/sbin/ip link set dev virbr0.50 mtu 1500
 fi
 
+# Make sure bridges are up
+sudo /usr/sbin/ifup virbr0
+sudo /usr/sbin/ifup virbr0.50
+
 say "Creating hosts"
 /data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force ${CLOUDSTACKFLAG} 2>&1

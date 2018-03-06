@@ -62,8 +62,7 @@ if [ ${hypervisor} = "xenserver" ]; then
   sudo /usr/sbin/ip link set dev virbr0.50 mtu 1500
 fi
 
-# Make sure bridges are up
-sudo /usr/sbin/ifup virbr0
+# Make sure bridge is up
 sudo /usr/sbin/ifup virbr0.50
 
 say "Creating hosts"

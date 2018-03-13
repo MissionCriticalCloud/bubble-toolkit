@@ -108,4 +108,13 @@ if  [ ! -v $( eval "echo \${nsx_controller_node_ip1}" ) ]; then
   add_nsx_controller_to_cosmic ${cs1ip}
 fi
 
+say "Disabling all BUILTIN templates"
+mysql -h ${cs1ip} -u cloud -pcloud cloud -e "UPDATE vm_template set removed=NOW() where type=\"BUILTIN\";"
+
+say "Registering Tiny template"
+cloudmonkey set display default
+TEMPOSID=$(cloudmonkey list ostypes keyword="Default - VirtIO capable OS" filter=id | grep ^id | awk {'print $3'})
+cloudmonkey register template displayText="tiny linux kvm" format=Qcow2 hypervisor=KVM isextractable=true isfeatured=true ispublic=true isrouting=false name="tiny linux kvm" osTypeId=$TEMPOSID passwordEnabled=true requireshvm=true zoneid=-1 url=https://s3-eu-west-1.amazonaws.com/mccmacchina/macchinina-kvm.qcow2.bz2
+
 wait_for_systemvm_templates ${cs1ip}
+

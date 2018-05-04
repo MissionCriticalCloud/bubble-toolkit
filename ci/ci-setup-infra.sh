@@ -415,6 +415,8 @@ function configure_kvm_host_in_nsx {
 
   say "Generate OVS certificates on ${kvm_host}"
   sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} "cd /etc/openvswitch; ovs-pki req ovsclient; ovs-pki self-sign ovsclient; ovs-vsctl -- --bootstrap set-ssl /etc/openvswitch/ovsclient-privkey.pem /etc/openvswitch/ovsclient-cert.pem /etc/openvswitch/vswitchd.cacert"
+  sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} "chown openvswitch:openvswitch /etc/openvswitch/*"
+  sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} "systemctl restart openvswitch"
 
   say "Note: Getting KVM host certificate from ${kvm_host}"
   kvm_ovs_certificate=$(sshpass -p "${kvm_pass}" ssh ${SSH_OPTIONS} ${kvm_user}@${kvm_host} cat /etc/openvswitch/ovsclient-cert.pem | sed -z "s/\n/\\\\n/g")

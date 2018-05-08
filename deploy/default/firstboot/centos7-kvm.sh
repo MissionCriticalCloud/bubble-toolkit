@@ -33,9 +33,9 @@ echo "options kvm_intel nested=1" >> /etc/modprobe.d/kvm-nested.conf
 # Cloudstack agent.properties settings
 cp -pr /etc/cloudstack/agent/agent.properties /etc/cloudstack/agent/agent.properties.orig
 # Add these settings (before adding the host)
-# libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver
+# libvirt.vif.driver=com.cloud.agent.resource.kvm.OvsVifDriver
 # network.bridge.type=openvswitch
-#echo "libvirt.vif.driver=com.cloud.hypervisor.kvm.resource.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties
+#echo "libvirt.vif.driver=com.cloud.agent.resource.kvm.OvsVifDriver" >> /etc/cloudstack/agent/agent.properties
 #echo "network.bridge.type=openvswitch" >> /etc/cloudstack/agent/agent.properties
 echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties
 

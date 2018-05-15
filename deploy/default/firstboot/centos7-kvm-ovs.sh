@@ -55,7 +55,7 @@ END
 
 yum install -y yum-utils
 yum-config-manager --enablerepo=extras
-yum install -y centos-release-openstack-pike
+yum install -y centos-release-openstack-queen
 yum install -y openvswitch
 yum update -y
 

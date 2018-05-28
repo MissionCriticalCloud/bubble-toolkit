@@ -54,10 +54,10 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} mkdir -p /opt/cosmic/agent/vms/
   ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/cosmic/agent/
   ${scp_base} cosmic-agent/target/cloud-agent-*.jar ${hvuser}@${hvip}:/opt/cosmic/agent/
-  ${scp_base} cosmic-agent/conf/agent.properties ${hvuser}@${hvip}:/etc/cosmic/agent/
+  ${scp_base} cosmic-agent/src/test/resources/application.yml ${hvuser}@${hvip}:/etc/cosmic/agent/
   ${scp_base} -r cosmic-core/scripts/src/main/resources/scripts ${hvuser}@${hvip}:/opt/cosmic/agent/
   ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
-  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent.py ${hvuser}@${hvip}:/usr/bin/cosmic-setup-agent
   ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
 
   if [ -d cosmic-core/scripts/src/main/resources/python ]; then # Prepare for moving/converting to artifact (structure)
@@ -75,15 +75,6 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} chmod -R 0755 /opt/cosmic/agent/scripts/
   ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-setup-agent
   ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-ssh
-
-  # Configure properties
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=custom" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.model=kvm64" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.agent.resource.kvm.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
-  ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
 
   say "Cosmic KVM Agent installed in ${hvip}"
 }

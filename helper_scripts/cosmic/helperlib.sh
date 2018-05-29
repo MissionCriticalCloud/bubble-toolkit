@@ -274,11 +274,11 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} mkdir -p /etc/cosmic/agent/
   ${scp_base} cosmic-agent/target/cloud-agent-*.jar ${hvuser}@${hvip}:/opt/cosmic/agent/
   if [ ${war_upgrade} == "false" ]; then
-    ${scp_base} cosmic-agent/conf/agent.properties ${hvuser}@${hvip}:/etc/cosmic/agent/
+    ${scp_base} cosmic-agent/src/test/resources/application.yml ${hvuser}@${hvip}:/etc/cosmic/agent/
   fi
   ${scp_base} -r cosmic-core/scripts/src/main/resources/scripts ${hvuser}@${hvip}:/opt/cosmic/agent/
   ${scp_base} cosmic-core/systemvm/dist/systemvm.iso ${hvuser}@${hvip}:/opt/cosmic/agent/vms/
-  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent ${hvuser}@${hvip}:/usr/bin/
+  ${scp_base} cosmic-agent/bindir/cosmic-setup-agent.py ${hvuser}@${hvip}:/usr/bin/cosmic-setup-agent
   ${scp_base} cosmic-agent/bindir/cosmic-ssh ${hvuser}@${hvip}:/usr/bin/
 
   ${scp_base} cosmic-core/scripts/src/main/resources/python/lib/cloud_utils.py ${hvuser}@${hvip}:/usr/lib64/python2.7/site-packages/
@@ -291,17 +291,6 @@ function install_kvm_packages {
   ${ssh_base} ${hvuser}@${hvip} chmod -R 0755 /opt/cosmic/agent/scripts/
   ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-setup-agent
   ${ssh_base} ${hvuser}@${hvip} chmod 0755 /usr/bin/cosmic-ssh
-
-  if [ ${war_upgrade} == "false" ]; then
-    # Configure properties
-    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.mode=custom" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.cpu.model=kvm64" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "libvirt.vif.driver=com.cloud.agent.resource.kvm.OvsVifDriver" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "network.bridge.type=openvswitch" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "guest.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "public.network.device=pub0" >> /etc/cosmic/agent/agent.properties'
-    ${ssh_base} ${hvuser}@${hvip} 'echo "private.network.device=cloudbr0" >> /etc/cosmic/agent/agent.properties'
-  fi
 
   if [ ${war_upgrade} == "true" ]; then
     ${ssh_base} ${hvuser}@${hvip} systemctl start cosmic-agent 2>&1 >/dev/null

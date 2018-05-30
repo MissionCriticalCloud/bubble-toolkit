@@ -89,6 +89,13 @@ Host 169.254.*
     StrictHostKeyChecking no
 EOL
 
+# Localstorage setup
+pvcreate /dev/vdb
+pvcreate /dev/vdc
+
+vgcreate vg_vdb /dev/vdb
+vgcreate vg_vdc /dev/vdc
+
 # Reboot
 echo "Syncing filesystems, will reboot soon.."
 sync

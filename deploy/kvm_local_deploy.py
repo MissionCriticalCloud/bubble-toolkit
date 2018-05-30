@@ -332,6 +332,11 @@ class kvm_local_deploy:
             template_image = self.config_data['template_dir'] + template + ".qcow2"
             new_image = self.config_data['image_dir'] + vm_name + ".img"
             shutil.copy2(template_image, new_image)
+            if 'kvm' in vm_name:
+                command1 = "qemu-img create -f qcow2 /data/images/" + vm_name + "-data-1.img 100G"
+                command2 = "qemu-img create -f qcow2 /data/images/" + vm_name + "-data-2.img 100G"
+                subprocess.call(command1, shell=True)
+                subprocess.call(command2, shell=True)
             return True
         except:
             return False
@@ -354,6 +359,13 @@ class kvm_local_deploy:
         templatevars['disk_dev'] = role_dict['disk_dev']
         templatevars['disk_bus'] = role_dict['disk_bus']
         templatevars['net_model'] = role_dict['net_model']
+        if role_name == 'kvm':
+            templatevars['data_disk_format'] = 'qcow2'
+            templatevars['data_disk_bus'] = role_dict['disk_bus']
+            templatevars['data_disk_1_name'] = vm_name + '-data-1'
+            templatevars['data_disk_2_name'] = vm_name + '-data-2'
+            templatevars['data_disk_1_dev'] = 'vdb'
+            templatevars['data_disk_2_dev'] = 'vdc'
         try:
             templatevars['mac'] = self.get_ip_and_mac(vm_name)['mac']
         except:
@@ -472,7 +484,7 @@ class kvm_local_deploy:
             command = "virsh undefine " + hostname
             return_code = subprocess.call(command, shell=True)
             # Delete
-            command = "sudo rm /data/images/" + hostname + ".img"
+            command = "sudo rm /data/images/" + hostname + "*"
             return_code = subprocess.call(command, shell=True)
         except:
             return False

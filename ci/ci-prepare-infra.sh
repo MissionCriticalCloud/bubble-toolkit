@@ -65,5 +65,19 @@ fi
 # Make sure bridge is up
 sudo /usr/sbin/ifup virbr0.50
 
-say "Creating hosts"
-/data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force ${CLOUDSTACKFLAG} 2>&1
+tries="3"
+currenttry="0"
+
+set +e
+while [ $currenttry -lt $tries ]; do
+  say "Creating hosts"
+
+  timeout 900 /data/shared/deploy/kvm_local_deploy.py -m ${marvin_config} --force ${CLOUDSTACKFLAG} 2>&1
+  if [ $? -gt 0 ]; then
+    say "Timeout while creating :("
+  else
+    say "Creating hosts went ok!"
+    exit 0
+  fi
+  currenttry=$[$currenttry+1]
+done

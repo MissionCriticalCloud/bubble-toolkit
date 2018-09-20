@@ -42,14 +42,15 @@ echo "guest.cpu.mode=host-model" >> /etc/cloudstack/agent/agent.properties
 # Set the logging to DEBUG
 sed -i 's/INFO/DEBUG/g' /etc/cloudstack/agent/log4j-cloud.xml
 
-# Libvirtd parameters for Cloudstack
+# Libvirtd parameters for Cosmic
 echo 'listen_tls = 0' >> /etc/libvirt/libvirtd.conf
 echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf
 echo 'tcp_port = "16509"' >> /etc/libvirt/libvirtd.conf
 echo 'mdns_adv = 0' >> /etc/libvirt/libvirtd.conf
 echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
+sed -i 's/#LIBVIRTD_ARGS/LIBVIRTD_ARGS/g' /etc/sysconfig/libvirtd
 
-# qemu.conf parameters for Cloudstack
+# qemu.conf parameters for Cosmic
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 # Network

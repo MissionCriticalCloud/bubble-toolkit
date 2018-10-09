@@ -40,6 +40,7 @@ echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf
 echo 'tcp_port = "16509"' >> /etc/libvirt/libvirtd.conf
 echo 'mdns_adv = 0' >> /etc/libvirt/libvirtd.conf
 echo 'auth_tcp = "none"' >> /etc/libvirt/libvirtd.conf
+sed -i 's/#LIBVIRTD_ARGS/LIBVIRTD_ARGS/g' /etc/sysconfig/libvirtd
 
 # qemu.conf parameters
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf

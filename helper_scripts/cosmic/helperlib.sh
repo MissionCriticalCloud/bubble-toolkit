@@ -119,6 +119,34 @@ function set_ssh_base_and_scp_base {
   scp_base="sshpass -p $1 scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet "
 }
 
+# deploy_cosmic_war should be sourced from ci-deploy-infra.sh, but contains executing code
+# so should be moved to a "library" sh script which can be sourced
+function deploy_cosmic_war {
+  local csip=$1
+  local csuser=$2
+  local cspass=$3
+  local war_file="$4"
+
+  # SSH/SCP helpers
+  set_ssh_base_and_scp_base ${cspass}
+
+  # Extra configuration for Tomcat's webapp (namely adding /etc/cosmic/management to its classpath)
+  ${scp_base} ${CI_SCRIPTS}/setup_files/client.xml ${csuser}@${csip}:/etc/tomcat/Catalina/localhost/
+
+  # Extra configuration for Cosmic application
+  ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
+  ${scp_base} ${CI_SCRIPTS}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${ssh_base} ${csuser}@${csip} 'curl -sL "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=RELEASE" -o /usr/share/java/tomcat/mariadb-java-client-latest.jar'
+  ${scp_base} ${CI_SCRIPTS}/setup_files/context.xml ${csuser}@${csip}:/etc/tomcat
+  ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=.*\$/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
+
+  ${ssh_base} ${csuser}@${csip} mkdir -p /var/log/cosmic/management
+  ${ssh_base} ${csuser}@${csip} chown -R tomcat /var/log/cosmic
+  ${scp_base} ${war_file} ${csuser}@${csip}:~tomcat/webapps/client.war
+  ${ssh_base} ${csuser}@${csip} service tomcat start &> /dev/null
+
+  say "WAR deployed"
+}
 # If this Jenkins-like build_run_deploy script is aproved, move function below to library script file
 function undeploy_cosmic_war {
   local csip=$1

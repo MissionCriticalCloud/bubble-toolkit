@@ -136,6 +136,7 @@ function deploy_cosmic_war {
   # Extra configuration for Cosmic application
   ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management
   ${scp_base} ${CI_SCRIPTS}/setup_files/db.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${scp_base} ${scripts_dir}/setup_files/kafka.producer.properties ${csuser}@${csip}:/etc/cosmic/management
   ${ssh_base} ${csuser}@${csip} 'curl -sL "https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=2.3.0" -o /usr/share/java/tomcat/mariadb-java-client-latest.jar'
   ${scp_base} ${CI_SCRIPTS}/setup_files/context.xml ${csuser}@${csip}:/etc/tomcat
   ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=.*\$/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"

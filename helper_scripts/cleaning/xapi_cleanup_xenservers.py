@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # ---------------------------------------------------------------------------- #
 # Cleans up a xen server so that that it can be reused in cludstack testing
 #

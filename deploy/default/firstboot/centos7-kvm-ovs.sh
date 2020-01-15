@@ -69,7 +69,7 @@ systemctl start openvswitch
 cat /data/shared/deploy/default/firstboot/configure_ovs.sh >> /etc/rc.d/rc.local
 echo "chmod 644 /etc/rc.d/rc.local" >> /etc/rc.d/rc.local
 echo "sync; sleep1" >> /etc/rc.d/rc.local
-echo "echo b > /proc/sysrq-trigger" >> /etc/rc.d/rc.local
+echo "/usr/sbin/reboot" >> /etc/rc.d/rc.local
 
 # Run this once
 chmod 755  /etc/rc.d/rc.local

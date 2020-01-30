@@ -42,10 +42,9 @@ class NSX(Base.Base):
         self.master = socket.gethostbyname(master[0].value)
         self.transport_zone_uuid = None
         self.cloud_db = mysql.connector.connect(
-            host=self.config['dbSvr']['dbSvr'],
-            user=self.config['dbSvr']['user'],
-            passwd=self.config['dbSvr']['passwd'],
-            database='cloud'
+            database='cloud',
+            username=self.config['dbSvr']['user'],
+            password=self.config['dbSvr']['passwd']
         )
 
     def create_cluster(self):

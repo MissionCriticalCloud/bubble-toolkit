@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
-$(dirname $0)/ci-cleanup.py
+# We need to be root to do the cleanup of all NFS files
+sudo $(dirname $0)/ci-cleanup.py $*

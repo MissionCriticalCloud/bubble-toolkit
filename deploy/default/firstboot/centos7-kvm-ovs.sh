@@ -46,17 +46,9 @@ sed -i 's/#LIBVIRTD_ARGS/LIBVIRTD_ARGS/g' /etc/sysconfig/libvirtd
 sed -i -e 's/\#vnc_listen.*$/vnc_listen = "0.0.0.0"/g' /etc/libvirt/qemu.conf
 
 ### OVS ###
-cat <<END > /etc/yum.repos.d/CentOS-ovs.repo
-[centos-openstack-pending]
-name=CentOS-7 - OpenStack Pending
-baseurl=http://cbs.centos.org/repos/cloud7-openstack-common-pending/x86_64/os/
-gpgcheck=0
-enabled=1
-END
-
 yum install -y yum-utils
 yum-config-manager --enablerepo=extras
-yum install -y centos-release-openstack-queen
+yum install -y centos-release-openstack-train
 yum install -y openvswitch
 yum install -y centos-release-qemu-ev
 yum update -y

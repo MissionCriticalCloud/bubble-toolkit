@@ -17,3 +17,4 @@ slackweb
 jsonpath-ng
 click
 cs
+setuptools<45

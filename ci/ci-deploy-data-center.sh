@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-$(dirname $0)/ci-deploy-data-center.py $*
+sudo $(dirname $0)/ci-deploy-data-center.py $*

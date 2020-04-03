@@ -60,6 +60,7 @@ class NSX(Base.Base):
 
     def setup_cosmic(self, isolation_mode=None):
         """Setup NSX in Cosmic"""
+        nsx_query = None
         cosmic_controller_uuid = uuid.uuid4()
         cosmic_controller_guid = uuid.uuid4()
 
@@ -97,6 +98,7 @@ class NSX(Base.Base):
             self.cloud_db.commit()
         except Error as e:
             print("==> Error executing queries: ", e)
+            print("==> Query: ", nsx_query)
         finally:
             if self.cloud_db.is_connected():
                 cloud_cursor.close()
@@ -237,7 +239,7 @@ class NSX(Base.Base):
                         print("==> Setting NSX manager of %s to %s" % (hostname, self.master))
                         self._ssh(cmd="ovs-vsctl set-manager ssl:%s:6632" % self.master, **connection)
                     else:
-                        print("==> Error setting up transport connector for %s" % hostname)
+                        print("==> Error setting up transport connector for %s, data='%s'" % (hostname, data))
 
     def add_connectivy_to_offerings(self):
         """Add network offering to Cosmic with NSX connectivity"""

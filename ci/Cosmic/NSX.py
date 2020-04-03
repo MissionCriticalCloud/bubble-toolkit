@@ -43,6 +43,8 @@ class NSX(Base.Base):
         self.transport_zone_uuid = None
         self.cloud_db = mysql.connector.connect(
             database='cloud',
+            host=self.config['dbSvr']['dbSvr'],
+            port=self.config['dbSvr']['port'],
             username=self.config['dbSvr']['user'],
             password=self.config['dbSvr']['passwd']
         )

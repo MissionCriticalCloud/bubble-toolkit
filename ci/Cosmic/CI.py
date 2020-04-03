@@ -44,7 +44,7 @@ class CI(Base.Base):
         self.mariadbjar = ('https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/'
                            'redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=%s' % self.mariadbversion)
 
-    def prepare(self, timeout=900, cloudstack_deploy_mode=None):
+    def prepare(self, timeout=900, cloudstack_deploy_mode=""):
         """Prepare infrastructure for CI pipeline
 
         :param timeout: Timeout to wait for infra to be build
@@ -71,6 +71,11 @@ class CI(Base.Base):
             for c in CMDS['MTU'][hypervisor]:
                 subprocess.call(map(lambda x: x.format(dev=h), c.split(' ')))
 
+        if cloudstack_deploy_mode:
+            cloudstack_deploy_mode = "--cloudstack"
+        if self.debug:
+            print("==> Executing: ", CMDS['deploy'].format(marvin_config=self.marvin_config,
+                                                           cloudstack_deploy_mode=cloudstack_deploy_mode))
         task = subprocess.Popen(map(lambda x: x.format(marvin_config=self.marvin_config,
                                                        cloudstack_deploy_mode=cloudstack_deploy_mode),
                                     CMDS['deploy'].split(' ')))

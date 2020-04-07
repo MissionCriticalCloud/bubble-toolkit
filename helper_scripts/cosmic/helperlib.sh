@@ -141,7 +141,7 @@ function deploy_cosmic_war {
   ${ssh_base} ${csuser}@${csip} "sed -i \"s/cluster.node.IP=.*\$/cluster.node.IP=${csip}/\" /etc/cosmic/management/db.properties"
 
   # Kafka
-  ${scp_base} ${scripts_dir}/setup_files/kafka.producer.properties ${csuser}@${csip}:/etc/cosmic/management
+  ${scp_base} ${CI_SCRIPTS}/setup_files/kafka.producer.properties ${csuser}@${csip}:/etc/cosmic/management
   ${ssh_base} ${csuser}@${csip} mkdir -p /etc/cosmic/management/META-INF/cloudstack/core
   ${scp_base} ${CI_SCRIPTS}/setup_files/spring-kafka-context.xml ${csuser}@${csip}:/etc/cosmic/management/META-INF/cloudstack/core
 

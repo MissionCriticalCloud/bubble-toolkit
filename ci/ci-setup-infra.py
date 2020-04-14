@@ -16,11 +16,11 @@ def main(**kwargs):
     cloudstack_deploy_mode = kwargs.get('cloudstack')
     template = kwargs.get('template') or '/data/templates/cosmic-systemvm.qcow2'
     ci = CI(marvin_config=kwargs.get('marvin_config'), debug=kwargs.get('debug'))
-    nsx = NSX(marvin_config=kwargs.get('marvin_config'), debug=kwargs.get('debug'))
 
     ci.deploy_cosmic_db()
     ci.install_systemvm_templates(template=template)
 
+    nsx = NSX(marvin_config=kwargs.get('marvin_config'), debug=kwargs.get('debug'))
     if nsx:
         nsx.create_cluster()
 

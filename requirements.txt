@@ -5,14 +5,15 @@ appdirs
 clint
 cloudmonkey
 fabric
-https
 mock
 mysql-connector-python
 nose
 packaging
 prettytable
 requests
-setuptools
 six
 slackweb
 jsonpath-ng
+click
+cs
+setuptools<45

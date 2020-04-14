@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-$(dirname $0)/ci-prepare-infra.py $*
+sudo $(dirname $0)/ci-prepare-infra.py $*

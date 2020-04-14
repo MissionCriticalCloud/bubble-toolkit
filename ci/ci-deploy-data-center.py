@@ -18,6 +18,8 @@ def main(**kwargs):
     if nsx:
         nsx.add_connectivy_to_offerings()
 
+    ci.wait_for_templates()
+
 
 if __name__ == '__main__':
     main()

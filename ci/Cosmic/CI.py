@@ -4,7 +4,6 @@ import glob
 import json
 import os
 import shutil
-import socket
 import subprocess
 import sys
 import tarfile
@@ -12,6 +11,7 @@ import time
 
 import marvin.deployDataCenter
 import marvin.marvinInit
+import mysql.connector
 import nose
 import paramiko
 import requests
@@ -44,7 +44,7 @@ class CI(Base.Base):
         self.mariadbjar = ('https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/'
                            'redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=%s' % self.mariadbversion)
 
-    def prepare(self, timeout=900, cloudstack_deploy_mode=None):
+    def prepare(self, timeout=900, cloudstack_deploy_mode=""):
         """Prepare infrastructure for CI pipeline
 
         :param timeout: Timeout to wait for infra to be build
@@ -71,6 +71,11 @@ class CI(Base.Base):
             for c in CMDS['MTU'][hypervisor]:
                 subprocess.call(map(lambda x: x.format(dev=h), c.split(' ')))
 
+        if cloudstack_deploy_mode:
+            cloudstack_deploy_mode = "--cloudstack"
+        if self.debug:
+            print("==> Executing: ", CMDS['deploy'].format(marvin_config=self.marvin_config,
+                                                           cloudstack_deploy_mode=cloudstack_deploy_mode))
         task = subprocess.Popen(map(lambda x: x.format(marvin_config=self.marvin_config,
                                                        cloudstack_deploy_mode=cloudstack_deploy_mode),
                                     CMDS['deploy'].split(' ')))
@@ -110,17 +115,19 @@ class CI(Base.Base):
                 print("==> Collecting Logs and Code Coverage Report from %s" % vm)
                 # TODO: Copy logs and coverage reports from HV and SCP them
                 # collect_files_from_vm ${csip} ${csuser} ${cspass} "/var/log/cosmic/management/*.log*" "cs${i}-management-logs/"
-                if not os.path.exists("%s-logs" % vm):
-                    os.makedirs("%s-logs" % vm)
                 if vm.startswith('cs'):
                     src = "/var/log/cosmic/management/*.log*"
+                    dstdir = "%s-management-logs" % vm
                     hostname = properties['mgtSvrIp']
                 else:
                     src = "/var/log/cosmic/agent/*.log*"
+                    dstdir = "%s-agent-logs" % vm
                     hostname = vm
+                if not os.path.exists(dstdir):
+                    os.makedirs(dstdir)
                 try:
                     self.collect_files_from_vm(hostname=hostname, username=username, password=password,
-                                               src=src, dst="%s-logs/*" % vm)
+                                               src=src, dst="%s/*" % dstdir)
                 except (scp.SCPException, paramiko.ssh_exception) as e:
                     print("ERROR: %s" % e.message)
 
@@ -134,7 +141,10 @@ class CI(Base.Base):
         secondarystorage = parse('zones[*].secondaryStorages[*]').find(self.config)
         for i in map(lambda x: x.value['url'].split(':')[2], primarystorage + secondarystorage):
             if os.path.exists(i):
-                shutil.rmtree("%s" % i)
+                try:
+                    shutil.rmtree("%s" % i)
+                except OSError as e:
+                    print("ERROR: %s" % e.message)
 
     def collect_files_from_vm(self, hostname='localhost', username=None, password=None, src=None, dst=None):
         """Collect logs and coverage files
@@ -189,23 +199,6 @@ class CI(Base.Base):
         marvin_filename = self.marvin_config.split('/')[-1]
         open(marvin_filename, "w").write(json.dumps(self.config, indent=4))
 
-    def wait_for_port(self, hostname=None, tcp_port=8096):
-        """Wait for port to be ready
-
-        :param hostname: Hostname to connect to
-        :param tcp_port: Port number to connect to
-        """
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            try:
-                s.connect((hostname, tcp_port))
-                s.close()
-                break
-            except socket.error as _:
-                if self.debug:
-                    print("==> %s not ready" % hostname)
-                time.sleep(1)
-
     def install_kvm_packages(self):
         """Prepare KVM hypervisor"""
         zones = parse('zones[*]').find(self.config)
@@ -241,9 +234,22 @@ class CI(Base.Base):
         db_user = self.config['dbSvr']['user']
         db_pass = self.config['dbSvr']['passwd']
         self.wait_for_port(hostname=db_svr, tcp_port=db_port)
+
         for mgtSvr in self.config['mgtSvr']:
             self._ssh(hostname=mgtSvr['mgtSvrIp'], username=mgtSvr['user'],
                       password=mgtSvr['passwd'], cmd=cmd)
+            for query in open("%s/ci/setup_files/create-cloud-db.sql" % self.setup_files, "r").readlines():
+                if query == '\n':
+                    continue
+                cloud_db = mysql.connector.connect(
+                    host=self.config['dbSvr']['dbSvr'],
+                    username="root"
+                )
+                cloud_cursor = cloud_db.cursor()
+                cloud_cursor.execute(query)
+                cloud_db.commit()
+                cloud_db.close()
+
         for f in glob.glob('/tmp/flyway*'):
             os.unlink(f) if os.path.isfile(f) else shutil.rmtree(f)
         resp = requests.get(self.flywaycli)
@@ -260,6 +266,7 @@ class CI(Base.Base):
                              '-encoding=UTF-8',
                              '-locations=filesystem:cosmic-core/cosmic-flyway/src',
                              '-baselineOnMigrate=true',
+                             '-table=schema_version',
                              'migrate'])
             print('==> Cosmic DB deployed at %s' % mgtSvr['mgtSvrIp'])
 
@@ -349,3 +356,36 @@ class CI(Base.Base):
             # Do post-commands
             for cmd in CMDS['war_deploy']['postcommands']:
                 self._ssh(cmd=cmd, **connection)
+
+    def collect_test_coverage_files(self):
+        zone = self.config['zones'][0]['name']
+        for host in self.config['mgtSvr']:
+            connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
+            print("==> Stopping Tomcat on %s" % host['mgtSvrName'])
+            self._ssh(cmd="systemctl stop tomcat", **connection)
+
+            print("==> Collecting Integration Tests Coverage Data (Management Server) from %s" % host['mgtSvrName'])
+            destfile = ("%s/%s/cosmic/target/coverage-reports/jacoco-it-%s.exec" %
+                        (self.workspace, zone, host['mgtSvrName']))
+            try:
+                self._scp_get(srcfile="/tmp/jacoco-it.exec", destfile=destfile, **connection)
+            except IOError as e:
+                print("ERROR: %s" % (e.message or e.strerror))
+
+        zones = parse('zones[*]').find(self.config)
+        for zone in zones:
+            hosts = parse('pods[*].clusters[*].hosts[*]').find(zone)
+            for host in hosts:
+                hostname = host.value['url'].split('/')[-1]
+                connection = {'hostname': hostname, 'username': host.value['username'],
+                              'password': host.value['password']}
+                print("==> Stopping Cosmic KVM Agent on host %s" % hostname)
+                self._ssh(cmd="systemctl stop cosmic-agent", **connection)
+
+                destfile = ("%s/%s/cosmic/target/coverage-reports/jacoco-it-%s.exec" %
+                            (self.workspace, zone.value['name'], hostname))
+                print("==> Collecting Integration Tests Coverage Data (Agent) from %s" % hostname)
+                try:
+                    self._scp_get(srcfile="/tmp/jacoco-it.exec", destfile=destfile, **connection)
+                except IOError as e:
+                    print("ERROR: %s" % (e.message or e.strerror))

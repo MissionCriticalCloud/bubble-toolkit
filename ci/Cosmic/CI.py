@@ -270,6 +270,9 @@ class CI(Base.Base):
                              'migrate'])
             print('==> Cosmic DB deployed at %s' % mgtSvr['mgtSvrIp'])
 
+        for f in glob.glob('/tmp/flyway*'):
+            os.unlink(f) if os.path.isfile(f) else shutil.rmtree(f)
+
     def install_systemvm_templates(self, template=None):
         """Install SystemVM template
 
@@ -311,6 +314,8 @@ class CI(Base.Base):
             self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
             self._scp_put(srcfile="/tmp/jacoco.conf", destfile="/etc/tomcat/conf.d/jacoco.conf", **connection)
         print("==> Tomcat configured")
+        os.unlink("/tmp/jacoco.conf")
+
 
     def configure_agent_to_load_jacoco_agent(self):
         """Deploy jacoco agent on hypervisor"""
@@ -356,6 +361,8 @@ class CI(Base.Base):
             # Do post-commands
             for cmd in CMDS['war_deploy']['postcommands']:
                 self._ssh(cmd=cmd, **connection)
+
+        os.unlink("/tmp/mariadb-java-client-latest.jar")
 
     def collect_test_coverage_files(self):
         zone = self.config['zones'][0]['name']

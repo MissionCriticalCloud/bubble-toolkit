@@ -67,7 +67,7 @@ class Base(object):
         self.ssh_client.connect(hostname=hostname,
                                 username=username,
                                 password=password)
-        scp_client = scp.SCPClient(self.ssh_client.get_transport())
+        scp_client = scp.SCPClient(self.ssh_client.get_transport(), sanitize=lambda x: x)
         scp_client.get(srcfile, destfile, recursive=True)
         scp_client.close()
 

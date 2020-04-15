@@ -127,7 +127,7 @@ class CI(Base.Base):
                     os.makedirs(dstdir)
                 try:
                     self.collect_files_from_vm(hostname=hostname, username=username, password=password,
-                                               src=src, dst="%s/*" % dstdir)
+                                               src=src, dst="%s" % dstdir)
                 except (scp.SCPException, paramiko.ssh_exception) as e:
                     print("ERROR: %s" % e.message)
 

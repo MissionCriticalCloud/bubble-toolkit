@@ -14,8 +14,8 @@ while ! nmap -Pn -p22 ${NSX_CONTROLLER_NODE} | grep "22/tcp open" 2>&1 > /dev/nu
 SSH_OPTIONS="-o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 echo "Note: Cleaning controller node."
-echo 'yes' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER_NODE} clear everything force
-echo 'y' | sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER_NODE} restart system force
+sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER_NODE} clear everything force
+sshpass -p 'admin' ssh ${SSH_OPTIONS} admin@${NSX_CONTROLLER_NODE} restart system force
 
 echo "Note: wait until we can SSH to the controller node."
 while ! nmap -Pn -p22 ${NSX_CONTROLLER_NODE} | grep "22/tcp open" 2>&1 > /dev/null; do sleep 1; done

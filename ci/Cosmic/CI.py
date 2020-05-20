@@ -316,7 +316,6 @@ class CI(Base.Base):
         print("==> Tomcat configured")
         os.unlink("/tmp/jacoco.conf")
 
-
     def configure_agent_to_load_jacoco_agent(self):
         """Deploy jacoco agent on hypervisor"""
         zones = parse('zones[*]').find(self.config)

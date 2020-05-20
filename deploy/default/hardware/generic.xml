@@ -37,7 +37,7 @@
     </controller>
     <interface type='bridge'>
       <mac address='{{mac}}'/>
-      <source bridge='{{network}}'/>
+      <source bridge='{{br_name}}'/>
       <target dev='{{name}}-eth0'/>
       <model type='{{net_model}}'/>
       <alias name='net0'/>

@@ -369,7 +369,7 @@ class kvm_local_deploy:
             templatevars['data_disk_2_name'] = vm_name + '-data-2'
             templatevars['data_disk_1_dev'] = 'vdb'
             templatevars['data_disk_2_dev'] = 'vdc'
-            templatevars['network'] = 'virbr0'
+            templatevars['br_name'] = 'virbr0'
         try:
             templatevars['mac'] = self.get_ip_and_mac(vm_name)['mac']
         except:
@@ -699,12 +699,21 @@ class kvm_local_deploy:
         if not self.get_marvin_json():
             return False
         print("Note: Found hypervisor type '" + self.get_hypervisor_type() + "'")
-        hosts = self.get_hosts()
+        vms = []
+        for zone in self.get_zones():
+            for pod in self.get_pods(zone=zone):
+                for cluster in self.get_clusters(pod=pod):
+                    vms += self.get_hosts(cluster=cluster)
+                vms += self.get_management_hosts(zone=zone)
+        vms += self.get_nsx_nodes()
+        if self.DEBUG == 1:
+            print("Debug: destroying: %s" % vms)
         thread_number = 10
+
         if self.running_on_vm:
             thread_number = 4
         pool = ThreadPool(thread_number)
-        results = pool.map(self.delete_host, hosts)
+        results = pool.map(self.delete_host, vms)
         print("Note: Deployment results: " + str(results))
         pool.close()
         pool.join()

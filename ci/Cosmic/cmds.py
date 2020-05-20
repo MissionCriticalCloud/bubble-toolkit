@@ -14,7 +14,7 @@ CMDS = {
     'generic': [
         'sudo /usr/sbin/ifup virbr0.50'
     ],
-    'deploy': '/data/shared/deploy/kvm_local_deploy.py -m {marvin_config} --force {cloudstack_deploy_mode} 2>&1',
+    'deploy': '/data/shared/deploy/kvm_local_deploy_v{version}.py -m {marvin_config} --force {cloudstack_deploy_mode} 2>&1',
     'agent_install': {
         'precommands': [
             'systemctl daemon-reload',

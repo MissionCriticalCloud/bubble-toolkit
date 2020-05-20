@@ -53,6 +53,8 @@ class CI(Base.Base):
         clusters = parse('zones[*].pods[*].clusters[*]').find(self.config)
         primarystorage = parse('zones[*].pods[*].clusters[*].primaryStorages[*]').find(self.config)
         secondarystorage = parse('zones[*].secondaryStorages[*]').find(self.config)
+        version = parse('version').find(self.config)
+
 
         for path in map(lambda x: x.value['url'].split(':')[2], primarystorage + secondarystorage):
             if not os.path.exists(path):
@@ -73,10 +75,11 @@ class CI(Base.Base):
 
         if cloudstack_deploy_mode:
             cloudstack_deploy_mode = "--cloudstack"
+
         if self.debug:
-            print("==> Executing: ", CMDS['deploy'].format(marvin_config=self.marvin_config,
+            print("==> Executing: ", CMDS['deploy'].format(version=version, marvin_config=self.marvin_config,
                                                            cloudstack_deploy_mode=cloudstack_deploy_mode))
-        task = subprocess.Popen(map(lambda x: x.format(marvin_config=self.marvin_config,
+        task = subprocess.Popen(map(lambda x: x.format(version=version, marvin_config=self.marvin_config,
                                                        cloudstack_deploy_mode=cloudstack_deploy_mode),
                                     CMDS['deploy'].split(' ')))
         retries = timeout

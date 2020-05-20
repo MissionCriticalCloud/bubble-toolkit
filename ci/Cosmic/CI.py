@@ -136,7 +136,7 @@ class CI(Base.Base):
 
             print("==> Destroying VM %s" % vm)
             # FIXME: Create library for this instead of a subprocess
-            subprocess.call(['/data/shared/deploy/kvm_local_deploy.py', '-x', vm])
+            subprocess.call(['/data/shared/deploy/kvm_local_deploy_v1.py', '-x', vm])
 
     def cleanup_storage(self):
         """Cleanup storage"""

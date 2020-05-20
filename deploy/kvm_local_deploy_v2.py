@@ -78,6 +78,7 @@ def handleArguments(argv):
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
            '\n  --deploy-role -r \t\tDeploy VM with this role' + \
            '\n  --deploy-vm -n \t\tDeploy VM with this name' + \
+           '\n  --destroy-vm -x \t\tDestroy VM with this name' + \
            '\n  --deploy-cloud -c \t\tDeploy group of VMs to build a cloud' + \
            '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
            '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
@@ -247,6 +248,21 @@ class kvm_local_deploy:
     def get_br_name(self, vm_name):
         if self.DEBUG == 1:
             print("Debug: get br_name for %s" % vm_name)
+        for zone in self.get_zones():
+            for pod in self.get_pods(zone=zone):
+                for cluster in self.get_clusters(pod=pod):
+                    for h in cluster['hosts']:
+                        if self.DEBUG == 1:
+                            print("Debug: found host: %s" % h)
+                        url_split = h['url'].split('/')
+                        if url_split[2].split('.')[0] == vm_name:
+                            if 'br_name' in h:
+                                if self.DEBUG == 1:
+                                    print("Debug: found br_name for %s: %s" % (vm_name, h['br_name']))
+                                return h['br_name']
+
+        if self.DEBUG == 1:
+            print("Debug: no br_name found for %s, using default 'virbr0'" % vm_name)
         return 'virbr0'
 
     # Get offering details
@@ -706,6 +722,8 @@ class kvm_local_deploy:
                     vms += self.get_hosts(cluster=cluster)
                 vms += self.get_management_hosts(zone=zone)
         vms += self.get_nsx_nodes()
+        if self.DEBUG == 1:
+            print("Debug: deploying: %s" % vms)
         thread_number = 10
         if self.running_on_vm:
             thread_number = 4
@@ -721,12 +739,21 @@ class kvm_local_deploy:
         if not self.get_marvin_json():
             return False
         print("Note: Found hypervisor type '" + self.get_hypervisor_type() + "'")
-        hosts = self.get_hosts()
+        vms = []
+        for zone in self.get_zones():
+            for pod in self.get_pods(zone=zone):
+                for cluster in self.get_clusters(pod=pod):
+                    vms += self.get_hosts(cluster=cluster)
+                vms += self.get_management_hosts(zone=zone)
+        vms += self.get_nsx_nodes()
+        if self.DEBUG == 1:
+            print("Debug: destroying: %s" % vms)
         thread_number = 10
+
         if self.running_on_vm:
             thread_number = 4
         pool = ThreadPool(thread_number)
-        results = pool.map(self.delete_host, hosts)
+        results = pool.map(self.delete_host, vms)
         print("Note: Deployment results: " + str(results))
         pool.close()
         pool.join()

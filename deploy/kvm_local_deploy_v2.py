@@ -166,7 +166,7 @@ class kvm_local_deploy:
             sys.exit(1)
 
     # Read our own config file for settings
-    def read_config_file(self, configfile):
+    def read_config_file(self):
         config = ConfigParser.RawConfigParser()
         config.read(self.configfile)
         try:
@@ -189,7 +189,7 @@ class kvm_local_deploy:
         config = ConfigParser.RawConfigParser()
         try:
             config.read(configfile)
-            confdict = { }
+            confdict = {}
             options = config.options(section)
         except:
             return False
@@ -213,6 +213,8 @@ class kvm_local_deploy:
     # Get override or else the default
     def get_file_name(self, dir_name, file_name):
         path_ending = self.format_path(dir_name) + file_name
+        if self.DEBUG == 1:
+            print("Debug: path_ending %s; file_name %s" % (path_ending, file_name))
 
         # Look for files that exist, in this order. Return the first one found.
         test_file = {}
@@ -242,9 +244,17 @@ class kvm_local_deploy:
         return False
 
     # Get offering details
+    def get_br_name(self, vm_name):
+        if self.DEBUG == 1:
+            print("Debug: get br_name for %s" % vm_name)
+        return 'virbr0'
+
+    # Get offering details
     def get_offering(self, offering_name):
         file_name = self.get_file_name(self.config_data['offering_dir'], offering_name + '.conf')
         if file_name is not None:
+            if self.DEBUG == 1:
+                print("Debug: offering_name %s; file_name %s" % (offering_name, file_name))
             return self.get_config_section(file_name, 'offering')
         else:
             print("ERROR: Offering with name " + offering_name + " does not exist!")
@@ -254,6 +264,8 @@ class kvm_local_deploy:
     def get_role(self, role_name):
         file_name = self.get_file_name(self.config_data['role_dir'], role_name + '.conf')
         if file_name is not None:
+            if self.DEBUG == 1:
+                print("Debug: role_name %s; file_name %s" % (role_name, file_name))
             return self.get_config_section(file_name, 'role')
         else:
             return False
@@ -262,6 +274,8 @@ class kvm_local_deploy:
     def get_cloud(self, cloud_name):
         file_name = self.get_file_name(self.config_data['cloud_dir'], cloud_name + '.conf')
         if file_name is not None:
+            if self.DEBUG == 1:
+                print("Debug: cloud_name %s; file_name %s" % (cloud_name, file_name))
             return self.get_config_section(file_name, 'cloud')
         else:
             return False
@@ -352,6 +366,7 @@ class kvm_local_deploy:
     # Generate the XML for the new VM
     def generate_xml(self, role_name, vm_name):
         role_dict = self.get_role(role_name)
+        br_name = self.get_br_name(vm_name)
         xml = self.get_hardware_xml(role_dict['hardware'])
         with open(xml) as f:
             tmpl = Template(f.read())
@@ -369,6 +384,7 @@ class kvm_local_deploy:
             templatevars['data_disk_2_name'] = vm_name + '-data-2'
             templatevars['data_disk_1_dev'] = 'vdb'
             templatevars['data_disk_2_dev'] = 'vdc'
+            templatevars['network'] = br_name
         try:
             templatevars['mac'] = self.get_ip_and_mac(vm_name)['mac']
         except:

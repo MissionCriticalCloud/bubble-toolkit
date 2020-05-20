@@ -46,13 +46,13 @@
         </controller>
         <interface type='bridge'>
             <mac address='{{mac}}' />
-            <source bridge='virbr0' />
+            <source bridge='{{network}}' />
             <target dev='{{name}}-eth0' />
             <model type='{{net_model}}' />
             <alias name='net0' />
         </interface>
         <interface type='bridge'>
-            <source bridge='virbr0' />
+            <source bridge='{{network}}' />
             <target dev='{{name}}-eth1' />
             <model type='{{net_model}}' />
             <alias name='net1' />

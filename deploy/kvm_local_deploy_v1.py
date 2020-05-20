@@ -369,6 +369,7 @@ class kvm_local_deploy:
             templatevars['data_disk_2_name'] = vm_name + '-data-2'
             templatevars['data_disk_1_dev'] = 'vdb'
             templatevars['data_disk_2_dev'] = 'vdc'
+            templatevars['network'] = 'virbr0'
         try:
             templatevars['mac'] = self.get_ip_and_mac(vm_name)['mac']
         except:

@@ -157,7 +157,7 @@ class kvm_local_deploy:
             sys.exit(1)
 
         self.print_welcome()
-        self.read_config_file(self.configfile)
+        self.read_config_file()
 
     # Check for root permissions
     def check_root(self):

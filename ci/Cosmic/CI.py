@@ -53,8 +53,7 @@ class CI(Base.Base):
         clusters = parse('zones[*].pods[*].clusters[*]').find(self.config)
         primarystorage = parse('zones[*].pods[*].clusters[*].primaryStorages[*]').find(self.config)
         secondarystorage = parse('zones[*].secondaryStorages[*]').find(self.config)
-        version = parse('version').find(self.config)
-
+        version = self.config['version']
 
         for path in map(lambda x: x.value['url'].split(':')[2], primarystorage + secondarystorage):
             if not os.path.exists(path):

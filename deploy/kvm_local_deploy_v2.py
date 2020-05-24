@@ -325,17 +325,19 @@ class kvm_local_deploy:
 
     # Get MAC and IP from Qemu
     def get_ip_and_mac(self, hostname):
-        net = self.conn.networkLookupByName('NAT')
-        root = ET.fromstring(net.XMLDesc())
-        dhcp = root.findall("./ip/dhcp/host")
-        result = { }
-        for d in dhcp:
-            if d.get('name') == hostname:
-                result['mac'] = d.get('mac')
-                result['name'] = d.get('name')
-                result['ip'] = d.get('ip')
+        networks = self.conn.listNetworks()
+        for network in networks:
+            net = self.conn.networkLookupByName(network)
+            root = ET.fromstring(net.XMLDesc())
+            dhcp = root.findall("./ip/dhcp/host")
+            result = { }
+            for d in dhcp:
+                if d.get('name') == hostname:
+                    result['mac'] = d.get('mac')
+                    result['name'] = d.get('name')
+                    result['ip'] = d.get('ip')
         if len(result) == 0:
-            print("ERROR: host not defined in NAT DHCP config.")
+            print("ERROR: host not defined in any DHCP config.")
             return False
         return result
 

@@ -396,6 +396,7 @@ class kvm_local_deploy:
         templatevars['disk_dev'] = role_dict['disk_dev']
         templatevars['disk_bus'] = role_dict['disk_bus']
         templatevars['net_model'] = role_dict['net_model']
+        templatevars['br_name'] = br_name
         if role_name == 'kvm':
             templatevars['data_disk_format'] = 'qcow2'
             templatevars['data_disk_bus'] = role_dict['disk_bus']
@@ -403,7 +404,6 @@ class kvm_local_deploy:
             templatevars['data_disk_2_name'] = vm_name + '-data-2'
             templatevars['data_disk_1_dev'] = 'vdb'
             templatevars['data_disk_2_dev'] = 'vdc'
-            templatevars['br_name'] = br_name
         try:
             templatevars['mac'] = self.get_ip_and_mac(vm_name)['mac']
         except:

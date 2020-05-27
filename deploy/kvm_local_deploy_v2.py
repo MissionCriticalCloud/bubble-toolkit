@@ -34,6 +34,7 @@ import os.path
 import shutil
 import subprocess
 import sys
+import re
 import xml.etree.ElementTree as ET
 from jinja2 import Template
 from multiprocessing.dummy import Pool as ThreadPool
@@ -500,8 +501,9 @@ class kvm_local_deploy:
 
     # Deploy a certain hostname
     def deploy_host(self, hostname):
-        role = hostname[:-1]
-        digit = hostname[-1:]
+        m = re.match("(\D+)(\d+)", hostname)
+        role = m.group(1)
+        digit = m.group(2)
         print("Note: Found role '" + role + "' and digit '" + digit + "'")
         if cloudstack and role == "cs":
             print("Note: Deploying CS role in CloudStack 4.4.4 compatible mode")

@@ -523,12 +523,15 @@ class kvm_local_deploy:
     def delete_host(self, hostname):
         print("Deleting vm '" + hostname + "'..")
         try:
+            print("Stopping vm '" + hostname + "'..")
             # Destroy
             command = "virsh destroy " + hostname
             return_code = subprocess.call(command, shell=True)
+            print("Removing vm '" + hostname + "'..")
             # Undefine
             command = "virsh undefine " + hostname
             return_code = subprocess.call(command, shell=True)
+            print("Deleting vm images '" + hostname + "'..")
             # Delete
             command = "sudo rm /data/images/" + hostname + "*"
             return_code = subprocess.call(command, shell=True)

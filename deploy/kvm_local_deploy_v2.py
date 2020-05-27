@@ -74,6 +74,8 @@ def handleArguments(argv):
     cloudstack = False
     global display_state
     display_state = False
+    global thread_number
+    thread_number = 10
 
     # Usage message
     help = "Usage: ./" + os.path.basename(__file__) + ' [options]' + \
@@ -84,7 +86,7 @@ def handleArguments(argv):
            '\n  --deploy-marvin -m \t\tDeploy hardware from this Marvin DataCenter configuration' + \
            '\n  --digit -d \t\t\tDigit to append to the role-name instead of the next available' + \
            '\n  --status -s \t\t\tDisplay status of your VMs' + \
-           '\n  --status -s \t\t\tDisplay status of your VMs' + \
+           '\n  --threads \t\t\tSet the number of threads (default = 10)' + \
            '\n  --cloudstack \t\t\tBuild CloudStack management server in CloudStack 4.4.4 compabile mode (CentOS6)' + \
            '\n  --delete \t\t\tOnly delete the specified VM (needs --digit) or Marvin config' + \
            '\n  --force \t\t\tDelete VMs when they already exist' + \
@@ -93,7 +95,7 @@ def handleArguments(argv):
     try:
         opts, args = getopt.getopt(
             argv, "hr:c:d:m:x:n:s", [
-                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "destroy_vm=", "digit=", "delete", "status", "cloudstack", "debug", "force"])
+                "deploy-role=", "deploy-vm=", "deploy-cloud=", "deploy-marvin=", "destroy_vm=", "digit=", "delete", "status", "threads=", "cloudstack", "debug", "force"])
     except getopt.GetoptError as e:
         print("Error: " + str(e))
         print(help)
@@ -122,6 +124,11 @@ def handleArguments(argv):
             digit = arg
         elif opt in ("-s", "--status"):
             display_state = True
+        elif opt in ("--threads"):
+            try:
+                thread_number = int(arg)
+            except ValueError:
+                sys.exit("Given threads is not valid! Given value (" + arg + ")")
         elif opt in ("--cloudstack"):
             cloudstack = True
         elif opt in ("--debug"):
@@ -621,18 +628,19 @@ class kvm_local_deploy:
     def sort_nsx_vm_name(self, vm_name):
         if 'mgr' in vm_name:
             return 1
-        elif 'con':
+        elif 'con' in vm_name:
             return 2
-        elif 'svc':
+        elif 'svc' in vm_name:
             return 3
         else:
             return 4
 
     def deploy_cloud_roles(self, roles):
-        thread_number = 10
-        if self.running_on_vm:
-            thread_number = 4
-        pool = ThreadPool(thread_number)
+        t_number = thread_number
+        if self.running_on_vm and t_number > 4:
+            t_number = 4
+        pool = ThreadPool(t_number)
+        print("Note: running with " + str(t_number) + " Threads")
         results = pool.map(self.deploy_role, roles)
         print("Note: Deployment results: " + str(results))
         pool.close()
@@ -728,10 +736,11 @@ class kvm_local_deploy:
         vms += self.get_nsx_nodes()
         if self.DEBUG == 1:
             print("Debug: deploying: %s" % vms)
-        thread_number = 10
-        if self.running_on_vm:
-            thread_number = 4
-        pool = ThreadPool(thread_number)
+        t_number = thread_number
+        if self.running_on_vm and t_number > 4:
+            t_number = 4
+        pool = ThreadPool(t_number)
+        print("Note: running with " + str(t_number) + " Threads")
         results = pool.map(self.deploy_host, vms)
         print("Note: Deployment results: " + str(results))
         pool.close()
@@ -752,11 +761,11 @@ class kvm_local_deploy:
         vms += self.get_nsx_nodes()
         if self.DEBUG == 1:
             print("Debug: destroying: %s" % vms)
-        thread_number = 10
-
-        if self.running_on_vm:
-            thread_number = 4
-        pool = ThreadPool(thread_number)
+        t_number = thread_number
+        if self.running_on_vm and t_number > 4:
+            t_number = 4
+        pool = ThreadPool(t_number)
+        print("Note: running with " + str(t_number) + " Threads")
         results = pool.map(self.delete_host, vms)
         print("Note: Deployment results: " + str(results))
         pool.close()

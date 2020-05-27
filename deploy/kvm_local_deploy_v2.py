@@ -223,7 +223,7 @@ class kvm_local_deploy:
     def get_file_name(self, dir_name, file_name):
         path_ending = self.format_path(dir_name) + file_name
         if self.DEBUG == 1:
-            print("Debug: path_ending %s; file_name %s" % (path_ending, file_name))
+            print("[DEBUG]: path_ending %s; file_name %s" % (path_ending, file_name))
 
         # Look for files that exist, in this order. Return the first one found.
         test_file = {}
@@ -237,7 +237,7 @@ class kvm_local_deploy:
                 return result
 
         if self.DEBUG == 1:
-            print("Debug: Nothing found returning None")
+            print("[DEBUG]: Nothing found returning None")
         return None
 
     # Make sure paths look the same and have a trailing slash
@@ -247,7 +247,7 @@ class kvm_local_deploy:
     # Test if file exists
     def test_file(self, file_name):
         if self.DEBUG == 1:
-            print("Debug: testing %s" % file_name)
+            print("[DEBUG]: testing %s" % file_name)
         if os.path.isfile(file_name):
             return file_name
         return False
@@ -255,22 +255,22 @@ class kvm_local_deploy:
     # Get offering details
     def get_br_name(self, vm_name):
         if self.DEBUG == 1:
-            print("Debug: get br_name for %s" % vm_name)
+            print("[DEBUG]: get br_name for %s" % vm_name)
         for zone in self.get_zones():
             for pod in self.get_pods(zone=zone):
                 for cluster in self.get_clusters(pod=pod):
                     for h in cluster['hosts']:
                         if self.DEBUG == 1:
-                            print("Debug: found host: %s" % h)
+                            print("[DEBUG]: found host: %s" % h)
                         url_split = h['url'].split('/')
                         if url_split[2].split('.')[0] == vm_name:
                             if 'br_name' in h:
                                 if self.DEBUG == 1:
-                                    print("Debug: found br_name for %s: %s" % (vm_name, h['br_name']))
+                                    print("[DEBUG]: found br_name for %s: %s" % (vm_name, h['br_name']))
                                 return h['br_name']
 
         if self.DEBUG == 1:
-            print("Debug: no br_name found for %s, using default 'virbr0'" % vm_name)
+            print("[DEBUG]: no br_name found for %s, using default 'virbr0'" % vm_name)
         return 'virbr0'
 
     # Get offering details
@@ -278,7 +278,7 @@ class kvm_local_deploy:
         file_name = self.get_file_name(self.config_data['offering_dir'], offering_name + '.conf')
         if file_name is not None:
             if self.DEBUG == 1:
-                print("Debug: offering_name %s; file_name %s" % (offering_name, file_name))
+                print("[DEBUG]: offering_name %s; file_name %s" % (offering_name, file_name))
             return self.get_config_section(file_name, 'offering')
         else:
             print("ERROR: Offering with name " + offering_name + " does not exist!")
@@ -289,7 +289,7 @@ class kvm_local_deploy:
         file_name = self.get_file_name(self.config_data['role_dir'], role_name + '.conf')
         if file_name is not None:
             if self.DEBUG == 1:
-                print("Debug: role_name %s; file_name %s" % (role_name, file_name))
+                print("[DEBUG]: role_name %s; file_name %s" % (role_name, file_name))
             return self.get_config_section(file_name, 'role')
         else:
             return False
@@ -299,7 +299,7 @@ class kvm_local_deploy:
         file_name = self.get_file_name(self.config_data['cloud_dir'], cloud_name + '.conf')
         if file_name is not None:
             if self.DEBUG == 1:
-                print("Debug: cloud_name %s; file_name %s" % (cloud_name, file_name))
+                print("[DEBUG]: cloud_name %s; file_name %s" % (cloud_name, file_name))
             return self.get_config_section(file_name, 'cloud')
         else:
             return False
@@ -335,15 +335,19 @@ class kvm_local_deploy:
     def get_ip_and_mac(self, hostname):
         networks = self.conn.listNetworks()
         for network in networks:
+            if self.DEBUG == 1:
+                print("[DEBUG]: search network : %s for VM: %s" % (network, hostname))
             net = self.conn.networkLookupByName(network)
             root = ET.fromstring(net.XMLDesc())
             dhcp = root.findall("./ip/dhcp/host")
-            result = { }
-            for d in dhcp:
-                if d.get('name') == hostname:
-                    result['mac'] = d.get('mac')
-                    result['name'] = d.get('name')
-                    result['ip'] = d.get('ip')
+            result = {}
+            for ip in dhcp:
+                if self.DEBUG == 1:
+                    print("[DEBUG]: search network : %s found IP: %s" % (network, ip.get['name']))
+                if ip.get('name') == hostname:
+                    result['mac'] = ip.get('mac')
+                    result['name'] = ip.get('name')
+                    result['ip'] = ip.get('ip')
         if len(result) == 0:
             print("ERROR: host not defined in any DHCP config.")
             return False
@@ -738,7 +742,7 @@ class kvm_local_deploy:
                 vms += self.get_management_hosts(zone=zone)
         vms += self.get_nsx_nodes()
         if self.DEBUG == 1:
-            print("Debug: deploying: %s" % vms)
+            print("[DEBUG]: deploying: %s" % vms)
         t_number = thread_number
         if self.running_on_vm and t_number > 4:
             t_number = 4
@@ -763,7 +767,7 @@ class kvm_local_deploy:
                 vms += self.get_management_hosts(zone=zone)
         vms += self.get_nsx_nodes()
         if self.DEBUG == 1:
-            print("Debug: destroying: %s" % vms)
+            print("[DEBUG]: destroying: %s" % vms)
         t_number = thread_number
         if self.running_on_vm and t_number > 4:
             t_number = 4

@@ -43,6 +43,9 @@ class CI(Base.Base):
         self.mariadbversion = '2.3.0'
         self.mariadbjar = ('https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/'
                            'redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=%s' % self.mariadbversion)
+        self.jacocoagent = '0.8.5'
+        self.jacocoagentjar = ('https://repo1.maven.org/maven2/org/jacoco/org.jacoco.agent/{jav}/'
+                               'org.jacoco.agent-{jav}.jar'.format(jav=self.jacocoagent))
 
     def prepare(self, timeout=900, cloudstack_deploy_mode=""):
         """Prepare infrastructure for CI pipeline
@@ -84,6 +87,9 @@ class CI(Base.Base):
         while task.poll() is None and retries > 0:
             time.sleep(1)
             retries -= 1
+
+        resp = requests.get(self.jacocoagentjar)
+        open('/tmp/jacoco-agent.jar', 'w').write(resp.content)
 
         for cmd in CMDS['generic']:
             subprocess.call(cmd.split(' '))
@@ -145,6 +151,13 @@ class CI(Base.Base):
                     shutil.rmtree("%s" % i)
                 except OSError as e:
                     print("ERROR: %s" % e.message)
+    
+    def cleanup_downloaded_files(self):
+        """Cleanup all the downloaded files"""
+        files = ['/tmp/flyway*', '/tmp/mariadb-java-client-latest.jar', '/tmp/jacoco-agent.jar']
+        for x in files:
+            for f in glob.glob(x):
+                os.unlink(f) if os.path.isfile(f) else shutil.rmtree(f)
 
     def collect_files_from_vm(self, hostname='localhost', username=None, password=None, src=None, dst=None):
         """Collect logs and coverage files
@@ -310,7 +323,7 @@ class CI(Base.Base):
         zone = self.config['zones'][0]['name']
         for host in self.config['mgtSvr']:
             connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
-            src_file = self.workspace + "/" + zone + "/cosmic/target/jacoco-agent.jar"
+            src_file = "/tmp/jacoco-agent.jar"
             self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
             self._scp_put(srcfile="/tmp/jacoco.conf", destfile="/etc/tomcat/conf.d/jacoco.conf", **connection)
         print("==> Tomcat configured")
@@ -327,7 +340,7 @@ class CI(Base.Base):
                 connection = {'hostname': hostname, 'username': host.value['username'],
                               'password': host.value['password']}
                 cmd = r"sed -i -e 's|/bin/java -Xms|/bin/java -javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec -Xms|' /usr/lib/systemd/system/cosmic-agent.service"
-                src_file = self.workspace + "/" + zone.value['name'] + "/cosmic/target/jacoco-agent.jar"
+                src_file = "/tmp/jacoco-agent.jar"
                 self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
                 self._ssh(cmd=cmd, **connection)
                 self._ssh(cmd="systemctl daemon-reload", **connection)

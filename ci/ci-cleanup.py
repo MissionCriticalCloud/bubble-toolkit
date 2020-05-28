@@ -39,6 +39,7 @@ def main(**kwargs):
     ci.cleanup(jsonpath='zones[*].pods[*].clusters[*].hosts[*]', name_path='url',
                result_filter=lambda x: x.split('/')[::-1][0])
     ci.cleanup_storage()
+    ci.cleanup_downloaded_files()
     return 0
 
 

@@ -226,31 +226,38 @@ class CI(Base.Base):
                 for cmd in CMDS['agent_install']['postcommands']:
                     self._ssh(cmd=cmd, **connection)
 
+    def _find_db_server(self, db_svrs, mgt_svr):
+        for db_svr in db_svrs:
+            if db_svr.value['dbSvrName'] == mgt_svr.value['dbSvrName']:
+                return db_svr
+
+        return False
+
     def deploy_cosmic_db(self):
         """Prepare Cosmic Database"""
-        cmd = 'mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO \'root\'@\'%\' WITH GRANT OPTION; FLUSH PRIVILEGES;"'
 
-        # TODO: At the moment there is only one DB server specified, so deployment only uses that DB server
-        db_svr = self.config['dbSvr']['dbSvr']
-        db_port = self.config['dbSvr']['port']
-        db_user = self.config['dbSvr']['user']
-        db_pass = self.config['dbSvr']['passwd']
-        self.wait_for_port(hostname=db_svr, tcp_port=db_port)
-
-        for mgtSvr in self.config['mgtSvr']:
-            self._ssh(hostname=mgtSvr['mgtSvrIp'], username=mgtSvr['user'],
-                      password=mgtSvr['passwd'], cmd=cmd)
+        mgt_svrs = parse('zones[*].mgtSvr[*]').find(self.config)
+        db_svrs = parse('zones[*].dbSvr[*]').find(self.config)
+        for mgt_svr in mgt_svrs:
+            db_svr = self._find_db_server(db_svrs, mgt_svr)
+            if not db_svr:
+                print("No valid DB server found!, skipping mgtSvr: %s" % mgt_svr.value['mgtSvrName'])
+                break
+            self.wait_for_port(hostname=db_svr.value['dbSvrIp'], tcp_port=db_svr.value['port'])
+            cmd = 'mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO \'root\'@\'%\' WITH GRANT OPTION; FLUSH PRIVILEGES;"'
+            self._ssh(hostname=mgt_svr.value['mgtSvrIp'], username=mgt_svr.value['user'],
+                      password=mgt_svr.value['passwd'], cmd=cmd)
+            cloud_db = mysql.connector.connect(
+                host=db_svr.value['dbSvrIp'],
+                username="root"
+            )
             for query in open("%s/ci/setup_files/create-cloud-db.sql" % self.setup_files, "r").readlines():
                 if query == '\n':
                     continue
-                cloud_db = mysql.connector.connect(
-                    host=self.config['dbSvr']['dbSvr'],
-                    username="root"
-                )
                 cloud_cursor = cloud_db.cursor()
                 cloud_cursor.execute(query)
                 cloud_db.commit()
-                cloud_db.close()
+            cloud_db.close()
 
         for f in glob.glob('/tmp/flyway*'):
             os.unlink(f) if os.path.isfile(f) else shutil.rmtree(f)
@@ -260,17 +267,21 @@ class CI(Base.Base):
         tar.extractall(path='/tmp/')
         tar.close()
 
-        for mgtSvr in self.config['mgtSvr']:
+        for mgt_svr in mgt_svrs:
+            db_svr = self._find_db_server(db_svrs, mgt_svr)
+            if not db_svr:
+                print("No valid DB server found!, skipping mgtSvr: %s" % mgt_svr.value['mgtSvrName'])
+                break
             subprocess.call(['/tmp/flyway-{fwv}/flyway'.format(fwv=self.flywayversion),
-                             '-url=jdbc:mariadb://%s:%s/cloud' % (mgtSvr['mgtSvrIp'], db_port),
-                             '-user=%s' % db_user,
-                             '-password=%s' % db_pass,
+                             '-url=jdbc:mariadb://%s:%s/cloud' % (db_svr.value['dbSvrIp'], db_svr.value['port']),
+                             '-user=%s' % db_svr.value['user'],
+                             '-password=%s' % db_svr.value['passwd'],
                              '-encoding=UTF-8',
                              '-locations=filesystem:cosmic-core/cosmic-flyway/src',
                              '-baselineOnMigrate=true',
                              '-table=schema_version',
                              'migrate'])
-            print('==> Cosmic DB deployed at %s' % mgtSvr['mgtSvrIp'])
+            print('==> Cosmic DB deployed at %s' % mgt_svr.value['mgtSvrIp'])
 
         for f in glob.glob('/tmp/flyway*'):
             os.unlink(f) if os.path.isfile(f) else shutil.rmtree(f)
@@ -309,13 +320,15 @@ class CI(Base.Base):
     def configure_tomcat_to_load_jacoco_agent(self):
         """Deploy jacoco agent on management server"""
         open("/tmp/jacoco.conf", "w").write('JAVA_OPTS="$JAVA_OPTS -javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec"\n')
-        zone = self.config['zones'][0]['name']
-        for host in self.config['mgtSvr']:
-            connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
-            src_file = self.workspace + "/" + zone + "/cosmic/target/jacoco-agent.jar"
-            self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
-            self._scp_put(srcfile="/tmp/jacoco.conf", destfile="/etc/tomcat/conf.d/jacoco.conf", **connection)
-        print("==> Tomcat configured")
+        zones = parse('zones[*]').find(self.config)
+        for zone in zones:
+            hosts = parse('mgtSvr[*]').find(zone)
+            for host in hosts:
+                connection = {'hostname': host.value.get('mgtSvrName'), 'username': host.value.get('user'), 'password': host.value.get('passwd')}
+                src_file = self.workspace + "/" + zone.value.get('name') + "/cosmic/target/jacoco-agent.jar"
+                self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
+                self._scp_put(srcfile="/tmp/jacoco.conf", destfile="/etc/tomcat/conf.d/jacoco.conf", **connection)
+                print("==> Tomcat configured on %s" % host.value.get('mgtSvrName'))
         os.unlink("/tmp/jacoco.conf")
 
     def configure_agent_to_load_jacoco_agent(self):
@@ -339,48 +352,50 @@ class CI(Base.Base):
         resp = requests.get(self.mariadbjar)
         open('/tmp/mariadb-java-client-latest.jar', 'w').write(resp.content)
 
-        zone = self.config['zones'][0]['name']
+        zones = parse('zones[*]').find(self.config)
+        for zone in zones:
 
-        template_vars = {
-            'setup_files': "%s/ci/setup_files" % self.setup_files,
-            'mariadbjar': "/tmp/mariadb-java-client-latest.jar",
-            'war_file': "%s/%s/cosmic/cosmic-client/target/cloud-client-ui-*.war" % (self.workspace, zone)
-        }
+            template_vars = {
+                'setup_files': "%s/ci/setup_files" % self.setup_files,
+                'mariadbjar': "/tmp/mariadb-java-client-latest.jar",
+                'war_file': "%s/%s/cosmic/cosmic-client/target/cloud-client-ui-*.war" % (self.workspace, zone.value['name'])
+            }
 
-        for host in self.config['mgtSvr']:
-            connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
+            hosts = parse('mgtSvr[*]').find(zone)
+            for host in hosts:
+                connection = {'hostname': host.value['mgtSvrIp'], 'username': host.value['user'], 'password': host.value['passwd']}
 
-            # Do pre-commands
-            for cmd in CMDS['war_deploy']['precommands']:
-                self._ssh(cmd=cmd, **connection)
+                # Do pre-commands
+                for cmd in CMDS['war_deploy']['precommands']:
+                    self._ssh(cmd=cmd, **connection)
 
-            # Do scp-commands
-            for cmd in CMDS['war_deploy']['scp']:
-                srcfile = cmd[0].format(**template_vars)
-                self._scp_put(srcfile=srcfile, destfile=cmd[1], **connection)
+                # Do scp-commands
+                for cmd in CMDS['war_deploy']['scp']:
+                    srcfile = cmd[0].format(**template_vars)
+                    self._scp_put(srcfile=srcfile, destfile=cmd[1], **connection)
 
-            # Do post-commands
-            for cmd in CMDS['war_deploy']['postcommands']:
-                self._ssh(cmd=cmd, **connection)
+                # Do post-commands
+                for cmd in CMDS['war_deploy']['postcommands']:
+                    self._ssh(cmd=cmd, **connection)
 
         os.unlink("/tmp/mariadb-java-client-latest.jar")
 
     def collect_test_coverage_files(self):
-        zone = self.config['zones'][0]['name']
-        for host in self.config['mgtSvr']:
-            connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
-            print("==> Stopping Tomcat on %s" % host['mgtSvrName'])
-            self._ssh(cmd="systemctl stop tomcat", **connection)
-
-            print("==> Collecting Integration Tests Coverage Data (Management Server) from %s" % host['mgtSvrName'])
-            destfile = ("%s/%s/cosmic/target/coverage-reports/jacoco-it-%s.exec" %
-                        (self.workspace, zone, host['mgtSvrName']))
-            try:
-                self._scp_get(srcfile="/tmp/jacoco-it.exec", destfile=destfile, **connection)
-            except IOError as e:
-                print("ERROR: %s" % (e.message or e.strerror))
-
         zones = parse('zones[*]').find(self.config)
+        for zone in zones:
+            for mgt_svr in zone['mgtSvr']:
+                connection = {'hostname': mgt_svr.value['mgtSvrIp'], 'username': mgt_svr.value['user'], 'password': mgt_svr.value['passwd']}
+                print("==> Stopping Tomcat on %s" % mgt_svr.value['mgtSvrName'])
+                self._ssh(cmd="systemctl stop tomcat", **connection)
+
+                print("==> Collecting Integration Tests Coverage Data (Management Server) from %s" % mgt_svr.value['mgtSvrName'])
+                destfile = ("%s/%s/cosmic/target/coverage-reports/jacoco-it-%s.exec" %
+                            (self.workspace, zone.value['name'], mgt_svr.value['mgtSvrName']))
+                try:
+                    self._scp_get(srcfile="/tmp/jacoco-it.exec", destfile=destfile, **connection)
+                except IOError as e:
+                    print("ERROR: %s" % (e.message or e.strerror))
+
         for zone in zones:
             hosts = parse('pods[*].clusters[*].hosts[*]').find(zone)
             for host in hosts:

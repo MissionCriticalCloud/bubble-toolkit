@@ -84,6 +84,8 @@ class NSX(Base.Base):
             cloud_cursor.execute("SELECT LAST_INSERT_ID();")
             next_host_id = cloud_cursor.fetchone()[0]
 
+            cloud_cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
+
             nsx_query = ("INSERT INTO external_nicira_nvp_devices (uuid,physical_network_id,provider_name,device_name,"
                          "host_id) VALUES ('${nsx_cosmic_controller_uuid}',201,'NiciraNvp','NiciraNvp',%s);" %
                          next_host_id)

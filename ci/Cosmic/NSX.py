@@ -66,22 +66,25 @@ class NSX(Base.Base):
 
         cloud_cursor = self.cloud_db.cursor()
         try:
-            cloud_cursor.execute("SELECT MAX(id) +1 FROM host;")
-            next_host_id = cloud_cursor.fetchone()[0]
-            nsx_query = ("INSERT INTO host (id,name,uuid,status,type,private_ip_address,private_netmask,"
+            nsx_query = ("INSERT INTO host (name,uuid,status,type,private_ip_address,private_netmask,"
                          "private_mac_address,storage_ip_address,storage_netmask,storage_mac_address,"
                          "storage_ip_address_2,storage_mac_address_2,storage_netmask_2,cluster_id,public_ip_address,"
                          "public_netmask,public_mac_address,proxy_port,data_center_id,pod_id,cpu_sockets,cpus,url,"
                          "fs_type,hypervisor_type,hypervisor_version,ram,resource,version,parent,total_size,"
                          "capabilities,guid,available,setup,dom0_memory,last_ping,mgmt_server_id,disconnected,"
                          "created,removed,update_count,resource_state,owner,lastUpdated,engine_state) VALUES "
-                         "(%s,'Nicira Controller - %s','%s','Down','L2Networking','',NULL,NULL,'',NULL,NULL,"
+                         "('Nicira Controller - %s','%s','Down','L2Networking','',NULL,NULL,'',NULL,NULL,"
                          "NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,"
                          "'com.cloud.network.resource.NiciraNvpResource','5.2.0.1-SNAPSHOT',NULL,NULL,NULL,"
                          "'%s',1,0,0,0,NULL,NULL,NOW(),NULL,0,'Enabled',NULL,NULL,'Disabled');" %
-                         (next_host_id, self.master, cosmic_controller_uuid, cosmic_controller_guid))
+                         (self.master, cosmic_controller_uuid, cosmic_controller_guid))
             cloud_cursor.execute(nsx_query)
             self.cloud_db.commit()
+
+            cloud_cursor.execute("SELECT LAST_INSERT_ID();")
+            next_host_id = cloud_cursor.fetchone()[0]
+
+            cloud_cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
 
             nsx_query = ("INSERT INTO external_nicira_nvp_devices (uuid,physical_network_id,provider_name,device_name,"
                          "host_id) VALUES ('${nsx_cosmic_controller_uuid}',201,'NiciraNvp','NiciraNvp',%s);" %

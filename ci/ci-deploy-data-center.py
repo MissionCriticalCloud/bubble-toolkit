@@ -15,7 +15,8 @@ def main(**kwargs):
     ci.copy_marvin_config()
     ci.deploy_dc()
 
-    if nsx:
+    if nsx is not None:
+        print("Setting connectivity for NSX offerings")
         nsx.add_connectivy_to_offerings()
 
     ci.wait_for_templates()

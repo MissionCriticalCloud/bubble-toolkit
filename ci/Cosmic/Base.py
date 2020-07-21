@@ -4,6 +4,7 @@ import os
 import json
 import socket
 import time
+import sys
 
 import cs
 import paramiko
@@ -24,11 +25,32 @@ class Base(object):
               "==> Using Marvin config '{0}'\n".format(marvin_config))
         if not os.path.exists(marvin_config):
             raise Exception("Supplied Marvin config not found!")
-        self.config = json.loads(open(marvin_config).read())
+        self.config = self._load_and_prep_config(marvin_config)
         self.marvin_config = marvin_config
         self.debug = debug
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    def _load_and_prep_config(self, marvin_config):
+        config = json.loads(open(marvin_config).read())
+        version = 1
+        if 'version' in config:
+            version = config['version']
+
+        if version == 1:
+            # In version 1 there is only one DB server specified, so deployment only uses that DB server
+            config['zones'][0]['dbSvr'] = config['dbSvr']
+            config['zones'][0]['mgtSvr'] = config['mgtSvr']
+            config['zones'][0]['dbSvr']['dbSvrIp'] = config['dbSvr']['dbSvr']
+            config['zones'][0]['dbSvr']['dbSvrName'] = 'mgtSvr'
+            config['zones'][0]['dbSvr']['role'] = 'mgtSvr'
+            config['zones'][0]['mgtSvr']['db'] = 'mgtSvr'
+            return config
+        elif version == 2:
+            return config
+
+        # unknown version found so we exit
+        sys.exit("ERROR: unknown config version found: " + str(version))
 
     def _ssh(self, hostname=None, username=None, password=None, cmd=None):
         """Connect to hostname via SSH

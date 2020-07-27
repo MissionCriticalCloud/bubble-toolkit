@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-sudo $(dirname $0)/ci-collect-integration-tests-coverage.py $*
+sudo -E $(dirname $0)/ci-collect-integration-tests-coverage.py $*

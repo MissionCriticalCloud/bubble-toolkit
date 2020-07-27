@@ -33,7 +33,8 @@ class CI(Base.Base):
     """
     def __init__(self, marvin_config=None, debug=False):
         super(CI, self).__init__(marvin_config=marvin_config, debug=debug)
-        self.workspace = '/data/git'
+        self.__workspace = None
+        self.zone = None
         self.setup_files = '/data/shared'
         self.templatepath = '/template/tmpl/1/3'
         self.templateuuid = 'f327eecc-be53-4d80-9d43-adaf45467abd'
@@ -43,6 +44,18 @@ class CI(Base.Base):
         self.mariadbversion = '2.3.0'
         self.mariadbjar = ('https://beta-nexus.mcc.schubergphilis.com/service/local/artifact/maven/'
                            'redirect?r=central&g=org.mariadb.jdbc&a=mariadb-java-client&v=%s' % self.mariadbversion)
+
+    @property
+    def workspace(self):
+        workspace = os.getenv('CUSTOM_WORKSPACE') if not self.__workspace else self.__workspace
+        if workspace is None:
+            workspace = "/".join(filter(None, ['/data/git', self.zone, 'cosmic']))
+        print("==> Using workspace: ", workspace)
+        return workspace
+
+    @workspace.setter
+    def workspace(self, value):
+        self.__workspace = value
 
     def prepare(self, timeout=900, cloudstack_deploy_mode=""):
         """Prepare infrastructure for CI pipeline
@@ -215,7 +228,8 @@ class CI(Base.Base):
 
                 # SCP files
                 for cmd in CMDS['agent_install']['scp']:
-                    src_file = self.workspace + "/" + zone.value['name'] + "/cosmic/" + cmd[0]
+                    self.zone = zone.value['name']
+                    src_file = self.workspace + "/" + cmd[0]
                     self._scp_put(srcfile=src_file, destfile=cmd[1], **connection)
                     if self.debug:
                         print("==> scp %s %s:%s\n" % (src_file, hostname, cmd[1]))
@@ -310,7 +324,8 @@ class CI(Base.Base):
         zone = self.config['zones'][0]['name']
         for host in self.config['mgtSvr']:
             connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
-            src_file = self.workspace + "/" + zone + "/cosmic/target/jacoco-agent.jar"
+            self.zone = zone
+            src_file = self.workspace + "/target/jacoco-agent.jar"
             self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
             self._scp_put(srcfile="/tmp/jacoco.conf", destfile="/etc/tomcat/conf.d/jacoco.conf", **connection)
         print("==> Tomcat configured")
@@ -326,7 +341,8 @@ class CI(Base.Base):
                 connection = {'hostname': hostname, 'username': host.value['username'],
                               'password': host.value['password']}
                 cmd = r"sed -i -e 's|/bin/java -Xms|/bin/java -javaagent:/tmp/jacoco-agent.jar=destfile=/tmp/jacoco-it.exec -Xms|' /usr/lib/systemd/system/cosmic-agent.service"
-                src_file = self.workspace + "/" + zone.value['name'] + "/cosmic/target/jacoco-agent.jar"
+                self.zone = zone.value['name']
+                src_file = self.workspace + "/target/jacoco-agent.jar"
                 self._scp_put(srcfile=src_file, destfile="/tmp", **connection)
                 self._ssh(cmd=cmd, **connection)
                 self._ssh(cmd="systemctl daemon-reload", **connection)
@@ -337,12 +353,12 @@ class CI(Base.Base):
         resp = requests.get(self.mariadbjar)
         open('/tmp/mariadb-java-client-latest.jar', 'w').write(resp.content)
 
-        zone = self.config['zones'][0]['name']
+        self.zone = self.config['zones'][0]['name']
 
         template_vars = {
             'setup_files': "%s/ci/setup_files" % self.setup_files,
             'mariadbjar': "/tmp/mariadb-java-client-latest.jar",
-            'war_file': "%s/%s/cosmic/cosmic-client/target/cloud-client-ui-*.war" % (self.workspace, zone)
+            'war_file': "%s/cosmic-client/target/cloud-client-ui-*.war" % self.workspace
         }
 
         for host in self.config['mgtSvr']:
@@ -364,15 +380,15 @@ class CI(Base.Base):
         os.unlink("/tmp/mariadb-java-client-latest.jar")
 
     def collect_test_coverage_files(self):
-        zone = self.config['zones'][0]['name']
+        self.zone = self.config['zones'][0]['name']
         for host in self.config['mgtSvr']:
             connection = {'hostname': host['mgtSvrIp'], 'username': host['user'], 'password': host['passwd']}
             print("==> Stopping Tomcat on %s" % host['mgtSvrName'])
             self._ssh(cmd="systemctl stop tomcat", **connection)
 
             print("==> Collecting Integration Tests Coverage Data (Management Server) from %s" % host['mgtSvrName'])
-            destfile = ("%s/%s/cosmic/target/coverage-reports/jacoco-it-%s.exec" %
-                        (self.workspace, zone, host['mgtSvrName']))
+            destfile = ("%s/target/coverage-reports/jacoco-it-%s.exec" %
+                        (self.workspace, host['mgtSvrName']))
             try:
                 self._scp_get(srcfile="/tmp/jacoco-it.exec", destfile=destfile, **connection)
             except IOError as e:
@@ -388,8 +404,9 @@ class CI(Base.Base):
                 print("==> Stopping Cosmic KVM Agent on host %s" % hostname)
                 self._ssh(cmd="systemctl stop cosmic-agent", **connection)
 
-                destfile = ("%s/%s/cosmic/target/coverage-reports/jacoco-it-%s.exec" %
-                            (self.workspace, zone.value['name'], hostname))
+                self.zone = zone.value['name']
+                destfile = ("%s/target/coverage-reports/jacoco-it-%s.exec" %
+                            (self.workspace, hostname))
                 print("==> Collecting Integration Tests Coverage Data (Agent) from %s" % hostname)
                 try:
                     self._scp_get(srcfile="/tmp/jacoco-it.exec", destfile=destfile, **connection)

@@ -27,7 +27,7 @@ cd /root
 
 wget https://raw.githubusercontent.com/remibergsma/dotfiles/master/.screenrc
 
-curl "https://bootstrap.pypa.io/get-pip.py" | python
+curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" | python
 pip install mysql-connector-python --allow-external mysql-connector-python requests
 pip install cloudmonkey
 
